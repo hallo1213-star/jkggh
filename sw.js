@@ -1,4 +1,4 @@
-const CACHE = 'wer-von-euch-v4';
+const CACHE = 'wer-von-euch-v6';
 const CORE = ['/', '/index.html', '/public.js', '/manifest.webmanifest', '/icon.svg'];
 
 self.addEventListener('install', event => {

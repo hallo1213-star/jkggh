@@ -11,6 +11,8 @@
   const mutedPlayers = new Set();
   let voted = false;
   let round = 0;
+  let bonusRound = false;
+  let revealCountdownTimer = null;
   let isPrivateRoom = false;
   let isPrivateHost = false;
   let connectionMode = '';
@@ -267,7 +269,11 @@
       return;
     }
     if (message.type === 'round_start') {
+      clearInterval(revealCountdownTimer);
+      revealCountdownTimer = null;
       round = message.round;
+      bonusRound = Boolean(message.bonusRound);
+      $('publicPlay').classList.toggle('bonus-night', bonusRound);
       roomPlayers = message.players;
       voted = false;
       renderPeople();
@@ -278,7 +284,13 @@
       $('publicStatus').textContent = `${message.count} von ${message.total} Stimmen abgegeben · geheim bis zur Auflösung`;
       return;
     }
+    if (message.type === 'reveal_countdown') {
+      showOnlineRevealCountdown();
+      return;
+    }
     if (message.type === 'round_result') {
+      clearInterval(revealCountdownTimer);
+      revealCountdownTimer = null;
       roomPlayers = message.players;
       renderPeople();
       renderResult(message);
@@ -315,11 +327,27 @@
     }
   }
 
+  function showOnlineRevealCountdown() {
+    let count = 3;
+    $('publicStatus').textContent = 'Alle Stimmen sind versiegelt. Die Geister zählen mit …';
+    $('publicChoices').innerHTML = `<div class="reveal-countdown-card"><div class="categoryline">${bonusRound ? '⚡ DOPPELPUNKTE AKTIV' : '✦ DIE STIMMEN SIND VERSIEGELT ✦'}</div><div class="countdown-ring"><span id="publicRevealNumber">3</span><i></i></div><h2>Die Geister zählen mit…</h2><p>Keine Wahl kann mehr geändert werden.</p><div class="countdown-track"><i id="publicRevealTrack"></i></div></div>`;
+    revealCountdownTimer = setInterval(() => {
+      count--;
+      const number = $('publicRevealNumber');
+      if (!number) { clearInterval(revealCountdownTimer); revealCountdownTimer = null; return; }
+      number.textContent = count > 0 ? count : '✦';
+      const track = $('publicRevealTrack');
+      if (track) track.style.width = `${Math.min(100, (4-count)*25)}%`;
+      if (count <= 0) { clearInterval(revealCountdownTimer); revealCountdownTimer = null; }
+    }, 690);
+  }
+
   function renderPublicRound(question) {
-    $('publicRound').textContent = `ÖFFENTLICHER SERVER · RUNDE ${round}`;
+    const roomLabel = isPrivateRoom ? 'PRIVATER SPUKRAUM' : 'ÖFFENTLICHER SERVER';
+    $('publicRound').textContent = bonusRound ? `⚡ DOPPELPUNKTE · RUNDE ${round}` : `${roomLabel} · RUNDE ${round}`;
     $('publicProgress').style.width = '0%';
     $('publicStatus').textContent = 'Wählt geheim eine Person aus. Die Stimmen werden erst am Ende gezeigt.';
-    $('publicQuestion').innerHTML = `<div class="card qcard"><div class="categoryline">🎃 DIE FRAGE · RUNDE ${round}</div><div class="qtext">Wer von euch <em>${safe(question)}</em></div></div>`;
+    $('publicQuestion').innerHTML = `<div class="card qcard"><div class="categoryline ${bonusRound ? 'bonus-round-label' : ''}">${bonusRound ? '⚡ VERFLUCHTE DOPPELRUNDE · +2 PUNKTE' : `🎃 DIE FRAGE · RUNDE ${round}`}</div><div class="qtext">Wer von euch <em>${safe(question)}</em></div></div>`;
     const candidates = roomPlayers.filter((player) => player.id !== myId);
     $('publicChoices').innerHTML = `<div class="public-choice-title">Wen tippst du?</div><div class="targetlist">${candidates.map((player, index) => `<button class="target" data-target="${safe(player.id)}"><span class="avatar">${emoji[index % emoji.length]}</span>${safe(player.name)}</button>`).join('')}</div>`;
     document.querySelectorAll('[data-target]').forEach((button) => {
@@ -336,10 +364,11 @@
   function renderResult(result) {
     const winner = roomPlayers.find((player) => player.id === result.winnerId);
     const tied = result.tied;
-    $('publicRound').textContent = `AUFLÖSUNG · RUNDE ${round}`;
+    const pointsAwarded = result.pointsAwarded || 1;
+    $('publicRound').textContent = bonusRound ? `⚡ DOPPELPUNKTE · AUFLÖSUNG ${round}` : `AUFLÖSUNG · RUNDE ${round}`;
     $('publicProgress').style.width = '100%';
     $('publicStatus').textContent = tied ? 'Gleichstand! Das Geisterrad hat genau eine Person ausgewählt.' : 'Die geheime Abstimmung ist vorbei.';
-    $('publicQuestion').innerHTML = `<div class="resulttop"><span class="bigemoji">${tied ? '🌀' : '🎃'}</span><h2>${tied ? 'Das Geisterrad hat gewählt!' : 'Die Gruppe hat entschieden!'}</h2><p>Runde ${round} · nächste Frage startet gleich</p></div><div class="card public-result"><div class="winner ${tied ? 'tiebreak' : ''}"><span class="crown">${tied ? '🎡' : '👑'}</span><div class="winnername">${safe(winner?.name || 'Unbekannt')}</div><div class="count">${tied ? 'GEISTER-RAD-GEWINNER · ' : ''}${result.counts[result.winnerId] || 0} Stimmen</div><div class="winbadge">🏆 RUNDE GEWONNEN</div></div><div class="bars">${roomPlayers.slice().sort((a, b) => (result.counts[b.id] || 0) - (result.counts[a.id] || 0)).map((player) => `<div class="barrow"><span class="barname">${safe(player.name)} · ${player.score || 0} Siege</span><div class="track"><div class="fill" data-width="${Math.round((result.counts[player.id] || 0) / Math.max(1, result.total) * 100)}%"></div></div><span class="num">${result.counts[player.id] || 0}</span></div>`).join('')}</div></div>`;
+    $('publicQuestion').innerHTML = `<div class="resulttop"><span class="bigemoji">${tied ? '🌀' : '🎃'}</span><h2>${tied ? 'Das Geisterrad hat gewählt!' : 'Die Gruppe hat entschieden!'}</h2><p>${bonusRound ? 'Die fünfte Runde zählt doppelt!' : `Runde ${round}`} · nächste Frage startet gleich</p></div><div class="card public-result"><div class="winner ${tied ? 'tiebreak' : ''}"><span class="crown">${tied ? '🎡' : '👑'}</span><div class="winnername">${safe(winner?.name || 'Unbekannt')}</div><div class="count">${tied ? 'GEISTER-RAD-GEWINNER · ' : ''}${result.counts[result.winnerId] || 0} Stimmen</div><div class="winbadge">${pointsAwarded===2?'⚡ +2 DOPPELPUNKTE':'🏆 RUNDE GEWONNEN'}</div></div><div class="bars">${roomPlayers.slice().sort((a, b) => (result.counts[b.id] || 0) - (result.counts[a.id] || 0)).map((player) => `<div class="barrow"><span class="barname">${safe(player.name)} · ${player.score || 0} Siege</span><div class="track"><div class="fill" data-width="${Math.round((result.counts[player.id] || 0) / Math.max(1, result.total) * 100)}%"></div></div><span class="num">${result.counts[player.id] || 0}</span></div>`).join('')}</div></div>`;
     $('publicChoices').innerHTML = '<div class="public-round-note">Die nächste Runde beginnt automatisch in wenigen Sekunden …</div>';
     requestAnimationFrame(() => document.querySelectorAll('.fill').forEach((bar) => { bar.style.width = bar.dataset.width; }));
   }

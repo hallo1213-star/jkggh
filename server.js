@@ -231,7 +231,7 @@ function startRound(room) {
   room.phase = 'voting';
   room.votes = new Map();
   room.currentQuestion = nextQuestion(room);
-  broadcast(room, { type: 'round_start', round: room.round, question: room.currentQuestion, players: publicPlayers(room) });
+  broadcast(room, { type: 'round_start', round: room.round, bonusRound: room.round % 5 === 0, question: room.currentQuestion, players: publicPlayers(room) });
   room.timer = setTimeout(() => finishRound(room), 90_000);
 }
 
@@ -241,11 +241,19 @@ function vote(client, targetId) {
   if (!room.players.some((player) => player.id === targetId) || targetId === client.id) return;
   room.votes.set(client.id, targetId);
   broadcast(room, { type: 'vote_count', count: room.votes.size, total: room.players.length });
-  if (room.votes.size >= room.players.length) finishRound(room);
+  if (room.votes.size >= room.players.length) beginReveal(room);
+}
+
+function beginReveal(room) {
+  if (room.phase !== 'voting') return;
+  clearTimeout(room.timer);
+  room.phase = 'revealing';
+  broadcast(room, { type: 'reveal_countdown', round: room.round });
+  room.timer = setTimeout(() => finishRound(room), 2700);
 }
 
 function finishRound(room) {
-  if (room.phase !== 'voting') return;
+  if (room.phase !== 'voting' && room.phase !== 'revealing') return;
   clearTimeout(room.timer);
   room.phase = 'result';
   const counts = Object.fromEntries(room.players.map((player) => [player.id, 0]));
@@ -253,12 +261,14 @@ function finishRound(room) {
   const highest = Math.max(...Object.values(counts));
   const leaders = room.players.filter((player) => counts[player.id] === highest);
   const winner = leaders[Math.floor(Math.random() * leaders.length)];
-  winner.score += 1;
+  const pointsAwarded = room.round % 5 === 0 ? 2 : 1;
+  winner.score += pointsAwarded;
   broadcast(room, {
     type: 'round_result',
     round: room.round,
     winnerId: winner.id,
     tied: leaders.length > 1,
+    pointsAwarded,
     counts,
     total: room.votes.size,
     players: publicPlayers(room)
