@@ -25,7 +25,14 @@ const httpServer = createServer(async (request, response) => {
     response.end(JSON.stringify({ ok: true, waiting: waiting.length, rooms: rooms.size }));
     return;
   }
-  const files = { '/': ['index.html', 'text/html; charset=utf-8'], '/index.html': ['index.html', 'text/html; charset=utf-8'], '/public.js': ['public.js', 'text/javascript; charset=utf-8'] };
+  const files = {
+    '/': ['index.html', 'text/html; charset=utf-8'],
+    '/index.html': ['index.html', 'text/html; charset=utf-8'],
+    '/public.js': ['public.js', 'text/javascript; charset=utf-8'],
+    '/manifest.webmanifest': ['manifest.webmanifest', 'application/manifest+json; charset=utf-8'],
+    '/sw.js': ['sw.js', 'text/javascript; charset=utf-8'],
+    '/icon.svg': ['icon.svg', 'image/svg+xml; charset=utf-8']
+  };
   const file = files[pathname];
   if (!file) {
     response.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
@@ -34,7 +41,11 @@ const httpServer = createServer(async (request, response) => {
   }
   try {
     const body = await readFile(join(root, file[0]));
-    response.writeHead(200, { 'content-type': file[1], 'cache-control': 'no-store' });
+    response.writeHead(200, {
+      'content-type': file[1],
+      'cache-control': pathname === '/sw.js' || pathname === '/manifest.webmanifest' ? 'no-cache' : 'no-store',
+      ...(pathname === '/sw.js' ? { 'service-worker-allowed': '/' } : {})
+    });
     response.end(body);
   } catch {
     response.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });

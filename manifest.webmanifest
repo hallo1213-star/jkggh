@@ -1,0 +1,20 @@
+{
+  "name": "WER VON EUCH? — Halloween Edition",
+  "short_name": "WER VON EUCH",
+  "description": "Das geheime Halloween-Partyspiel für deine Freundesrunde.",
+  "lang": "de",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b090d",
+  "theme_color": "#0b090d",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
