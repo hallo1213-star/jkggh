@@ -2,7 +2,7 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomUUID } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 import WebSocket, { WebSocketServer } from 'ws';
 
 const root = dirname(fileURLToPath(import.meta.url));
@@ -56,11 +56,36 @@ function send(client, message) {
 }
 
 function publicPlayers(room) {
-  return room.players.map(({ id, name, score }) => ({ id, name, score }));
+  return room.players.map(({ id, name, score }) => ({ id, name, score, host: id === room.hostId }));
 }
 
 function broadcast(room, message) {
   for (const player of room.players) send(clients.get(player.id), message);
+}
+
+function setPlayerDetails(client, data) {
+  client.name = String(data.name || '').trim().slice(0, 18);
+  client.questions = Array.isArray(data.questions)
+    ? [...new Set(data.questions.map((q) => String(q).slice(0, 180)).filter(Boolean))].slice(0, 300)
+    : [];
+}
+
+function makeInviteCode() {
+  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code;
+  do {
+    code = [...randomBytes(6)].map((byte) => alphabet[byte % alphabet.length]).join('');
+  } while (rooms.has(code));
+  return code;
+}
+
+function broadcastPrivateLobby(room) {
+  for (const player of room.players) {
+    send(clients.get(player.id), {
+      type: 'room_lobby', roomId: room.id, playerId: player.id,
+      hostId: room.hostId, players: publicPlayers(room), minPlayers: 3, maxPlayers: 8
+    });
+  }
 }
 
 function queueUpdate() {
@@ -69,16 +94,13 @@ function queueUpdate() {
 }
 
 function joinQueue(client, data) {
-  if (client.name) return;
+  if (client.name || client.roomId) return;
   const name = String(data.name || '').trim().slice(0, 18);
   if (name.length < 2) {
     send(client, { type: 'error', message: 'Bitte gib einen Namen mit mindestens zwei Zeichen ein.' });
     return;
   }
-  client.name = name;
-  client.questions = Array.isArray(data.questions)
-    ? [...new Set(data.questions.map((q) => String(q).slice(0, 180)).filter(Boolean))].slice(0, 300)
-    : [];
+  setPlayerDetails(client, { ...data, name });
   waiting.push(client);
   queueUpdate();
   matchPlayers();
@@ -98,6 +120,7 @@ function matchPlayers() {
       used: new Set(),
       round: 0,
       votes: new Map(),
+      private: false,
       phase: 'starting',
       timer: null
     };
@@ -109,6 +132,71 @@ function matchPlayers() {
     startRound(room);
   }
   queueUpdate();
+}
+
+function createPrivateRoom(client, data) {
+  if (client.name || client.roomId) return;
+  const name = String(data.name || '').trim().slice(0, 18);
+  if (name.length < 2) {
+    send(client, { type: 'error', message: 'Bitte gib einen Namen mit mindestens zwei Zeichen ein.' });
+    return;
+  }
+  setPlayerDetails(client, { ...data, name });
+  const room = {
+    id: makeInviteCode(),
+    players: [{ id: client.id, name: client.name, score: 0 }],
+    hostId: client.id,
+    questions: client.questions.length ? client.questions : defaultQuestions,
+    used: new Set(),
+    round: 0,
+    votes: new Map(),
+    private: true,
+    phase: 'lobby',
+    timer: null
+  };
+  rooms.set(room.id, room);
+  client.roomId = room.id;
+  broadcastPrivateLobby(room);
+}
+
+function joinPrivateRoom(client, data) {
+  if (client.name || client.roomId) return;
+  const name = String(data.name || '').trim().slice(0, 18);
+  if (name.length < 2) {
+    send(client, { type: 'error', message: 'Bitte gib einen Namen mit mindestens zwei Zeichen ein.' });
+    return;
+  }
+  const code = String(data.code || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+  const room = rooms.get(code);
+  if (!room || !room.private || room.phase !== 'lobby') {
+    send(client, { type: 'error', message: 'Der Einladungscode ist falsch oder der Raum wurde schon gestartet.' });
+    return;
+  }
+  if (room.players.length >= 8) {
+    send(client, { type: 'error', message: 'Dieser Raum ist schon voll (maximal 8 Personen).' });
+    return;
+  }
+  setPlayerDetails(client, { ...data, name });
+  client.roomId = room.id;
+  room.players.push({ id: client.id, name: client.name, score: 0 });
+  broadcastPrivateLobby(room);
+}
+
+function startPrivateRoom(client) {
+  const room = rooms.get(client.roomId);
+  if (!room || !room.private || room.phase !== 'lobby' || room.hostId !== client.id) return;
+  if (room.players.length < 3) {
+    send(client, { type: 'error', message: 'Zum Starten braucht ihr mindestens 3 Spieler.' });
+    return;
+  }
+  room.phase = 'starting';
+  for (const player of room.players) {
+    send(clients.get(player.id), {
+      type: 'room_start', roomId: room.id, playerId: player.id,
+      players: publicPlayers(room), private: true
+    });
+  }
+  startRound(room);
 }
 
 function nextQuestion(room) {
@@ -182,11 +270,17 @@ function removeClient(client) {
   if (queueIndex >= 0) waiting.splice(queueIndex, 1);
   if (client.roomId) {
     const room = rooms.get(client.roomId);
+    const previousRoomId = client.roomId;
+    client.roomId = null;
     if (room) {
       const player = room.players.find((entry) => entry.id === client.id);
       room.players = room.players.filter((entry) => entry.id !== client.id);
       room.votes.delete(client.id);
-      if (room.players.length < 3) closeRoom(room);
+      if (room.private && room.phase === 'lobby') {
+        if (room.hostId === client.id && room.players.length) room.hostId = room.players[0].id;
+        if (!room.players.length) rooms.delete(previousRoomId);
+        else broadcastPrivateLobby(room);
+      } else if (room.players.length < 3) closeRoom(room);
       else {
         broadcast(room, { type: 'player_left', name: player?.name || 'Ein Spieler', players: publicPlayers(room) });
         if (room.phase === 'voting' && room.votes.size >= room.players.length) finishRound(room);
@@ -205,6 +299,9 @@ wss.on('connection', (ws) => {
     let data;
     try { data = JSON.parse(raw.toString()); } catch { return; }
     if (data.type === 'join') joinQueue(client, data);
+    else if (data.type === 'create_private') createPrivateRoom(client, data);
+    else if (data.type === 'join_private') joinPrivateRoom(client, data);
+    else if (data.type === 'start_private') startPrivateRoom(client);
     else if (data.type === 'vote') vote(client, String(data.targetId || ''));
     else if (data.type === 'leave') {
       removeClient(client);

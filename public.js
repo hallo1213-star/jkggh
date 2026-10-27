@@ -11,6 +11,9 @@
   const mutedPlayers = new Set();
   let voted = false;
   let round = 0;
+  let isPrivateRoom = false;
+  let isPrivateHost = false;
+  let connectionMode = '';
 
   const safe = (value) => String(value).replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -41,14 +44,97 @@
   });
   $('joinPublic').onclick = joinPublic;
 
+  const privateModal = $('privateModal');
+  $('openPrivate').onclick = () => {
+    privateModal.classList.remove('hidden');
+    $('privateError').textContent = '';
+    $('privateName').focus();
+  };
+  $('closePrivate').onclick = closePrivateModal;
+  privateModal.addEventListener('click', (event) => {
+    if (event.target === privateModal && !roomId) closePrivateModal();
+  });
+  $('privateName').addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') createPrivateRoom();
+  });
+  $('inviteCode').addEventListener('input', () => {
+    $('inviteCode').value = $('inviteCode').value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+  });
+  $('inviteCode').addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') joinPrivateRoom();
+  });
+  $('createPrivate').onclick = createPrivateRoom;
+  $('joinPrivate').onclick = joinPrivateRoom;
+  $('startPrivate').onclick = () => {
+    if (isPrivateRoom && isPrivateHost && roomPlayers.length >= 3) send({ type: 'start_private' });
+  };
+  $('copyInvite').onclick = async () => {
+    if (!roomId) return;
+    try {
+      await navigator.clipboard.writeText(roomId);
+      $('copyInvite').textContent = 'KOPIERT ✓';
+      setTimeout(() => { $('copyInvite').textContent = 'CODE KOPIEREN'; }, 1800);
+    } catch {
+      $('privateLobbyStatus').textContent = 'Dein Einladungscode ist ' + roomId + '. Markiere ihn und kopiere ihn an deine Freunde.';
+    }
+  };
+
+  function selectedQuestionPool() {
+    return [...new Set(activeCats.flatMap((category) => questions[category] || []))];
+  }
+
   function cancelSearch() {
-    if (socket && !roomId) {
-      send({ type: 'leave' });
-      socket.close();
+    if (socket && !roomId && connectionMode === 'public') {
+      const oldSocket = socket;
       socket = null;
+      if (oldSocket.readyState === WebSocket.OPEN) oldSocket.send(JSON.stringify({ type: 'leave' }));
+      oldSocket.close();
       resetJoinButton();
     }
     modal.classList.add('hidden');
+  }
+
+  function closePrivateModal() {
+    if (socket && !roomId && connectionMode === 'private') {
+      const oldSocket = socket;
+      socket = null;
+      if (oldSocket.readyState === WebSocket.OPEN) oldSocket.send(JSON.stringify({ type: 'leave' }));
+      oldSocket.close();
+      resetJoinButton();
+    }
+    privateModal.classList.add('hidden');
+  }
+
+  function connectToServer(type, name, mode, extra = {}) {
+    connectionMode = mode;
+    const errorBox = mode === 'private' ? $('privateError') : $('publicError');
+    if (socket) socket.close();
+    try {
+      const currentSocket = new WebSocket(serverAddress());
+      socket = currentSocket;
+      currentSocket.onopen = () => currentSocket.send(JSON.stringify({
+        type, name, questions: selectedQuestionPool(), ...extra
+      }));
+      currentSocket.onmessage = (event) => handleMessage(JSON.parse(event.data));
+      currentSocket.onerror = () => {
+        errorBox.textContent = mode === 'private'
+          ? 'Verbindung zum Spielserver fehlgeschlagen. Versuch es gleich nochmal.'
+          : 'Der öffentliche Server ist gerade nicht erreichbar. Die lokale Runde funktioniert weiterhin.';
+        resetJoinButton();
+      };
+      currentSocket.onclose = () => {
+        if (socket !== currentSocket) return;
+        socket = null;
+        if (roomId) {
+          $('publicStatus').textContent = 'Verbindung verloren. Du kannst den Raum verlassen.';
+          $('publicStatus').className = 'public-status';
+        }
+        resetJoinButton();
+      };
+    } catch {
+      errorBox.textContent = 'Serververbindung nicht möglich. Öffne die Seite über den Spielserver.';
+      resetJoinButton();
+    }
   }
 
   function joinPublic() {
@@ -61,36 +147,97 @@
     $('joinPublic').disabled = true;
     $('joinPublic').querySelector('span').textContent = 'SERVER WIRD GESUCHT …';
     $('publicError').textContent = 'Verbinde dich mit der offenen Lobby …';
-    try {
-      socket = new WebSocket(serverAddress());
-      socket.onopen = () => {
-        const pool = [...new Set(activeCats.flatMap((category) => questions[category] || []))];
-        send({ type: 'join', name, questions: pool });
-      };
-      socket.onmessage = (event) => handleMessage(JSON.parse(event.data));
-      socket.onerror = () => {
-        $('publicError').textContent = 'Der öffentliche Server ist noch nicht online. Die lokale Runde funktioniert weiterhin.';
-        resetJoinButton();
-      };
-      socket.onclose = () => {
-        if (roomId) {
-          $('publicStatus').textContent = 'Verbindung verloren. Du kannst die Runde verlassen.';
-          $('publicStatus').className = 'public-status';
-        }
-        resetJoinButton();
-      };
-    } catch {
-      $('publicError').textContent = 'Serververbindung nicht möglich. Öffne die Seite über den Spielserver.';
-      resetJoinButton();
+    isPrivateRoom = false;
+    connectToServer('join', name, 'public');
+  }
+
+  function createPrivateRoom() {
+    const name = $('privateName').value.trim();
+    if (name.length < 2) {
+      $('privateError').textContent = 'Gib bitte einen Namen mit mindestens zwei Zeichen ein.';
+      $('privateName').focus();
+      return;
     }
+    $('createPrivate').disabled = true;
+    $('createPrivate').querySelector('span').textContent = 'RAUM WIRD ERSTELLT …';
+    $('privateError').textContent = 'Dein privater Raum wird vorbereitet …';
+    isPrivateRoom = true;
+    connectToServer('create_private', name, 'private');
+  }
+
+  function joinPrivateRoom() {
+    const name = $('privateName').value.trim();
+    const code = $('inviteCode').value.trim().toUpperCase();
+    if (name.length < 2) {
+      $('privateError').textContent = 'Gib zuerst deinen Namen ein.';
+      $('privateName').focus();
+      return;
+    }
+    if (code.length !== 6) {
+      $('privateError').textContent = 'Der Einladungscode muss genau 6 Zeichen haben.';
+      $('inviteCode').focus();
+      return;
+    }
+    $('joinPrivate').disabled = true;
+    $('joinPrivate').textContent = 'SUCHE …';
+    $('privateError').textContent = 'Wir suchen euren privaten Raum …';
+    isPrivateRoom = true;
+    connectToServer('join_private', name, 'private', { code });
   }
 
   function resetJoinButton() {
     $('joinPublic').disabled = false;
     $('joinPublic').querySelector('span').textContent = 'SERVER SUCHEN';
+    $('createPrivate').disabled = false;
+    $('createPrivate').querySelector('span').textContent = 'RAUM ERSTELLEN';
+    $('joinPrivate').disabled = false;
+    $('joinPrivate').textContent = 'BEITRETEN';
   }
 
+  function renderPrivateLobby(message) {
+    isPrivateRoom = true;
+    roomId = message.roomId;
+    myId = message.playerId;
+    isPrivateHost = message.hostId === myId;
+    roomPlayers = message.players;
+    $('publicModal').classList.add('hidden');
+    privateModal.classList.add('hidden');
+    $('home').classList.add('hidden');
+    $('play').classList.add('hidden');
+    $('publicPlay').classList.remove('hidden');
+    $('privateLobby').classList.remove('hidden');
+    $('publicProgress').parentElement.classList.add('hidden');
+    $('publicPeople').classList.add('hidden');
+    $('voiceButton').classList.add('hidden');
+    $('publicProgress').style.width = '0%';
+    $('publicQuestion').innerHTML = '';
+    $('publicChoices').innerHTML = '';
+    $('publicRound').textContent = 'PRIVATER RAUM · ' + roomId;
+    $('publicStatus').textContent = 'Lade deine Freunde mit dem Einladungscode ein.';
+    $('publicStatus').className = 'public-status';
+    $('privateCodeDisplay').textContent = roomId;
+    $('privatePlayerCount').textContent = roomPlayers.length + ' / 3 MIN.';
+    $('privateLobbyPlayers').innerHTML = roomPlayers.map((player) =>
+      '<span class="private-lobby-player ' + (player.host ? 'host' : '') + '">' + safe(player.name) +
+      (player.id === myId ? ' · DU' : '') + (player.host ? ' · HOST' : '') + '</span>'
+    ).join('');
+    $('startPrivate').classList.toggle('hidden', !isPrivateHost);
+    $('startPrivate').disabled = roomPlayers.length < 3;
+    if (roomPlayers.length < 3) {
+      const missing = 3 - roomPlayers.length;
+      $('privateLobbyStatus').textContent = 'Noch ' + missing + (missing === 1 ? ' Person fehlt' : ' Personen fehlen') + ' zum Starten. Teile den Code mit deinen Freunden.';
+    } else if (isPrivateHost) {
+      $('privateLobbyStatus').textContent = 'Eure Crew ist bereit! Du kannst die Spukrunde starten.';
+    } else {
+      $('privateLobbyStatus').textContent = 'Deine Crew ist bereit. Warte, bis der Host die Runde startet.';
+    }
+    $('privateError').textContent = '';
+  }
   function handleMessage(message) {
+    if (message.type === 'room_lobby') {
+      renderPrivateLobby(message);
+      return;
+    }
     if (message.type === 'queue') {
       $('publicError').textContent = `Du bist in der Warteschlange. ${message.waiting} Spieler warten gerade.`;
       $('publicStatus').textContent = `Suche Mitspieler … ${message.waiting} in der Lobby`;
@@ -101,11 +248,20 @@
       myId = message.playerId;
       roomId = message.roomId;
       roomPlayers = message.players;
+      isPrivateRoom = Boolean(message.private);
+      isPrivateHost = Boolean(roomPlayers.find((player) => player.id === myId)?.host);
       $('publicModal').classList.add('hidden');
+      privateModal.classList.add('hidden');
       $('home').classList.add('hidden');
       $('play').classList.add('hidden');
       $('publicPlay').classList.remove('hidden');
-      $('publicStatus').textContent = 'Du bist im öffentlichen Spukserver. Mikrofon ist aus, bis du es einschaltest.';
+      $('privateLobby').classList.add('hidden');
+      $('publicProgress').parentElement.classList.remove('hidden');
+      $('publicPeople').classList.remove('hidden');
+      $('voiceButton').classList.remove('hidden');
+      $('publicStatus').textContent = isPrivateRoom
+        ? 'Ihr seid in eurem privaten Spukraum. Das Mikrofon bleibt aus, bis du es selbst einschaltest.'
+        : 'Du bist im öffentlichen Spukserver. Mikrofon ist aus, bis du es einschaltest.';
       renderPeople();
       beginVoicePeers();
       return;
@@ -135,8 +291,11 @@
       return;
     }
     if (message.type === 'room_closed') {
-      $('publicStatus').textContent = 'Die Runde wurde geschlossen, weil zu wenige Spieler übrig sind.';
+      $('publicStatus').textContent = 'Der Raum wurde geschlossen, weil weniger als drei Spieler übrig sind.';
       roomId = null;
+      isPrivateRoom = false;
+      isPrivateHost = false;
+      $('privateLobby').classList.add('hidden');
       stopVoice();
       return;
     }
@@ -145,8 +304,13 @@
       return;
     }
     if (message.type === 'error') {
-      $('publicError').textContent = message.message;
-      $('publicStatus').textContent = message.message;
+      if (connectionMode === 'private') {
+        $('privateError').textContent = message.message;
+        if (roomId) $('privateLobbyStatus').textContent = message.message;
+      } else {
+        $('publicError').textContent = message.message;
+        $('publicStatus').textContent = message.message;
+      }
       resetJoinButton();
     }
   }
@@ -285,10 +449,15 @@
   $('leavePublic').onclick = leavePublic;
   function leavePublic() {
     send({ type: 'leave' });
-    if (socket) socket.close();
+    const oldSocket = socket;
     socket = null;
+    if (oldSocket) oldSocket.close();
     roomId = null;
+    isPrivateRoom = false;
+    isPrivateHost = false;
+    connectionMode = '';
     stopVoice();
+    $('privateLobby').classList.add('hidden');
     $('publicPlay').classList.add('hidden');
     $('home').classList.remove('hidden');
   }
