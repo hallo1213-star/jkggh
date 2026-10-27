@@ -16,6 +16,15 @@
   let isPrivateRoom = false;
   let isPrivateHost = false;
   let connectionMode = '';
+  let queueMiniTimer = null;
+  let queueMiniActive = false;
+  let pumpkinScore = 0;
+  let pumpkinTimeLeft = 15;
+  let memoryMoves = 0;
+  let memoryPairs = 0;
+  let memoryPick = null;
+  let memoryLocked = false;
+  let memoryFlipTimer = null;
 
   const safe = (value) => String(value).replace(/[&<>"']/g, (c) => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
@@ -45,6 +54,153 @@
     if (event.key === 'Enter') joinPublic();
   });
   $('joinPublic').onclick = joinPublic;
+  $('openQueueMinigames').onclick = openQueueMinigames;
+  $('miniClose').onclick = closeQueueMinigames;
+  $('queueMinigameOverlay').addEventListener('click', (event) => {
+    if (event.target === $('queueMinigameOverlay')) closeQueueMinigames();
+  });
+  $('playPumpkin').onclick = startPumpkinGame;
+  $('playMemory').onclick = startMemoryGame;
+  $('pumpkinAgain').onclick = startPumpkinGame;
+  $('memoryAgain').onclick = startMemoryGame;
+  document.querySelectorAll('.miniBack').forEach((button) => button.onclick = showMiniMenu);
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && !$('queueMinigameOverlay').classList.contains('hidden')) closeQueueMinigames();
+  });
+
+  function openQueueMinigames() {
+    $('queueMinigameOverlay').classList.remove('hidden');
+    showMiniMenu();
+    $('miniClose').focus();
+  }
+
+  function clearQueueMiniTimers() {
+    clearInterval(queueMiniTimer);
+    clearTimeout(memoryFlipTimer);
+    queueMiniTimer = null;
+    memoryFlipTimer = null;
+  }
+
+  function closeQueueMinigames() {
+    $('queueMinigameOverlay').classList.add('hidden');
+    clearQueueMiniTimers();
+    queueMiniActive = false;
+  }
+
+  function showMiniMenu() {
+    clearQueueMiniTimers();
+    queueMiniActive = false;
+    $('miniMenu').classList.remove('hidden');
+    $('pumpkinGame').classList.remove('active');
+    $('memoryGame').classList.remove('active');
+    $('miniTitle').textContent = 'Die Zeit vertreiben';
+  }
+
+  function startPumpkinGame() {
+    clearQueueMiniTimers();
+    queueMiniActive = true;
+    pumpkinScore = 0;
+    pumpkinTimeLeft = 15;
+    $('miniMenu').classList.add('hidden');
+    $('memoryGame').classList.remove('active');
+    $('pumpkinGame').classList.add('active');
+    $('miniTitle').textContent = 'Kürbis-Klick';
+    $('pumpkinScore').textContent = '0';
+    $('pumpkinTime').textContent = '15';
+    $('pumpkinResult').textContent = 'Kürbisse anklicken, Geistern ausweichen!';
+    const arena = $('pumpkinArena');
+    arena.innerHTML = '';
+    for (let i = 0; i < 4; i++) {
+      const target = document.createElement('button');
+      target.type = 'button';
+      target.className = 'pumpkin-target';
+      target.setAttribute('aria-label', i === 3 ? 'Geist: vermeiden' : 'Kürbis: anklicken');
+      target.textContent = i === 3 ? '👻' : '🎃';
+      if (i === 3) target.classList.add('ghost-target');
+      const moveTarget = () => {
+        target.style.left = `${Math.random() * 77 + 2}%`;
+        target.style.top = `${Math.random() * 72 + 3}%`;
+      };
+      moveTarget();
+      target.onclick = () => {
+        if (!queueMiniActive || pumpkinTimeLeft <= 0) return;
+        pumpkinScore = Math.max(0, pumpkinScore + (target.classList.contains('ghost-target') ? -1 : 1));
+        $('pumpkinScore').textContent = String(pumpkinScore);
+        $('pumpkinResult').textContent = target.classList.contains('ghost-target') ? 'Uii, ein Geist! −1 Punkt' : 'Treffer! 🎃';
+        moveTarget();
+      };
+      arena.append(target);
+    }
+    queueMiniTimer = setInterval(() => {
+      pumpkinTimeLeft -= 1;
+      $('pumpkinTime').textContent = String(pumpkinTimeLeft);
+      if (pumpkinTimeLeft <= 0) {
+        clearQueueMiniTimers();
+        queueMiniActive = false;
+        arena.innerHTML = '';
+        $('pumpkinResult').textContent = `Runde vorbei! Du hast ${pumpkinScore} Kürbisse erwischt. 🎃`;
+      }
+    }, 1000);
+  }
+
+  function startMemoryGame() {
+    clearQueueMiniTimers();
+    queueMiniActive = false;
+    memoryMoves = 0;
+    memoryPairs = 0;
+    memoryPick = null;
+    memoryLocked = false;
+    $('miniMenu').classList.add('hidden');
+    $('pumpkinGame').classList.remove('active');
+    $('memoryGame').classList.add('active');
+    $('miniTitle').textContent = 'Geister-Paare';
+    $('memoryMoves').textContent = '0';
+    $('memoryPairs').textContent = '0';
+    $('memoryResult').textContent = 'Finde die sechs gleichen Geisterpaare!';
+    const icons = ['👻', '🦇', '🕷️', '🧙', '🕸️', '🧛'];
+    const cards = [...icons, ...icons].sort(() => Math.random() - 0.5);
+    $('memoryGrid').innerHTML = '';
+    cards.forEach((icon, index) => {
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'memory-tile';
+      card.textContent = icon;
+      card.setAttribute('aria-label', `Verdeckte Karte ${index + 1}`);
+      card.onclick = () => {
+        if (memoryLocked || card.classList.contains('revealed') || card.classList.contains('matched')) return;
+        card.classList.add('revealed');
+        card.setAttribute('aria-label', icon);
+        if (!memoryPick) {
+          memoryPick = card;
+          return;
+        }
+        memoryMoves += 1;
+        $('memoryMoves').textContent = String(memoryMoves);
+        if (memoryPick.textContent === card.textContent) {
+          memoryPick.classList.add('matched');
+          card.classList.add('matched');
+          memoryPick = null;
+          memoryPairs += 1;
+          $('memoryPairs').textContent = String(memoryPairs);
+          $('memoryResult').textContent = memoryPairs === 6 ? `Alle Paare gefunden in ${memoryMoves} Zügen! 🏆` : 'Ein Paar gefunden! ✨';
+        } else {
+          memoryLocked = true;
+          $('memoryResult').textContent = 'Nicht gleich — merk dir die Karten!';
+          const previous = memoryPick;
+          memoryPick = null;
+          memoryFlipTimer = setTimeout(() => {
+            previous.classList.remove('revealed');
+            card.classList.remove('revealed');
+            previous.setAttribute('aria-label', 'Verdeckte Karte');
+            card.setAttribute('aria-label', 'Verdeckte Karte');
+            memoryLocked = false;
+            memoryFlipTimer = null;
+          }, 750);
+        }
+      };
+      $('memoryGrid').append(card);
+    });
+  }
 
   const privateModal = $('privateModal');
   $('openPrivate').onclick = () => {
@@ -86,6 +242,8 @@
   }
 
   function cancelSearch() {
+    $('queueMinigames').classList.remove('active');
+    closeQueueMinigames();
     if (socket && !roomId && connectionMode === 'public') {
       const oldSocket = socket;
       socket = null;
@@ -123,6 +281,7 @@
           ? 'Verbindung zum Spielserver fehlgeschlagen. Versuch es gleich nochmal.'
           : 'Der öffentliche Server ist gerade nicht erreichbar. Die lokale Runde funktioniert weiterhin.';
         resetJoinButton();
+        $('queueMinigames').classList.remove('active');
       };
       currentSocket.onclose = () => {
         if (socket !== currentSocket) return;
@@ -241,12 +400,15 @@
       return;
     }
     if (message.type === 'queue') {
+      $('queueMinigames').classList.add('active');
       $('publicError').textContent = `Du bist in der Warteschlange. ${message.waiting} Spieler warten gerade.`;
       $('publicStatus').textContent = `Suche Mitspieler … ${message.waiting} in der Lobby`;
       $('publicStatus').className = 'public-status waiting';
       return;
     }
     if (message.type === 'room_start') {
+      $('queueMinigames').classList.remove('active');
+      closeQueueMinigames();
       myId = message.playerId;
       roomId = message.roomId;
       roomPlayers = message.players;
