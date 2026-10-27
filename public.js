@@ -80,7 +80,7 @@
   };
 
   function selectedQuestionPool() {
-    return [...new Set(activeCats.flatMap((category) => questions[category] || []))];
+    return questionPoolFor(activeCats);
   }
 
   function cancelSearch() {
