@@ -1,0 +1,17 @@
+{
+  "name": "jarvis",
+  "version": "0.1.0",
+  "description": "Persönlicher Sprachassistent für Windows mit Deepgram Voice Agent und ElevenLabs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20.12"
+  },
+  "dependencies": {
+    "@deepgram/sdk": "^5.17.0",
+    "ws": "^8.20.0"
+  }
+}
