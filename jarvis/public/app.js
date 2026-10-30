@@ -1,5 +1,5 @@
-// Jarvis interface: captures the microphone, plays Jarvis's voice, shows the
-// conversation and asks for confirmation before important actions.
+// Jarvis interface (desktop and iPhone): captures the microphone, plays Jarvis's
+// voice, shows the conversation and asks for confirmation before important actions.
 const OUTPUT_SAMPLE_RATE = 24000;
 
 const $ = (id) => document.getElementById(id);
@@ -25,7 +25,10 @@ const els = {
   confirmNo: $('confirm-no'),
   toasts: $('toasts'),
   canvas: $('reactor'),
-  clock: $('clock')
+  clock: $('clock'),
+  laptopChip: $('laptop-chip'),
+  laptopChipText: $('laptop-chip-text'),
+  logout: $('logout')
 };
 
 const state = {
@@ -143,6 +146,44 @@ function upsertAction({ id, label, state: actionState, detail }) {
   }
 }
 
+function addLink(url, title) {
+  clearEmpty(els.transcript);
+  const item = document.createElement('div');
+  item.className = 'msg assistant';
+  const label = document.createElement('span');
+  label.className = 'msg-role';
+  label.textContent = 'Link';
+  const link = document.createElement('a');
+  link.className = 'msg-link';
+  link.href = url;
+  link.target = '_blank';
+  link.rel = 'noopener noreferrer';
+  link.textContent = title || url;
+  item.append(label, link);
+  els.transcript.append(item);
+  els.transcript.scrollTop = els.transcript.scrollHeight;
+}
+
+function setLaptop(connected) {
+  els.laptopChip.dataset.state = connected ? 'online' : '';
+  els.laptopChipText.textContent = connected ? 'Laptop an' : 'Laptop aus';
+}
+
+// Returns false (and goes to the login page) when the session has expired.
+async function checkSession() {
+  try {
+    const response = await fetch('/api/session', { cache: 'no-store' });
+    if (response.status === 401) {
+      location.replace('/login.html');
+      return false;
+    }
+    if (response.ok) setLaptop((await response.json()).laptop);
+  } catch {
+    // offline: keep going, the connection error is shown elsewhere
+  }
+  return true;
+}
+
 function toast(message, kind = '') {
   const item = document.createElement('div');
   item.className = `toast ${kind}`;
@@ -170,12 +211,20 @@ function chime(frequencies = [880, 1320]) {
 
 // --- Audio -----------------------------------------------------------------
 
+// Must be called directly from a tap: iOS only allows audio that starts inside the gesture.
 async function setupAudio() {
   if (state.audio) return;
+  try {
+    // Safari 17+: play through the speaker while recording, even with the mute switch on.
+    if (navigator.audioSession) navigator.audioSession.type = 'play-and-record';
+  } catch {
+    // older Safari or other browsers
+  }
+  const audio = new AudioContext({ latencyHint: 'interactive' });
+  audio.resume();
   state.stream = await navigator.mediaDevices.getUserMedia({
     audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true, autoGainControl: true }
   });
-  const audio = new AudioContext({ latencyHint: 'interactive' });
   await audio.audioWorklet.addModule('/mic-worklet.js');
   const source = audio.createMediaStreamSource(state.stream);
   state.inputAnalyser = audio.createAnalyser();
@@ -248,7 +297,7 @@ function stopPlayback() {
 // --- Connection ------------------------------------------------------------
 
 function connect() {
-  const ws = new WebSocket(`ws://${location.host}/ws`);
+  const ws = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws`);
   ws.binaryType = 'arraybuffer';
   state.ws = ws;
   setMode('connecting');
@@ -262,9 +311,10 @@ function connect() {
     }
     handleMessage(JSON.parse(data));
   };
-  ws.onclose = () => {
+  ws.onclose = async () => {
     if (state.ws !== ws) return;
-    disconnected('Verbindung zum lokalen Jarvis-Server getrennt.');
+    if (!(await checkSession())) return;
+    disconnected('Verbindung zu Jarvis getrennt.');
   };
 }
 
@@ -304,6 +354,12 @@ function handleMessage(message) {
     }
     case 'action':
       upsertAction(message);
+      break;
+    case 'link':
+      addLink(message.url, message.title);
+      break;
+    case 'laptop':
+      setLaptop(message.connected);
       break;
     case 'confirm':
       queueConfirm(message);
@@ -346,6 +402,7 @@ async function activate() {
   try {
     await setupAudio();
     await state.audio.resume();
+    if (!(await checkSession())) return;
     els.activate.hidden = true;
     connect();
   } catch (error) {
@@ -410,6 +467,11 @@ document.addEventListener('keydown', (event) => {
 // --- Controls --------------------------------------------------------------
 
 els.activate.addEventListener('click', activate);
+
+els.logout.addEventListener('click', async () => {
+  await fetch('/api/logout', { method: 'POST' }).catch(() => {});
+  location.replace('/login.html');
+});
 
 els.reconnect.addEventListener('click', () => {
   els.reconnect.hidden = true;
@@ -569,4 +631,5 @@ function draw() {
 }
 
 setMode('offline');
+checkSession();
 requestAnimationFrame(draw);

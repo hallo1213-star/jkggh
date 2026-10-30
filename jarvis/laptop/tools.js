@@ -1,5 +1,5 @@
-// Computer-control functions Jarvis may call. Each tool is exposed to the
-// Voice Agent as a client-side function and runs here on the laptop.
+// Computer-control functions that run on the laptop. The cloud server only
+// reads their definitions; the laptop connector (connector.js) executes them.
 // Tools with `confirm` only run after the user approves them on screen.
 import { execFile } from 'node:child_process';
 import { promises as fs } from 'node:fs';
@@ -141,7 +141,7 @@ function appKey(name) {
 
 // --- Tool definitions ------------------------------------------------------
 
-const searchUrls = {
+export const searchUrls = {
   google: (q) => `https://www.google.com/search?q=${encodeURIComponent(q)}`,
   youtube: (q) => `https://www.youtube.com/results?search_query=${encodeURIComponent(q)}`,
   maps: (q) => `https://www.google.com/maps/search/${encodeURIComponent(q)}`,
@@ -150,7 +150,7 @@ const searchUrls = {
 
 const mediaKeys = { mute: 173, volume_down: 174, volume_up: 175, next: 176, previous: 177, play_pause: 179 };
 
-function normalizeUrl(input) {
+export function normalizeUrl(input) {
   let value = String(input ?? '').trim();
   if (!value) throw new Error('Keine Adresse angegeben.');
   if (!/^[a-z][a-z0-9+.-]*:/i.test(value)) value = `https://${value}`;
@@ -161,22 +161,8 @@ function normalizeUrl(input) {
 
 export const tools = [
   {
-    name: 'get_datetime',
-    description: 'Liefert aktuelles Datum, Uhrzeit und Wochentag.',
-    parameters: { type: 'object', properties: {} },
-    label: () => 'Uhrzeit abgefragt',
-    run: async () => {
-      const now = new Date();
-      return {
-        datum: now.toLocaleDateString('de-DE', { day: 'numeric', month: 'long', year: 'numeric' }),
-        wochentag: now.toLocaleDateString('de-DE', { weekday: 'long' }),
-        uhrzeit: now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
-      };
-    }
-  },
-  {
-    name: 'open_website',
-    description: 'Öffnet eine Webseite im Standardbrowser.',
+    name: 'pc_open_website',
+    description: 'Öffnet eine Webseite im Browser des Laptops. Nur verwenden, wenn der Nutzer ausdrücklich den Laptop meint.',
     parameters: {
       type: 'object',
       properties: { url: { type: 'string', description: 'Adresse, z. B. "youtube.com" oder "https://wetter.de"' } },
@@ -190,8 +176,8 @@ export const tools = [
     }
   },
   {
-    name: 'web_search',
-    description: 'Sucht im Browser bei Google, YouTube, Google Maps oder Wikipedia und zeigt die Ergebnisse an. Nutze das für aktuelle Informationen, Wetter, Nachrichten, Videos oder Orte.',
+    name: 'pc_web_search',
+    description: 'Öffnet eine Suche bei Google, YouTube, Google Maps oder Wikipedia im Browser des Laptops. Nur verwenden, wenn der Nutzer ausdrücklich den Laptop meint.',
     parameters: {
       type: 'object',
       properties: {
@@ -582,26 +568,6 @@ export const tools = [
     }
   },
   {
-    name: 'set_timer',
-    description: 'Stellt einen Timer oder eine Erinnerung. Jarvis meldet sich nach Ablauf (solange die Oberfläche geöffnet ist).',
-    parameters: {
-      type: 'object',
-      properties: {
-        minutes: { type: 'number', description: 'Dauer in Minuten (Dezimalzahlen erlaubt, z. B. 0.5 für 30 Sekunden)' },
-        message: { type: 'string', description: 'Woran erinnert werden soll' }
-      },
-      required: ['minutes']
-    },
-    label: (a) => `Timer: ${a.minutes} min${a.message ? ` – ${a.message}` : ''}`,
-    run: async ({ minutes, message }, context) => {
-      const ms = Math.round(Number(minutes) * 60000);
-      if (!(ms > 0) || ms > 24 * 3600000) throw new Error('Die Dauer muss zwischen ein paar Sekunden und 24 Stunden liegen.');
-      context.schedule(ms, String(message || 'Dein Timer ist abgelaufen.'));
-      const due = new Date(Date.now() + ms).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
-      return { gestellt: true, faelligUm: due };
-    }
-  },
-  {
     name: 'run_powershell',
     description: 'Führt einen PowerShell-Befehl aus, wenn kein anderes Werkzeug passt (z. B. WLAN-Info, Prozesse, Netzwerk, Dateien zählen, Einstellungen abfragen). Der Nutzer sieht den Befehl und muss ihn bestätigen. Bevorzuge lesende Befehle.',
     parameters: {
@@ -634,7 +600,7 @@ export function findTool(name) {
 // confirmation wait until the user's turn is confirmed before they are dispatched.
 export const functionDefinitions = tools.map(({ name, description, parameters, confirm }) => ({
   name,
-  description,
+  description: `Auf dem Laptop (nur wenn er verbunden ist): ${description}`,
   parameters,
   ...(confirm ? { defer_until_eot: true } : {})
 }));

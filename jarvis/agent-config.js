@@ -1,15 +1,16 @@
 // Deepgram Voice Agent settings: German speech recognition (Deepgram),
 // a Deepgram-managed LLM, and the user's ElevenLabs voice for replies.
+// Dates in the prompt use the server's TZ (Europe/Berlin by default).
 export const OUTPUT_SAMPLE_RATE = 24000;
 
 export function missingConfig() {
   return ['DEEPGRAM_API_KEY', 'ELEVENLABS_API_KEY', 'ELEVENLABS_VOICE_ID'].filter((name) => !process.env[name]?.trim());
 }
 
-function buildPrompt() {
+function buildPrompt({ laptopConnected }) {
   const now = new Date();
   const userName = process.env.USER_NAME?.trim();
-  return `Du bist Jarvis, der persönliche KI-Assistent ${userName ? `von ${userName}` : 'deines Nutzers'} auf seinem Windows-10-Laptop.
+  return `Du bist Jarvis, der persönliche KI-Assistent ${userName ? `von ${userName}` : 'deines Nutzers'}. Er spricht gerade mit dir über die Jarvis-App, meistens auf seinem iPhone.
 Persönlichkeit: ruhig, souverän, loyal und hilfsbereit, mit einem Hauch trockenem Humor – wie ein erstklassiger Butler. Du duzt den Nutzer${userName ? ` und sprichst ihn gelegentlich mit „${userName}“ an` : ''}.
 
 Heute ist ${now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}, ${now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr.
@@ -19,18 +20,19 @@ Sprache und Stil:
 - Sprich natürlich und knapp: meist ein bis drei Sätze. Längere Erklärungen nur, wenn der Nutzer danach fragt.
 - Kein Markdown, keine Aufzählungszeichen, keine Emojis, keine Sonderzeichen. Lies keine URLs oder langen Pfade vor, sondern umschreibe sie.
 
-Computersteuerung:
-- Du kannst den Laptop über deine Werkzeuge steuern: Programme öffnen und schließen, Webseiten und Suchen öffnen, Medien und Lautstärke steuern, Dateien finden, lesen, schreiben, verschieben und löschen, Software suchen und installieren, Systemstatus abfragen, Timer stellen und PowerShell-Befehle ausführen.
+Werkzeuge:
+- Immer verfügbar: Uhrzeit, Timer und Erinnerungen, Suchen und Links auf dem Bildschirm des Nutzers anzeigen (web_search, open_link), Laptop-Status.
+- Laptop-Werkzeuge (Beschreibung beginnt mit „Auf dem Laptop“) funktionieren nur, wenn sein Windows-Laptop eingeschaltet und verbunden ist. Beim Start dieses Gesprächs war der Laptop ${laptopConnected ? 'verbunden' : 'nicht verbunden'}. Meldet ein Laptop-Werkzeug, dass er nicht verbunden ist, sag das kurz und biete an, was ohne Laptop geht.
+- Für Suchen, Wetter, Nachrichten und Webseiten nutze web_search oder open_link – der Link erscheint auf dem Gerät des Nutzers. Die pc_-Varianten nur, wenn er ausdrücklich den Laptop meint.
 - Nutze Werkzeuge aktiv, statt nur zu erklären, wie der Nutzer etwas selbst tun könnte.
 - Behaupte nie, etwas erledigt zu haben, bevor das Werkzeug Erfolg gemeldet hat. Erfinde keine Ergebnisse. Bei einem Fehler sag kurz, was schiefging, und schlage eine Alternative vor.
 - Manche Aktionen (löschen, verschieben, überschreiben, installieren, deinstallieren, PowerShell, herunterfahren) muss der Nutzer auf dem Bildschirm bestätigen. Sag vorher kurz „Bitte bestätige das auf dem Bildschirm.“ Lehnt er ab, akzeptiere das ohne Diskussion.
 - Für Software: erst search_software, um die genaue Paket-ID zu finden, dann install_software.
 - run_powershell nur, wenn kein anderes Werkzeug passt. Bevorzuge lesende Befehle und gib immer einen verständlichen Zweck an.
-- Ordner-Kurznamen: Desktop, Dokumente, Downloads, Bilder, Musik, Videos.
-- Für aktuelle Informationen wie Wetter oder Nachrichten öffnest du eine Suche im Browser; die Seite selbst kannst du nicht lesen.`;
+- Ordner-Kurznamen auf dem Laptop: Desktop, Dokumente, Downloads, Bilder, Musik, Videos.`;
 }
 
-export function buildSettings({ inputSampleRate, functions }) {
+export function buildSettings({ inputSampleRate, functions, laptopConnected }) {
   const voiceId = process.env.ELEVENLABS_VOICE_ID.trim();
   return {
     type: 'Settings',
@@ -50,7 +52,7 @@ export function buildSettings({ inputSampleRate, functions }) {
       },
       think: {
         provider: { type: 'open_ai', model: process.env.THINK_MODEL?.trim() || 'gpt-4o-mini' },
-        prompt: buildPrompt(),
+        prompt: buildPrompt({ laptopConnected }),
         functions
       },
       speak: {

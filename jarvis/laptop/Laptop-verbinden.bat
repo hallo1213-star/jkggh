@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 cd /d "%~dp0"
-title Jarvis
+title Jarvis Laptop-Verbinder
 where node >nul 2>nul || (
   echo Node.js ist nicht installiert. Bitte die LTS-Version von https://nodejs.org installieren.
   pause
@@ -9,12 +9,12 @@ where node >nul 2>nul || (
 )
 if not exist .env (
   copy .env.example .env >nul
-  echo Bitte trage deine Schluessel in die Datei .env ein, speichere sie und schliesse den Editor.
+  echo Bitte trage JARVIS_URL und LAPTOP_TOKEN in die Datei .env ein, speichere sie und schliesse den Editor.
   notepad .env
 )
 if not exist node_modules (
   echo Installiere Abhaengigkeiten ...
   call npm install || (pause & exit /b 1)
 )
-node server.js
+node connector.js
 pause

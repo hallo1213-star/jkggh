@@ -1,0 +1,16 @@
+{
+  "name": "jarvis-laptop",
+  "version": "0.2.0",
+  "description": "Verbindet deinen Windows-Laptop mit Jarvis in der Cloud",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node connector.js"
+  },
+  "engines": {
+    "node": ">=20.12"
+  },
+  "dependencies": {
+    "ws": "^8.20.0"
+  }
+}

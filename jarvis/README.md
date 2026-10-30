@@ -1,100 +1,123 @@
 # J.A.R.V.I.S. – dein persönlicher Sprachassistent
 
-Jarvis hört dir über dein Mikrofon zu, versteht Deutsch, antwortet mit der ElevenLabs-Stimme **Robert Ranger – Cool Storyteller** und steuert deinen Windows-Laptop: Programme öffnen, Dateien verwalten, Software installieren, Lautstärke regeln und vieles mehr. Wichtige Aktionen führt er erst aus, nachdem du sie auf dem Bildschirm bestätigt hast.
+Jarvis läuft in der Cloud und ist als App auf deinem **iPhone** nutzbar – zu Hause und unterwegs, **auch wenn dein Laptop aus ist**. Er versteht Deutsch, antwortet mit der ElevenLabs-Stimme **Robert Ranger – Cool Storyteller** und kann – sobald dein Laptop an ist – auch deinen Windows-Laptop steuern. Wichtige Aktionen führt er erst aus, nachdem du sie auf dem Bildschirm bestätigt hast.
 
 ## So funktioniert es
 
 ```
-Mikrofon (Browser) ──► lokaler Jarvis-Server (Node.js, nur auf deinem Laptop)
-                         │   ├─ hält deine API-Schlüssel
-                         │   └─ führt Computer-Aktionen aus (tools.js)
-                         ▼
-                 Deepgram Voice Agent
-                 ├─ Spracherkennung Deutsch (nova-3)
-                 ├─ KI-Antworten + Funktionsaufrufe (von Deepgram betriebenes LLM)
-                 └─ Stimme: ElevenLabs (Robert Ranger)
+iPhone / Browser ──► Jarvis in der Cloud (Render)  ◄── Laptop-Verbinder (nur wenn der Laptop an ist)
+   (Login)            ├─ hält deine API-Schlüssel          └─ führt PC-Aktionen aus
+                      ├─ Uhrzeit, Timer, Suchen, Links
+                      ▼
+              Deepgram Voice Agent
+              ├─ Spracherkennung Deutsch (nova-3)
+              ├─ KI-Antworten + Funktionsaufrufe
+              └─ Stimme: ElevenLabs (Robert Ranger)
 ```
 
-Deepgram steuert das ganze Gespräch – Zuhören, Denken, Sprechen und Unterbrechen. Wenn Jarvis etwas am Computer tun soll, ruft die KI eine Funktion auf, und der lokale Server führt sie auf deinem Laptop aus. Einen eigenen OpenAI- oder Anthropic-Schlüssel brauchst du nicht.
+- **Immer verfügbar:** Gespräch, Uhrzeit, Timer/Erinnerungen, Websuchen und Links (erscheinen zum Antippen in der App).
+- **Nur wenn der Laptop an ist:** Programme, Dateien, Lautstärke, Software installieren, PowerShell usw. Der Laptop verbindet sich von selbst nach außen zu Jarvis – am Router musst du nichts einstellen.
 
-## Voraussetzungen
+## Was du brauchst (alles kostenlos, außer der Nutzung bei Deepgram/ElevenLabs nach deinem Tarif)
 
-- Windows 10 (oder 11) mit Chrome oder Edge
-- **Node.js 20.12 oder neuer** – die LTS-Version von https://nodejs.org
-- **Deepgram API Key** – https://console.deepgram.com → API Keys
-- **ElevenLabs-Konto mit API Key** – https://elevenlabs.io → Profil → API Keys. Für die Nutzung von Stimmen aus der Voice Library über die API kann ein kostenpflichtiger ElevenLabs-Plan nötig sein; prüfe das in deinem Konto.
-- Internetverbindung (Spracherkennung, KI und Stimme laufen online)
-
-## Voice-ID finden
-
-1. Öffne in ElevenLabs die **Voice Library** und suche „Robert Ranger – Cool Storyteller“.
-2. Füge die Stimme zu **My Voices** hinzu (nur eigene/hinzugefügte Stimmen funktionieren über die API).
-3. Öffne die Stimme unter **My Voices** und kopiere die **Voice ID** (eine Zeichenkette wie `AbC123xYz…`).
+- **GitHub-Konto** mit einem neuen Repository, z. B. `jarvis` (darf privat sein)
+- **Render-Konto** (https://render.com) – dein Konto vom Spiel reicht
+- **Deepgram API Key** und **ElevenLabs API Key + Voice-ID** (wie bisher)
+- Für die Laptop-Steuerung: **Node.js 20.12 oder neuer** auf dem Laptop (https://nodejs.org, LTS)
 
 ## Einrichtung
 
-1. Lade diesen `jarvis`-Ordner auf deinen Laptop (z. B. nach `C:\Jarvis`).
-2. Doppelklicke **`Jarvis-starten.bat`**.
-   - Beim ersten Start wird die Datei `.env` angelegt und im Editor geöffnet.
-   - Trage `DEEPGRAM_API_KEY`, `ELEVENLABS_API_KEY` und `ELEVENLABS_VOICE_ID` ein, speichere und schließe den Editor.
-   - Danach installiert das Skript die Abhängigkeiten und startet Jarvis.
-3. Der Browser öffnet `http://localhost:3000`. Klicke **Jarvis aktivieren** und erlaube den Mikrofonzugriff.
-4. Jarvis begrüßt dich – sprich einfach los.
+### 1. Code zu GitHub hochladen
 
-Alternativ im Terminal: `npm install` und danach `npm start`.
+1. Lege auf GitHub ein neues Repository `jarvis` an.
+2. Lade den **Inhalt** dieses Ordners hoch (`server.js`, `render.yaml`, `public/`, `laptop/` usw. – **ohne** `node_modules` und ohne `.env`), z. B. über **Add file → Upload files**.
+
+### 2. Bei Render veröffentlichen
+
+1. In Render: **New → Blueprint** und das Repository `jarvis` wählen.
+2. Render fragt nach diesen Werten:
+   - `DEEPGRAM_API_KEY` – dein Deepgram-Schlüssel
+   - `ELEVENLABS_API_KEY` – dein ElevenLabs-Schlüssel
+   - `ELEVENLABS_VOICE_ID` – die Voice-ID von Robert Ranger (siehe unten)
+   - `JARVIS_PASSWORD` – **dein Passwort für die App**. Mindestens 8 Zeichen, besser ein langer Satz. Jarvis kann deinen Laptop steuern – wähle es sorgfältig.
+   - `USER_NAME` – wie Jarvis dich nennen soll (darf leer bleiben)
+   - `LAPTOP_TOKEN` und `SESSION_SECRET` erzeugt Render automatisch.
+3. **Apply** klicken und warten, bis der Dienst **Live** ist. Deine Adresse sieht so aus: `https://jarvis-xxxx.onrender.com`.
+
+### 3. Auf dem iPhone installieren
+
+1. Öffne deine Render-Adresse in **Safari** und melde dich mit deinem Passwort an.
+2. Tippe auf **Teilen** → **Zum Home-Bildschirm**.
+3. Öffne Jarvis über das neue Symbol, melde dich dort **einmal** an (die App hat eigene Cookies) und tippe **Jarvis aktivieren**. Erlaube das Mikrofon.
+
+### 4. Laptop verbinden (optional)
+
+1. Kopiere den Ordner `laptop` auf deinen Laptop (z. B. nach `C:\Jarvis-Laptop`).
+2. In Render: dein Dienst → **Environment** → Wert von `LAPTOP_TOKEN` kopieren.
+3. Doppelklicke **`Laptop-verbinden.bat`**. Beim ersten Start öffnet sich die `.env`:
+   - `JARVIS_URL=https://jarvis-xxxx.onrender.com`
+   - `LAPTOP_TOKEN=` den kopierten Wert
+4. Speichern, Editor schließen. Im Fenster steht „Verbunden“, in der App leuchtet **Laptop an**.
+
+Tipp: Lege eine Verknüpfung zu `Laptop-verbinden.bat` in den Autostart-Ordner (`Win + R` → `shell:startup`), dann verbindet sich der Laptop bei jedem Start automatisch.
+
+## Voice-ID finden
+
+1. In ElevenLabs die **Voice Library** öffnen und „Robert Ranger – Cool Storyteller“ suchen.
+2. Zu **My Voices** hinzufügen (nur eigene/hinzugefügte Stimmen funktionieren über die API).
+3. Unter **My Voices** die Stimme öffnen und die **Voice ID** kopieren.
 
 ## Was Jarvis kann
 
-| Bereich | Beispiele |
-|---|---|
-| Programme | „Öffne Spotify“, „Starte Word“, „Schließ Chrome“ |
-| Web | „Öffne YouTube“, „Such nach dem Wetter in Berlin“, „Zeig mir Pizzerien in der Nähe auf Maps“ |
-| Medien | „Nächstes Lied“, „Pause“, „Lauter“, „Stell die Lautstärke auf 30 Prozent“ |
-| Dateien | „Was liegt in meinen Downloads?“, „Finde meine Bewerbung“, „Lies mir die Notiz vor“, „Erstelle eine Einkaufsliste auf dem Desktop“ |
-| Aufräumen* | „Lösche die Datei test.txt in Downloads“, „Verschiebe den Ordner …“ |
-| Software* | „Installiere VLC“, „Deinstalliere …“ (über den Windows-Paketmanager winget) |
-| System | „Wie voll ist mein Akku?“, „Sperr den Bildschirm“, „Fahr den Laptop herunter“* |
-| Alltag | „Stell einen Timer auf 10 Minuten“, „Kopier mir den Text in die Zwischenablage“ |
-| Alles andere* | Jarvis kann einen PowerShell-Befehl vorschlagen – du siehst ihn und entscheidest |
+| Bereich | Beispiele | Laptop nötig? |
+|---|---|---|
+| Gespräch | Fragen, Erklärungen, Ideen, Texte formulieren | nein |
+| Zeit | „Wie spät ist es?“, „Erinnere mich in 20 Minuten an die Wäsche“ | nein |
+| Web | „Wie wird das Wetter morgen?“, „Zeig mir Pizzerien in der Nähe“, „Öffne YouTube“ | nein (Link in der App) |
+| Programme | „Öffne Spotify auf dem Laptop“, „Schließ Chrome“ | ja |
+| Medien | „Nächstes Lied“, „Lauter“, „Lautstärke auf 30 Prozent“ | ja |
+| Dateien | „Was liegt in meinen Downloads?“, „Erstelle eine Einkaufsliste auf dem Desktop“, „Lösche test.txt“* | ja |
+| Software | „Installiere VLC“* | ja |
+| System | „Wie voll ist mein Akku?“, „Sperr den Laptop“, „Fahr den Laptop herunter“* | ja |
+| Alles andere | PowerShell-Befehl, den du siehst und bestätigst* | ja |
 
-\* = erfordert deine Bestätigung auf dem Bildschirm.
-
-Du kannst Jarvis auch schreiben: Das Textfeld unten rechts funktioniert wie Sprechen.
+\* = erfordert deine Bestätigung in der App.
 
 ## Sicherheit
 
-- **Bestätigung bei wichtigen Aktionen:** Löschen, Verschieben, Überschreiben, Installieren, Deinstallieren, Herunterfahren/Neustart, Energiesparmodus, das Öffnen von Programmdateien (.exe, .bat …) und jeder PowerShell-Befehl erscheinen als Dialog mit „Ausführen“ / „Abbrechen“. Ohne Antwort innerhalb von 90 Sekunden wird abgebrochen. Eine Bestätigung per Sprache gibt es bewusst nicht – so kann z. B. ein Video im Hintergrund nichts freigeben.
-- **Löschen = Papierkorb:** Dateien werden nie endgültig gelöscht, sondern in den Papierkorb verschoben.
-- **Geschützte Ordner:** Laufwerkswurzeln, dein Benutzerordner, Desktop/Dokumente/Downloads selbst sowie Windows- und Programmordner werden nie verschoben oder gelöscht.
-- **Nur lokal erreichbar:** Der Server lauscht ausschließlich auf `127.0.0.1` und akzeptiert nur Verbindungen von seiner eigenen Oberfläche. Andere Geräte im WLAN oder fremde Webseiten können Jarvis nicht steuern.
-- **Schlüssel bleiben geheim:** Die `.env` liegt nur auf deinem Laptop, wird nie an den Browser geschickt und ist per `.gitignore` vom Hochladen ausgeschlossen.
-- Wenn du die Seite schließt, wird die Deepgram-Sitzung sofort beendet.
+- **Login:** Ohne Passwort ist nichts erreichbar – weder die Oberfläche noch die Sprachverbindung. Nach 5 falschen Versuchen wird für 15 Minuten gesperrt. Die Anmeldung gilt 30 Tage; **Abmelden** oben rechts.
+- **Bestätigung bei wichtigen Aktionen:** Löschen, Verschieben, Überschreiben, Installieren, Deinstallieren, Herunterfahren/Neustart, Energiesparmodus, Programmdateien öffnen und jeder PowerShell-Befehl erscheinen als Dialog. Ohne Antwort innerhalb von 90 Sekunden wird abgebrochen. Bewusst keine Bestätigung per Sprache.
+- **Löschen = Papierkorb**, geschützte Ordner (Laufwerke, Benutzerordner, Desktop/Dokumente/Downloads selbst, Windows- und Programmordner) werden nie verschoben oder gelöscht.
+- **Laptop-Zugang** nur mit dem geheimen `LAPTOP_TOKEN`. Gib ihn niemandem.
+- **Schlüssel** liegen nur bei Render bzw. in deinen lokalen `.env`-Dateien und erreichen nie den Browser.
 
-## Anpassen
+## Gut zu wissen
 
-- **Persönlichkeit und Regeln:** `agent-config.js` → `buildPrompt()`
-- **Wie Jarvis dich nennt:** `USER_NAME=Max` in der `.env`
-- **Neue Fähigkeiten:** in `tools.js` ein Objekt zur Liste `tools` hinzufügen (`name`, `description`, `parameters`, `label`, `run`, optional `confirm`). Jarvis kennt es beim nächsten Start automatisch.
-- **Modelle:** `LISTEN_MODEL`, `THINK_MODEL`, `ELEVENLABS_MODEL` in der `.env`. Standard: `nova-3`, `gpt-4o-mini`, `eleven_turbo_v2_5`. Für noch natürlichere, aber etwas langsamere Sprache kannst du `eleven_multilingual_v2` probieren.
+- **Aufwachzeit:** Der kostenlose Render-Dienst schläft nach 15 Minuten ohne Nutzung ein; das erste Öffnen danach dauert etwa eine Minute. Solange der Laptop-Verbinder läuft, bleibt Jarvis wach. Ohne Laptop kannst du ihn mit einem kostenlosen Dienst wie https://cron-job.org alle 10 Minuten `https://jarvis-xxxx.onrender.com/health` aufrufen lassen (das passt in Renders 750 Gratis-Stunden pro Monat).
+- **iPhone gesperrt / App im Hintergrund:** iOS stoppt dann das Mikrofon. Nach dem Zurückkehren auf **Neu verbinden** tippen.
+- **Timer** erinnern dich nur, solange die App geöffnet ist (Benachrichtigungen kommen in einem späteren Schritt).
+- **Mehrere Geräte** können gleichzeitig angemeldet sein; der Laptop ist für alle erreichbar.
 
 ## Fehlerbehebung
 
 | Problem | Lösung |
 |---|---|
-| „In der Datei .env fehlt …“ | Schlüssel in `.env` eintragen, Jarvis neu starten. |
-| Fehler mit „401“ / „unauthorized“ | Deepgram-Schlüssel prüfen (ohne Leerzeichen, nicht abgelaufen). |
-| Jarvis antwortet als Text, aber man hört nichts | ElevenLabs-Schlüssel und Voice-ID prüfen; ist die Stimme unter **My Voices**? Erlaubt dein ElevenLabs-Plan API-Zugriff auf diese Stimme? Der Fehler steht im Terminal. |
-| Jarvis unterbricht sich selbst | Kopfhörer verwenden oder links „Mikro stumm, während Jarvis spricht“ einschalten. |
-| Jarvis hört nichts | Mikrofonfreigabe im Browser (Schloss-Symbol) und Windows-Einstellungen → Datenschutz → Mikrofon prüfen. |
-| „Programm nicht gefunden“ | Den Namen so sagen, wie er im Startmenü steht. |
-| Installation hängt | Manche Installer fragen nach Administratorrechten – bestätige das Windows-Fenster. |
-| Port 3000 belegt | In der `.env` z. B. `PORT=3001` setzen. |
+| Login: „JARVIS_PASSWORD ist nicht gesetzt“ | In Render → Environment ein Passwort mit mindestens 8 Zeichen eintragen. |
+| „Bei Render fehlt: …“ | Den genannten Schlüssel in Render → Environment eintragen. |
+| Fehler mit „401“ von Deepgram | Deepgram-Schlüssel prüfen. |
+| Text erscheint, aber man hört nichts | ElevenLabs-Schlüssel/Voice-ID prüfen; Stimme unter **My Voices**? Plan erlaubt API-Zugriff? Details in Render → **Logs**. Am iPhone: Lautstärke hoch, ggf. Stummschalter aus. |
+| Jarvis unterbricht sich selbst | Kopfhörer verwenden oder „Mikro stumm, während Jarvis spricht“ einschalten. |
+| Laptop-Fenster: „LAPTOP_TOKEN stimmt nicht“ | Wert erneut aus Render kopieren (ohne Leerzeichen). |
+| Laptop-Fenster: „Status 502/503“ | Render wacht gerade auf – der Verbinder versucht es automatisch erneut. |
+| „Laptop aus“, obwohl er an ist | `Laptop-verbinden.bat` starten bzw. Fenster offen lassen. |
 
-Bei Fehlern von Deepgram steht im Terminal eine Zeile `Deepgram-Sitzung: <request_id>` – die ID hilft beim Support.
+## Lokal testen (optional)
+
+`.env.example` nach `.env` kopieren, Werte eintragen, `npm install` und `npm start` → `http://localhost:3000`. Für den Laptop-Verbinder dann `JARVIS_URL=http://localhost:3000`.
 
 ## Technische Notizen
 
 - Deepgram Voice Agent über das offizielle SDK `@deepgram/sdk` v5 (`client.agent.v1.connect()`, `sendSettings`, `sendMedia`, `sendFunctionCallResponse`).
-- Audio: Mikrofon als linear16 in der Abtastrate deines Browsers; Jarvis' Stimme als linear16 mit 24 kHz.
+- Cloud-Funktionen: `cloud-tools.js`. Laptop-Funktionen: `laptop/tools.js` (die Cloud liest nur deren Beschreibungen, ausgeführt wird auf dem Laptop durch `laptop/connector.js`).
 - Irreversible Funktionen sind mit `defer_until_eot` markiert: Der Agent ruft sie erst auf, wenn dein Satz wirklich zu Ende ist.
 - Doku: https://developers.deepgram.com
