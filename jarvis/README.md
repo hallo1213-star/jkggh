@@ -2,6 +2,20 @@
 
 Jarvis läuft in der Cloud und ist als App auf deinem **iPhone** nutzbar – zu Hause und unterwegs, **auch wenn dein Laptop aus ist**. Er versteht Deutsch, antwortet mit der ElevenLabs-Stimme **Robert Ranger – Cool Storyteller** und kann – sobald dein Laptop an ist – auch deinen Windows-Laptop steuern. Wichtige Aktionen führt er erst aus, nachdem du sie auf dem Bildschirm bestätigt hast.
 
+## Schnellstart in 3 Schritten
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/hallo1213-star/jarvis)
+
+1. **Auf den Knopf oben klicken** und bei Render anmelden.
+2. Zwei Felder ausfüllen und **Apply** klicken:
+   - `DEEPGRAM_API_KEY` – dein Schlüssel von https://console.deepgram.com
+   - `JARVIS_PASSWORD` – ein Passwort, das du dir ausdenkst (mindestens 8 Zeichen)
+3. Nach ca. 3 Minuten zeigt Render eine Adresse wie `https://jarvis-xxxx.onrender.com`. Öffne sie auf dem iPhone in **Safari**, gib dein Passwort ein und tippe **Teilen → Zum Home-Bildschirm**. Fertig!
+
+Jarvis spricht zunächst mit einer eingebauten deutschen Stimme. **Robert Ranger nachrüsten:** Render → dein Dienst → **Environment** → `ELEVENLABS_API_KEY` und `ELEVENLABS_VOICE_ID` hinzufügen → **Save Changes**. Render startet Jarvis dann automatisch neu.
+
+Alles Weitere unten ist optional.
+
 ## So funktioniert es
 
 ```
@@ -18,39 +32,15 @@ iPhone / Browser ──► Jarvis in der Cloud (Render)  ◄── Laptop-Verbin
 - **Immer verfügbar:** Gespräch, Uhrzeit, Timer/Erinnerungen, Websuchen und Links (erscheinen zum Antippen in der App).
 - **Nur wenn der Laptop an ist:** Programme, Dateien, Lautstärke, Software installieren, PowerShell usw. Der Laptop verbindet sich von selbst nach außen zu Jarvis – am Router musst du nichts einstellen.
 
-## Was du brauchst (alles kostenlos, außer der Nutzung bei Deepgram/ElevenLabs nach deinem Tarif)
+## Hinweise zum iPhone
 
-- **GitHub-Konto** mit einem neuen Repository, z. B. `jarvis` (darf privat sein)
-- **Render-Konto** (https://render.com) – dein Konto vom Spiel reicht
-- **Deepgram API Key** und **ElevenLabs API Key + Voice-ID** (wie bisher)
-- Für die Laptop-Steuerung: **Node.js 20.12 oder neuer** auf dem Laptop (https://nodejs.org, LTS)
+Öffne Jarvis nach dem Hinzufügen über das neue Symbol und melde dich dort **einmal** an (die App hat eigene Cookies). Tippe **Jarvis aktivieren** und erlaube das Mikrofon.
 
-## Einrichtung
+Optional bei Render → Environment: `USER_NAME` (wie Jarvis dich nennt), `DEEPGRAM_VOICE` (andere eingebaute Stimme, z. B. `aura-2-fabian-de`).
 
-### 1. Code zu GitHub hochladen
+## Laptop verbinden (optional)
 
-1. Lege auf GitHub ein neues Repository `jarvis` an.
-2. Lade den **Inhalt** dieses Ordners hoch (`server.js`, `render.yaml`, `public/`, `laptop/` usw. – **ohne** `node_modules` und ohne `.env`), z. B. über **Add file → Upload files**.
-
-### 2. Bei Render veröffentlichen
-
-1. In Render: **New → Blueprint** und das Repository `jarvis` wählen.
-2. Render fragt nach diesen Werten:
-   - `DEEPGRAM_API_KEY` – dein Deepgram-Schlüssel
-   - `ELEVENLABS_API_KEY` – dein ElevenLabs-Schlüssel
-   - `ELEVENLABS_VOICE_ID` – die Voice-ID von Robert Ranger (siehe unten)
-   - `JARVIS_PASSWORD` – **dein Passwort für die App**. Mindestens 8 Zeichen, besser ein langer Satz. Jarvis kann deinen Laptop steuern – wähle es sorgfältig.
-   - `USER_NAME` – wie Jarvis dich nennen soll (darf leer bleiben)
-   - `LAPTOP_TOKEN` und `SESSION_SECRET` erzeugt Render automatisch.
-3. **Apply** klicken und warten, bis der Dienst **Live** ist. Deine Adresse sieht so aus: `https://jarvis-xxxx.onrender.com`.
-
-### 3. Auf dem iPhone installieren
-
-1. Öffne deine Render-Adresse in **Safari** und melde dich mit deinem Passwort an.
-2. Tippe auf **Teilen** → **Zum Home-Bildschirm**.
-3. Öffne Jarvis über das neue Symbol, melde dich dort **einmal** an (die App hat eigene Cookies) und tippe **Jarvis aktivieren**. Erlaube das Mikrofon.
-
-### 4. Laptop verbinden (optional)
+Dafür brauchst du **Node.js 20.12 oder neuer** auf dem Laptop (https://nodejs.org, LTS).
 
 1. Kopiere den Ordner `laptop` auf deinen Laptop (z. B. nach `C:\Jarvis-Laptop`).
 2. In Render: dein Dienst → **Environment** → Wert von `LAPTOP_TOKEN` kopieren.
@@ -61,7 +51,7 @@ iPhone / Browser ──► Jarvis in der Cloud (Render)  ◄── Laptop-Verbin
 
 Tipp: Lege eine Verknüpfung zu `Laptop-verbinden.bat` in den Autostart-Ordner (`Win + R` → `shell:startup`), dann verbindet sich der Laptop bei jedem Start automatisch.
 
-## Voice-ID finden
+## Voice-ID von Robert Ranger finden
 
 1. In ElevenLabs die **Voice Library** öffnen und „Robert Ranger – Cool Storyteller“ suchen.
 2. Zu **My Voices** hinzufügen (nur eigene/hinzugefügte Stimmen funktionieren über die API).

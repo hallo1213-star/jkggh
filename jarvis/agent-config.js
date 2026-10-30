@@ -3,8 +3,35 @@
 // Dates in the prompt use the server's TZ (Europe/Berlin by default).
 export const OUTPUT_SAMPLE_RATE = 24000;
 
+// Only the Deepgram key is required. Without ElevenLabs data Jarvis speaks
+// with Deepgram's built-in German voice instead of Robert Ranger.
+const FALLBACK_VOICE = 'aura-2-julius-de';
+
 export function missingConfig() {
-  return ['DEEPGRAM_API_KEY', 'ELEVENLABS_API_KEY', 'ELEVENLABS_VOICE_ID'].filter((name) => !process.env[name]?.trim());
+  return ['DEEPGRAM_API_KEY'].filter((name) => !process.env[name]?.trim());
+}
+
+export function elevenLabsConfigured() {
+  return Boolean(process.env.ELEVENLABS_API_KEY?.trim() && process.env.ELEVENLABS_VOICE_ID?.trim());
+}
+
+function buildSpeak() {
+  if (!elevenLabsConfigured()) {
+    return { provider: { type: 'deepgram', version: 'v1', model: process.env.DEEPGRAM_VOICE?.trim() || FALLBACK_VOICE } };
+  }
+  const voiceId = process.env.ELEVENLABS_VOICE_ID.trim();
+  return {
+    provider: {
+      type: 'eleven_labs',
+      model_id: process.env.ELEVENLABS_MODEL?.trim() || 'eleven_turbo_v2_5',
+      language: 'de'
+    },
+    // ElevenLabs streaming endpoint; Deepgram picks output_format and model_id itself.
+    endpoint: {
+      url: `wss://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/multi-stream-input`,
+      headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY.trim() }
+    }
+  };
 }
 
 function buildPrompt({ laptopConnected }) {
@@ -33,7 +60,6 @@ Werkzeuge:
 }
 
 export function buildSettings({ inputSampleRate, functions, laptopConnected }) {
-  const voiceId = process.env.ELEVENLABS_VOICE_ID.trim();
   return {
     type: 'Settings',
     audio: {
@@ -55,18 +81,7 @@ export function buildSettings({ inputSampleRate, functions, laptopConnected }) {
         prompt: buildPrompt({ laptopConnected }),
         functions
       },
-      speak: {
-        provider: {
-          type: 'eleven_labs',
-          model_id: process.env.ELEVENLABS_MODEL?.trim() || 'eleven_turbo_v2_5',
-          language: 'de'
-        },
-        // ElevenLabs streaming endpoint; Deepgram picks output_format and model_id itself.
-        endpoint: {
-          url: `wss://api.elevenlabs.io/v1/text-to-speech/${encodeURIComponent(voiceId)}/multi-stream-input`,
-          headers: { 'xi-api-key': process.env.ELEVENLABS_API_KEY.trim() }
-        }
-      },
+      speak: buildSpeak(),
       greeting: 'Jarvis ist online. Womit kann ich helfen?'
     }
   };

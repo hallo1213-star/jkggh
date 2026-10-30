@@ -12,13 +12,7 @@ services:
         value: Europe/Berlin
       - key: DEEPGRAM_API_KEY
         sync: false
-      - key: ELEVENLABS_API_KEY
-        sync: false
-      - key: ELEVENLABS_VOICE_ID
-        sync: false
       - key: JARVIS_PASSWORD
-        sync: false
-      - key: USER_NAME
         sync: false
       - key: LAPTOP_TOKEN
         generateValue: true
