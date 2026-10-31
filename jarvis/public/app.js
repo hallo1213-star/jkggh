@@ -1,6 +1,7 @@
 // Jarvis interface (desktop and iPhone): captures the microphone, plays Jarvis's
 // voice, shows the conversation and asks for confirmation before important actions.
 import { initMoney, showMoney } from './money.js';
+import { handleGlobeMessage, initGlobe } from './globe.js';
 
 const OUTPUT_SAMPLE_RATE = 24000;
 
@@ -1019,6 +1020,14 @@ function toast(message, kind = '') {
 }
 
 initMoney({ toast });
+initGlobe({
+  toast,
+  send: (message) => {
+    if (state.ws?.readyState !== WebSocket.OPEN) return false;
+    state.ws.send(JSON.stringify(message));
+    return true;
+  }
+});
 
 function chime(frequencies = [880, 1320]) {
   if (!state.audio) return;
@@ -1184,6 +1193,9 @@ function handleMessage(message) {
     case 'vocab':
       personalStores[message.type].store(message.items, { sync: false, updatedAt: message.updatedAt });
       if (message.show) showPlanner({ planner: 'termine', notes: 'notizen', expenses: 'ausgaben', vocab: 'vokabeln' }[message.type]);
+      break;
+    case 'globe':
+      handleGlobeMessage(message);
       break;
     case 'money_show':
       showMoney();

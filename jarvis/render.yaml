@@ -23,3 +23,5 @@ services:
         sync: false
       - key: GUMROAD_ACCESS_TOKEN
         sync: false
+      - key: CESIUM_ION_TOKEN
+        sync: false

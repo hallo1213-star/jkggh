@@ -4,7 +4,8 @@ import { DIFFICULTIES, GAME_TYPES, encodeGame, sanitizeGame } from './public/gam
 import { describeEmail, gmailConfigured, listEmails, readEmail, sendEmail } from './gmail.js';
 import { addItems, listAsText, removeItems, sellLinks, shopLinks } from './shopping.js';
 import { OFFER_ALLOWED, STATUSES, findCustomer, summarize, upsertCustomer } from './customers.js';
-import { getNews, getWeather, lookupWikipedia } from './knowledge.js';
+import { getNews, getWeather, getWeatherAt, lookupWikipedia } from './knowledge.js';
+import { geocodePlace } from './places.js';
 import { addMemory, forgetMemory } from './memories.js';
 import { sendTelegram, telegramConfigured } from './telegram.js';
 import { sendVoiceNote } from './voice-message.js';
@@ -850,6 +851,48 @@ export const cloudTools = [
       context.schedule(ms, String(message || 'Dein Timer ist abgelaufen.'));
       const due = new Date(Date.now() + ms).toLocaleTimeString('de-DE', { timeZone, hour: '2-digit', minute: '2-digit' });
       return { gestellt: true, faelligUm: due };
+    }
+  },
+  {
+    name: 'globe',
+    description: 'Steuert Jarvis\' eigene interaktive 3D-Erdkugel mit echten Satellitenbildern (öffnet sich direkt in der App). Aktionen: ort = zu einem Ort fliegen und heranzoomen (Stadt, Stadtteil, Straße, Sehenswürdigkeit, Land), z. B. „Zeig mir Paris“, „Wie sieht es gerade in Berlin Neukölln aus?“, „Zoom auf Neukölln“ (bei Stadtteilen die Stadt mit angeben, z. B. "Neukölln, Berlin"); ganze_erde; drehen / stopp (Erde rotieren lassen); nacht / tag (Erde bei Nacht mit NASA-Nachtlichtern bzw. normale Satellitenansicht); standort („Wo bin ich?“ – nutzt den Standort des Geräts); schliessen.',
+    parameters: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['ort', 'ganze_erde', 'drehen', 'stopp', 'nacht', 'tag', 'standort', 'schliessen'] },
+        place: { type: 'string', description: 'Nur bei ort: der Ort, möglichst eindeutig, z. B. "Neukölln, Berlin", "Eiffelturm, Paris", "New York"' }
+      },
+      required: ['action']
+    },
+    label: (a) => (a.action === 'ort' ? `Erdkugel: ${a.place || ''}` : `Erdkugel: ${a.action.replace('_', ' ')}`),
+    run: async ({ action, place }, context) => {
+      if (action !== 'ort') {
+        context.showGlobe({ action });
+        const notes = {
+          standort: 'Der Standort wird gerade auf dem Gerät abgefragt (der Browser fragt eventuell um Erlaubnis). Sag noch keinen Ort – die Antwort kommt gleich automatisch als Nachricht.',
+          nacht: 'Zeigt die Erde bei Nacht (NASA Black Marble, Lichter der Städte – ein Gesamtbild, keine Live-Aufnahme).',
+          ganze_erde: 'Die ganze Erde wird angezeigt.',
+          drehen: 'Die Erde dreht sich.',
+          stopp: 'Die Drehung ist gestoppt.',
+          tag: 'Normale Satellitenansicht.',
+          schliessen: 'Die Erdkugel ist geschlossen.'
+        };
+        return { ok: true, hinweis: notes[action] };
+      }
+      const target = await geocodePlace(place);
+      context.showGlobe({ action: 'fly', place: target });
+      const [weather, wiki] = await Promise.allSettled([
+        getWeatherAt(target.lat, target.lon),
+        lookupWikipedia(target.city && target.city !== target.name ? `${target.name} ${target.city}` : target.name)
+      ]);
+      return {
+        ort: target.label,
+        art: target.kind || undefined,
+        koordinaten: `${target.lat}, ${target.lon}`,
+        aktuell: weather.status === 'fulfilled' ? weather.value : 'Wetterdaten gerade nicht verfügbar',
+        info: wiki.status === 'fulfilled' && !wiki.value.mehrdeutig ? wiki.value.zusammenfassung.slice(0, 500) : undefined,
+        satellitenbild: 'Esri World Imagery – ein Archivbild (je nach Ort Monate bis wenige Jahre alt), KEINE Live-Aufnahme. Sag das so, wenn er fragt, wie es „gerade“ aussieht: aktuell sind nur Wetter, Uhrzeit und Tag/Nacht.'
+      };
     }
   },
   {

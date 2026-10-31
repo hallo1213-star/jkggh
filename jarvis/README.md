@@ -195,6 +195,31 @@ Alles per Sprache – und zum Nachschauen über den Knopf **Planer** (Tabs Termi
 - Der Planer wird als **angepinnte Nachricht „🗂 Jarvis-Daten – bitte nicht löschen“** in deinem Telegram-Chat gesichert. Der kostenlose Render-Server vergisst beim Neustart alles – aus dieser Nachricht holt Jarvis deine Termine und Erinnerungen zurück. Bitte nicht löschen oder entpinnen.
 - Notizen, Ausgaben und Vokabeln liegen auf deinen Geräten (Browser-Speicher) und werden beim Verbinden abgeglichen.
 
+## 3D-Erdkugel 🌍
+
+Über den Knopf **Erde** oder per Sprache öffnet sich Jarvis' eigene interaktive 3D-Erdkugel direkt in der App. Sie zeigt echte Satelliten- und Luftbilder, eine Atmosphäre und den Sternenhimmel. Du kannst sie mit Finger oder Maus drehen und zoomen, von der ganzen Erde bis auf einzelne Straßen.
+
+- „Jarvis, wie sieht es gerade in Berlin Neukölln aus?“ → Jarvis fliegt von der Erde nach Berlin und zoomt auf Neukölln. Dazu sagt er dir, was **wirklich aktuell** ist: Wetter, Bewölkung, Ortszeit, Tag oder Nacht, Sonnenuntergang und ein paar Infos zum Ort.
+- „Zeig mir Paris / New York / Berlin“, „Zoom auf Neukölln“, „Zeig mir die ganze Erde“, „Dreh die Erde“, „Zeig mir die Erde bei Nacht“, „Wo bin ich gerade?“ (fragt einmal nach Erlaubnis für den Standort), „Mach die Erde zu“.
+- Unten gibt es ein Suchfeld und Knöpfe für Ganze Erde, Drehen, Nacht, Namen (Ortsnamen einblenden) und Mein Standort.
+
+**Woher die Bilder kommen:**
+- 3D-Technik: CesiumJS
+- Tagbilder: **Esri World Imagery** (Satelliten- und Luftbilder, z. B. von Maxar)
+- Nacht: **NASA Black Marble**
+- Ortssuche: OpenStreetMap
+
+Für all das brauchst du **keinen Schlüssel**.
+
+⚠️ **Nicht live:** Satellitenbilder sind Archivaufnahmen, je nach Ort einige Monate bis wenige Jahre alt. Das steht auch in der Ansicht, und Jarvis behauptet nie, das Bild sei live. Aktuell sind nur Wetter, Uhrzeit und Tag/Nacht.
+
+**Optional, für noch schärfere Bilder und echte Berge (3D-Gelände):**
+1. Kostenloses Konto bei [ion.cesium.com](https://ion.cesium.com/signup) anlegen.
+2. Dort unter **Access Tokens** den „Default Token“ kopieren.
+3. Bei Render als **`CESIUM_ION_TOKEN`** eintragen.
+
+Dann nutzt die Erde Bing-Maps-Luftbilder und Cesium World Terrain.
+
 ## Webcams
 
 - **Autobahn:** Verkehrskameras mit aktuellen Bildern aus den offenen Daten der Autobahn GmbH, z. B. „A1 bei Köln“.

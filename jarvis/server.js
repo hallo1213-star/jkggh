@@ -26,6 +26,7 @@ import { sendTelegramDocument } from './telegram.js';
 import { addIncome, completeUserTask, sanitizeMoney, startMoney, stopMoney, addLog as addMoneyLog, updateProject, updateTask, incomeTotals } from './money-state.js';
 import { moneyToolStatus, relinkPages, startMoneyAgent } from './money-agent.js';
 import { gumroadConfigured, gumroadProducts } from './gumroad.js';
+import { geocodePlace, reversePlace } from './places.js';
 import { findTool as findLaptopTool, functionDefinitions as laptopFunctions } from './laptop/tools.js';
 
 if (!process.env.TZ) process.env.TZ = 'Europe/Berlin';
@@ -307,6 +308,23 @@ const httpServer = createServer(async (request, response) => {
   if (pathname === '/api/session') {
     if (!isAuthenticated(request)) sendJson(response, 401, { error: 'Nicht angemeldet' });
     else sendJson(response, 200, { ok: true, laptop: laptopConnected() });
+    return;
+  }
+
+  if (pathname.startsWith('/api/globe/')) {
+    if (!isAuthenticated(request)) {
+      sendJson(response, 401, { error: 'Nicht angemeldet' });
+      return;
+    }
+    const params = new URL(request.url, 'http://localhost').searchParams;
+    try {
+      if (pathname === '/api/globe/config') sendJson(response, 200, { ionToken: process.env.CESIUM_ION_TOKEN?.trim() || null });
+      else if (pathname === '/api/globe/search') sendJson(response, 200, { place: await geocodePlace(params.get('q')) });
+      else if (pathname === '/api/globe/reverse') sendJson(response, 200, { place: await reversePlace(params.get('lat'), params.get('lon')) });
+      else sendJson(response, 404, { error: 'Nicht gefunden' });
+    } catch (error) {
+      sendJson(response, 400, { error: error.message });
+    }
     return;
   }
 
@@ -605,6 +623,9 @@ browserWss.on('connection', (browser, request) => {
     showMoney() {
       toBrowser({ type: 'money_show' });
     },
+    showGlobe(command) {
+      toBrowser({ type: 'globe', ...command });
+    },
     showWebcams({ title, cams, links }) {
       toBrowser({ type: 'webcams', title, cams, links });
     },
@@ -817,6 +838,16 @@ browserWss.on('connection', (browser, request) => {
       memoryStore.set(message.items);
     } else if (/^(planner|notes|expenses|vocab)_update$/.test(message.type)) {
       syncedStores[message.type.replace('_update', '')].set(message.items);
+    } else if (message.type === 'globe_location') {
+      // "Wo bin ich?": the device sent its position; name the place and tell the agent.
+      reversePlace(message.lat, message.lon)
+        .then((place) => {
+          toBrowser({ type: 'globe', action: 'located', place });
+          if (agentOpen) agent.sendInjectAgentMessage({ type: 'InjectAgentMessage', message: `Laut deinem Gerät bist du gerade hier: ${place.name}${place.country ? `, ${place.country}` : ''}.` });
+        })
+        .catch((error) => toBrowser({ type: 'globe', action: 'error', message: `Ort nicht erkannt: ${error.message}` }));
+    } else if (message.type === 'globe_location_error') {
+      if (agentOpen) agent.sendInjectAgentMessage({ type: 'InjectAgentMessage', message: `Ich konnte deinen Standort nicht abfragen: ${String(message.message || 'keine Erlaubnis').slice(0, 120)}. Erlaube den Standortzugriff für Jarvis im Browser.` });
     } else if (message.type === 'confirm_response') {
       confirmations.get(message.id)?.(message.approved === true);
     } else if (message.type === 'text' && agentOpen && String(message.text || '').trim()) {

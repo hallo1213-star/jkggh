@@ -70,6 +70,33 @@ export async function getWeather(place, { fetchImpl = fetch, days = 3 } = {}) {
   };
 }
 
+// Current weather and local time at exact coordinates (for the 3D globe).
+export async function getWeatherAt(lat, lon, { fetchImpl = fetch } = {}) {
+  const data = await getJson(
+    `https://api.open-meteo.com/v1/forecast?latitude=${Number(lat)}&longitude=${Number(lon)}` +
+    '&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m,precipitation,is_day,cloud_cover' +
+    '&daily=sunrise,sunset,temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1',
+    fetchImpl
+  );
+  const c = data.current || {};
+  const round = (value) => (typeof value === 'number' ? Math.round(value) : null);
+  const time = (iso) => (typeof iso === 'string' ? iso.slice(11, 16) : null);
+  return {
+    ortszeit: time(c.time),
+    zeitzone: data.timezone || null,
+    tagOderNacht: c.is_day === 1 ? 'Tag' : c.is_day === 0 ? 'Nacht' : null,
+    temperatur: round(c.temperature_2m),
+    gefuehlt: round(c.apparent_temperature),
+    wetter: describeWeather(c.weather_code).text,
+    symbol: describeWeather(c.weather_code).icon,
+    bewoelkungProzent: round(c.cloud_cover),
+    windKmh: round(c.wind_speed_10m),
+    niederschlagMm: c.precipitation ?? null,
+    heute: { max: round(data.daily?.temperature_2m_max?.[0]), min: round(data.daily?.temperature_2m_min?.[0]), sonnenaufgang: time(data.daily?.sunrise?.[0]), sonnenuntergang: time(data.daily?.sunset?.[0]) },
+    quelle: 'Open-Meteo (aktuell)'
+  };
+}
+
 // --- News --------------------------------------------------------------------
 
 const NEWS_FEEDS = [
