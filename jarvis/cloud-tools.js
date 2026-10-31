@@ -2,7 +2,8 @@
 import { normalizeUrl, searchUrls } from './laptop/tools.js';
 import { DIFFICULTIES, GAME_TYPES, encodeGame, sanitizeGame } from './public/game-config.js';
 import { describeEmail, gmailConfigured, listEmails, readEmail, sendEmail } from './gmail.js';
-import { addItems, listAsText, removeItems, shopLinks } from './shopping.js';
+import { addItems, listAsText, removeItems, sellLinks, shopLinks } from './shopping.js';
+import { OFFER_ALLOWED, STATUSES, findCustomer, summarize, upsertCustomer } from './customers.js';
 import { FONTS, MODES, SECTION_TYPES, encodeSite, sanitizeSite } from './public/site-config.js';
 
 const timeZone = process.env.TZ || 'Europe/Berlin';
@@ -163,17 +164,136 @@ export const cloudTools = [
             required: ['type']
           }
         },
-        footer: { type: 'string', description: 'Kurzer Text für die Fußzeile' }
+        footer: { type: 'string', description: 'Kurzer Text für die Fußzeile' },
+        customer: { type: 'string', description: 'Nur für das Website-Geschäft: Name des Ladens/Kunden. Dann wird es eine Vorschau für diesen Laden (ohne Jarvis-Logo und ohne Download für Besucher) und sie wird beim Kunden gespeichert.' }
       },
       required: ['title', 'sections']
     },
-    label: (a) => `Website erstellen: ${a.title || 'ohne Titel'}`,
+    label: (a) => `Website erstellen: ${a.title || 'ohne Titel'}${a.customer ? ` (für ${a.customer})` : ''}`,
     run: async (args, context) => {
-      const site = sanitizeSite(args);
+      const site = sanitizeSite({ ...args, pitch: Boolean(args.customer) });
       if (site.sections.length < 2) throw new Error('Die Website braucht mindestens zwei Abschnitte mit Inhalt (z. B. hero und text). Bitte erneut mit vollständigen Abschnitten aufrufen.');
-      const url = `${context.origin}/site.html#${encodeSite(site)}`;
-      context.showSite({ title: site.title, emoji: site.logo, url });
-      return { erstellt: true, titel: site.title, abschnitte: site.sections.map((section) => section.type), hinweis: 'Der Nutzer sieht jetzt die Website und kann sie öffnen, teilen oder als Datei herunterladen.' };
+      const path = `/site.html#${encodeSite(site)}`;
+      context.showSite({ title: site.title, emoji: site.logo, url: `${context.origin}${path}` });
+      let customer;
+      if (args.customer) {
+        const result = upsertCustomer(context.getCustomers(), { name: args.customer, site: { path, title: site.title } });
+        context.setCustomers(result.list);
+        customer = summarize(result.customer);
+      }
+      return { erstellt: true, titel: site.title, abschnitte: site.sections.map((section) => section.type), kunde: customer, hinweis: customer ? 'Vorschau-Website beim Kunden gespeichert. Der Nutzer kann sie dem Laden auf dem Handy zeigen.' : 'Der Nutzer sieht jetzt die Website und kann sie öffnen, teilen oder als Datei herunterladen.' };
+    }
+  },
+  {
+    name: 'customer_add',
+    description: 'Website-Geschäft: Legt einen Laden/Kunden in der Kundenliste an (oder ergänzt ihn, falls es ihn schon gibt).',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Name des Ladens, z. B. "Friseur Haarscharf"' },
+        branche: { type: 'string', description: 'z. B. Friseur, Imbiss, Handwerker' },
+        ort: { type: 'string', description: 'Ort oder Adresse' },
+        email: { type: 'string', description: 'Geschäftliche E-Mail-Adresse, falls bekannt' },
+        notiz: { type: 'string' }
+      },
+      required: ['name']
+    },
+    label: (a) => `Kunde angelegt: ${a.name}`,
+    run: async ({ name, branche, ort, email, notiz }, context) => {
+      const result = upsertCustomer(context.getCustomers(), { name, branche, ort, email, notiz });
+      context.setCustomers(result.list);
+      return { neu: result.created, kunde: summarize(result.customer) };
+    }
+  },
+  {
+    name: 'customer_update',
+    description: `Website-Geschäft: Ändert einen Kunden, z. B. den Status (${STATUSES.join(', ')}), Preis, E-Mail oder Notiz. "interessiert" bedeutet: Der Laden hat zugestimmt, ein Angebot per E-Mail zu bekommen.`,
+    parameters: {
+      type: 'object',
+      properties: {
+        customer: { type: 'string', description: 'Name oder ID des Kunden' },
+        status: { type: 'string', enum: STATUSES },
+        email: { type: 'string' },
+        preis: { type: 'string', description: 'Vereinbarter Preis, z. B. "150 €"' },
+        branche: { type: 'string' },
+        ort: { type: 'string' },
+        notiz: { type: 'string' }
+      },
+      required: ['customer']
+    },
+    label: (a) => `Kunde aktualisiert: ${a.customer}${a.status ? ` → ${a.status}` : ''}`,
+    run: async ({ customer: ref, ...fields }, context) => {
+      const existing = findCustomer(context.getCustomers(), ref);
+      if (!existing) throw new Error(`Kunde „${ref}“ nicht gefunden.`);
+      const result = upsertCustomer(context.getCustomers(), { ...fields, id: existing.id, name: existing.name });
+      context.setCustomers(result.list);
+      return { kunde: summarize(result.customer) };
+    }
+  },
+  {
+    name: 'customer_list',
+    description: 'Website-Geschäft: Zeigt die Kundenliste (optional nach Status gefiltert) und öffnet sie auf dem Bildschirm.',
+    parameters: { type: 'object', properties: { status: { type: 'string', enum: STATUSES } } },
+    label: () => 'Kundenliste angezeigt',
+    run: async ({ status }, context) => {
+      const list = context.getCustomers();
+      context.setCustomers(list, { show: true });
+      const shown = list.filter((customer) => !status || customer.status === status);
+      const counts = Object.fromEntries(STATUSES.map((value) => [value, list.filter((customer) => customer.status === value).length]));
+      return { anzahl: list.length, nachStatus: counts, kunden: shown.slice(0, 30).map(summarize) };
+    }
+  },
+  {
+    name: 'customer_send_offer',
+    description: 'Website-Geschäft: Schickt einem Laden eine Angebots-E-Mail mit einem Knopf zu seiner Website-Vorschau. Nur erlaubt, wenn der Laden zugestimmt hat (Status interessiert). Du schreibst Betreff und Text; der Link wird automatisch angehängt. Der Nutzer bestätigt vor dem Senden.',
+    parameters: {
+      type: 'object',
+      properties: {
+        customer: { type: 'string', description: 'Name oder ID des Kunden' },
+        subject: { type: 'string' },
+        text: { type: 'string', description: 'Höflicher Angebotstext auf Deutsch, mit Anrede, wer der Absender ist, Preis falls vereinbart, und Grußformel' }
+      },
+      required: ['customer', 'subject', 'text']
+    },
+    label: (a) => `Angebot an ${a.customer}`,
+    confirm: async ({ customer: ref, subject, text }, context) => {
+      const customer = offerCustomer(context, ref);
+      return { title: `Angebot an ${customer.name} senden?`, detail: `An: ${customer.email}\nBetreff: ${String(subject).slice(0, 200)}\n\n${String(text).slice(0, 3000)}\n\n[Knopf: Website-Vorschau ansehen → ${customer.site.title || 'Vorschau'}]` };
+    },
+    run: async ({ customer: ref, subject, text }, context) => {
+      const customer = offerCustomer(context, ref);
+      const url = `${context.origin}${customer.site.path}`;
+      const body = String(text ?? '').trim();
+      const html = `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.6;color:#1f2937">${body.split(/\n+/).map((part) => `<p>${escapeHtml(part)}</p>`).join('')}<p style="margin:28px 0"><a href="${escapeHtml(url)}" style="display:inline-block;padding:14px 26px;border-radius:999px;background:#4f46e5;color:#ffffff;font-weight:bold;text-decoration:none">Website-Vorschau ansehen</a></p></div>`;
+      const sent = await sendEmail({ to: customer.email, subject, body: `${body}\n\nIhre Website-Vorschau: ${url}`, html });
+      const result = upsertCustomer(context.getCustomers(), { id: customer.id, name: customer.name, status: customer.status === 'gekauft' ? 'gekauft' : 'angebot_gesendet' });
+      context.setCustomers(result.list);
+      return { ...sent, kunde: summarize(result.customer) };
+    }
+  },
+  {
+    name: 'create_listing',
+    description: 'Schreibt eine ehrliche, verkaufsstarke Kleinanzeige für etwas, das der Nutzer verkaufen möchte, und zeigt sie mit Kopier-Knöpfen und Links zum Preisvergleich (Kleinanzeigen, verkaufte Artikel bei eBay) an.',
+    parameters: {
+      type: 'object',
+      properties: {
+        item: { type: 'string', description: 'Kurzer Suchbegriff für den Preisvergleich, z. B. "PlayStation 4 Pro 1TB"' },
+        title: { type: 'string', description: 'Anzeigentitel (max. 65 Zeichen), mit Marke, Modell und wichtigstem Merkmal' },
+        description: { type: 'string', description: 'Anzeigentext: Zustand ehrlich (auch Mängel), Lieferumfang, Details, Abholung/Versand, freundlicher Abschluss. Absätze mit Zeilenumbruch.' },
+        condition: { type: 'string', description: 'z. B. Neu, Sehr gut, Gut, In Ordnung, Defekt' }
+      },
+      required: ['item', 'title', 'description']
+    },
+    label: (a) => `Kleinanzeige: ${a.title || a.item}`,
+    run: async ({ item, title, description, condition }, context) => {
+      const listing = {
+        title: String(title ?? '').trim().slice(0, 65),
+        text: `${condition ? `Zustand: ${String(condition).trim().slice(0, 40)}\n\n` : ''}${String(description ?? '').trim().slice(0, 4000)}`,
+        links: sellLinks(item)
+      };
+      if (!listing.title || !listing.text.trim()) throw new Error('Titel und Beschreibung fehlen.');
+      context.showListing(listing);
+      return { angezeigt: true, hinweis: 'Der Nutzer kann Titel und Text kopieren und Preise vergleichen. Aktuelle Preise kennst du nicht.' };
     }
   },
   {
@@ -329,4 +449,21 @@ export const cloudTools = [
 
 export function findCloudTool(name) {
   return cloudTools.find((tool) => tool.name === name);
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+}
+
+// Checks that an offer may be sent: known shop, e-mail, preview site and consent.
+function offerCustomer(context, ref) {
+  const customer = findCustomer(context.getCustomers(), ref);
+  if (!customer) throw new Error(`Kunde „${ref}“ nicht gefunden.`);
+  if (!OFFER_ALLOWED.includes(customer.status)) {
+    throw new Error(`Werbe-E-Mails sind in Deutschland ohne Einverständnis nicht erlaubt (auch an Firmen). ${customer.name} hat den Status „${customer.status}“. Sprich den Laden zuerst persönlich oder telefonisch an; wenn er einverstanden ist, setze den Status auf „interessiert“.`);
+  }
+  if (!customer.email) throw new Error(`Für ${customer.name} ist keine E-Mail-Adresse gespeichert.`);
+  if (!customer.site) throw new Error(`Für ${customer.name} gibt es noch keine Website-Vorschau. Erstelle zuerst eine mit create_website und customer.`);
+  if (!gmailConfigured()) throw new Error('Gmail ist noch nicht eingerichtet.');
+  return customer;
 }

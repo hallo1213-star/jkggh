@@ -45,7 +45,13 @@ const els = {
   shoppingClose: $('shopping-close'),
   shoppingForm: $('shopping-form'),
   shoppingInput: $('shopping-input'),
-  shoppingClearDone: $('shopping-clear-done')
+  shoppingClearDone: $('shopping-clear-done'),
+  customersButton: $('customers-button'),
+  customersModal: $('customers-modal'),
+  customersClose: $('customers-close'),
+  customersSummary: $('customers-summary'),
+  customerList: $('customer-list'),
+  customersEmpty: $('customers-empty')
 };
 
 const state = {
@@ -184,7 +190,7 @@ function addLink(url, title) {
 // --- Games ---------------------------------------------------------------
 
 const GAMES_KEY = 'jarvis.games';
-const gameTypeNames = { fangen: 'Fangen', ausweichen: 'Ausweichen', springen: 'Springen', reaktion: 'Reaktion', memory: 'Memory', quiz: 'Quiz', website: 'Website' };
+const gameTypeNames = { fangen: 'Fangen', ausweichen: 'Ausweichen', springen: 'Springen', reaktion: 'Reaktion', memory: 'Memory', quiz: 'Quiz', website: 'Website', anzeige: 'Kleinanzeige' };
 let micMutedBeforeGame = false;
 
 function loadGames() {
@@ -196,8 +202,9 @@ function loadGames() {
   }
 }
 
-function saveGame({ title, type, emoji, url }) {
-  const games = [{ title, type, emoji, url, created: Date.now() }, ...loadGames().filter((game) => game.url !== url)].slice(0, 30);
+function saveGame({ title, type, emoji, url, listing }) {
+  const id = url || `anzeige:${title}`;
+  const games = [{ title, type, emoji, url, listing, created: Date.now() }, ...loadGames().filter((game) => (game.url || `anzeige:${game.title}`) !== id)].slice(0, 30);
   try {
     localStorage.setItem(GAMES_KEY, JSON.stringify(games));
   } catch {
@@ -223,7 +230,8 @@ function isSiteUrl(url) {
   return projectPath(url) === '/site.html';
 }
 
-function gameCard({ title, type, emoji, url }) {
+function gameCard({ title, type, emoji, url, listing }) {
+  if (type === 'anzeige' && listing) return listingCard({ title, ...listing });
   const card = document.createElement('div');
   card.className = 'game-card';
   const icon = document.createElement('span');
@@ -319,44 +327,192 @@ els.gameShare.addEventListener('click', async () => {
   }
 });
 
+// --- Lists synced with your other devices ---------------------------------
+
+// A list saved on this device and shared through Jarvis with your other
+// devices. `updatedAt` is the server's version stamp; the newest copy wins.
+function syncedList({ key, timeKey, updateType, clean, onChange }) {
+  return {
+    load() {
+      try {
+        const list = JSON.parse(localStorage.getItem(key) || '[]');
+        return Array.isArray(list) ? clean(list) : [];
+      } catch {
+        return [];
+      }
+    },
+    loadTime() {
+      try {
+        return Number(localStorage.getItem(timeKey)) || 0;
+      } catch {
+        return 0;
+      }
+    },
+    store(items, { sync = true, updatedAt } = {}) {
+      const list = clean(Array.isArray(items) ? items : []);
+      const online = state.ws?.readyState === WebSocket.OPEN;
+      try {
+        localStorage.setItem(key, JSON.stringify(list));
+        if (updatedAt) localStorage.setItem(timeKey, String(updatedAt));
+        // Edited while offline: this copy should win the next time we connect.
+        else if (sync && !online) localStorage.setItem(timeKey, String(Date.now()));
+      } catch {
+        // storage unavailable; the list still works for this session
+      }
+      if (sync && online) state.ws.send(JSON.stringify({ type: updateType, items: list }));
+      onChange();
+    }
+  };
+}
+
+// --- Customers (website business) ----------------------------------------
+
+const STATUS_LABELS = { neu: 'Neu', angesprochen: 'Angesprochen', interessiert: 'Interessiert ✓', angebot_gesendet: 'Angebot gesendet', gekauft: 'Gekauft 💰', abgelehnt: 'Abgelehnt' };
+
+const customers = syncedList({
+  key: 'jarvis.customers',
+  timeKey: 'jarvis.customersUpdatedAt',
+  updateType: 'customers_update',
+  clean: (list) => list.filter((customer) => typeof customer?.name === 'string' && typeof customer?.id === 'string').slice(0, 100),
+  onChange: () => {
+    if (!els.customersModal.hidden) renderCustomers();
+  }
+});
+
+function renderCustomers() {
+  const list = customers.load();
+  const sold = list.filter((customer) => customer.status === 'gekauft').length;
+  els.customersSummary.textContent = list.length ? `${list.length} ${list.length === 1 ? 'Kunde' : 'Kunden'} · ${sold} gekauft` : '';
+  els.customerList.replaceChildren(...list.map((customer) => {
+    const row = document.createElement('li');
+    row.dataset.status = customer.status;
+    const info = document.createElement('div');
+    const name = document.createElement('span');
+    name.className = 'customer-name';
+    name.textContent = customer.name;
+    const meta = document.createElement('span');
+    meta.className = 'customer-meta';
+    meta.textContent = [customer.branche, customer.ort, customer.preis, customer.email].filter(Boolean).join(' · ') || 'Keine Details';
+    info.append(name, meta);
+    const actions = document.createElement('div');
+    actions.className = 'customer-actions';
+    const status = document.createElement('select');
+    status.setAttribute('aria-label', `Status von ${customer.name}`);
+    for (const [value, label] of Object.entries(STATUS_LABELS)) status.append(new Option(label, value, false, value === customer.status));
+    status.addEventListener('change', () => {
+      customers.store(list.map((entry) => (entry.id === customer.id ? { ...entry, status: status.value, aktualisiert: new Date().toISOString() } : entry)));
+    });
+    actions.append(status);
+    if (customer.site?.path && /^\/site\.html#/.test(customer.site.path)) {
+      const preview = document.createElement('button');
+      preview.type = 'button';
+      preview.className = 'ctrl';
+      preview.textContent = '↗ Vorschau';
+      preview.addEventListener('click', () => {
+        els.customersModal.hidden = true;
+        openGame(location.origin + customer.site.path, customer.site.title || customer.name);
+      });
+      actions.append(preview);
+    }
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'icon-btn';
+    remove.textContent = '✕';
+    remove.setAttribute('aria-label', `${customer.name} löschen`);
+    remove.addEventListener('click', () => {
+      if (confirm(`${customer.name} aus der Kundenliste löschen?`)) customers.store(list.filter((entry) => entry.id !== customer.id));
+    });
+    actions.append(remove);
+    row.append(info, actions);
+    return row;
+  }));
+  els.customersEmpty.hidden = list.length > 0;
+}
+
+function showCustomers() {
+  renderCustomers();
+  els.customersModal.hidden = false;
+}
+
+els.customersButton.addEventListener('click', showCustomers);
+els.customersClose.addEventListener('click', () => {
+  els.customersModal.hidden = true;
+});
+els.customersModal.addEventListener('click', (event) => {
+  if (event.target === els.customersModal) els.customersModal.hidden = true;
+});
+
+// --- Listings (selling used things) ------------------------------------------
+
+function listingCard({ title, text, links }) {
+  const card = document.createElement('div');
+  card.className = 'listing-card';
+  const heading = document.createElement('span');
+  heading.className = 'listing-title';
+  heading.textContent = `🏷️ ${title}`;
+  const body = document.createElement('pre');
+  body.className = 'listing-text';
+  body.textContent = text;
+  const buttons = document.createElement('div');
+  buttons.className = 'listing-buttons';
+  for (const [label, value] of [['Titel kopieren', title], ['Text kopieren', text]]) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'ctrl';
+    button.textContent = label;
+    button.addEventListener('click', async () => {
+      try {
+        await navigator.clipboard.writeText(value);
+        button.textContent = 'Kopiert ✓';
+      } catch {
+        button.textContent = 'Kopieren nicht möglich';
+      }
+      setTimeout(() => {
+        button.textContent = label;
+      }, 1800);
+    });
+    buttons.append(button);
+  }
+  const shops = document.createElement('div');
+  shops.className = 'shop-links';
+  for (const shop of Array.isArray(links) ? links : []) {
+    if (!/^https:\/\//.test(shop.url)) continue;
+    const a = document.createElement('a');
+    a.href = shop.url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.textContent = shop.name;
+    shops.append(a);
+  }
+  card.append(heading, body, buttons, shops);
+  return card;
+}
+
+function addListingCard(listing) {
+  clearEmpty(els.transcript);
+  const item = document.createElement('div');
+  item.className = 'msg assistant';
+  const label = document.createElement('span');
+  label.className = 'msg-role';
+  label.textContent = 'Kleinanzeige';
+  item.append(label, listingCard(listing));
+  els.transcript.append(item);
+  els.transcript.scrollTop = els.transcript.scrollHeight;
+}
+
 // --- Shopping ----------------------------------------------------------
 
-const SHOPPING_KEY = 'jarvis.shoppingList';
-const SHOPPING_TIME_KEY = 'jarvis.shoppingListUpdatedAt';
-
-function loadShoppingTime() {
-  try {
-    return Number(localStorage.getItem(SHOPPING_TIME_KEY)) || 0;
-  } catch {
-    return 0;
+const shopping = syncedList({
+  key: 'jarvis.shoppingList',
+  timeKey: 'jarvis.shoppingListUpdatedAt',
+  updateType: 'shopping_list_update',
+  clean: (list) => list.filter((item) => typeof item?.text === 'string').slice(0, 100).map((item) => ({ text: item.text.slice(0, 80), done: item.done === true })),
+  onChange: () => {
+    if (!els.shoppingModal.hidden) renderShoppingList();
   }
-}
-
-function loadShoppingList() {
-  try {
-    const list = JSON.parse(localStorage.getItem(SHOPPING_KEY) || '[]');
-    return Array.isArray(list) ? list.filter((item) => typeof item?.text === 'string').slice(0, 100) : [];
-  } catch {
-    return [];
-  }
-}
-
-// Saves the list on this device. Local edits are sent to Jarvis, which shares
-// them with your other devices; `updatedAt` is the server's version stamp.
-function storeShoppingList(items, { sync = true, updatedAt } = {}) {
-  const list = (Array.isArray(items) ? items : []).map((item) => ({ text: String(item.text).slice(0, 80), done: item.done === true }));
-  const online = state.ws?.readyState === WebSocket.OPEN;
-  try {
-    localStorage.setItem(SHOPPING_KEY, JSON.stringify(list));
-    if (updatedAt) localStorage.setItem(SHOPPING_TIME_KEY, String(updatedAt));
-    // Edited while offline: this copy should win the next time we connect.
-    else if (sync && !online) localStorage.setItem(SHOPPING_TIME_KEY, String(Date.now()));
-  } catch {
-    // storage unavailable; the list still works for this session
-  }
-  if (sync && online) state.ws.send(JSON.stringify({ type: 'shopping_list_update', items: list }));
-  if (!els.shoppingModal.hidden) renderShoppingList();
-}
+});
+const loadShoppingList = () => shopping.load();
+const storeShoppingList = (items, options) => shopping.store(items, options);
 
 function renderShoppingList() {
   const list = loadShoppingList();
@@ -578,7 +734,7 @@ function connect() {
   setMode('connecting');
   els.reconnect.hidden = true;
 
-  ws.onopen = () => ws.send(JSON.stringify({ type: 'start', sampleRate: state.audio.sampleRate, shoppingList: loadShoppingList(), shoppingListUpdatedAt: loadShoppingTime() }));
+  ws.onopen = () => ws.send(JSON.stringify({ type: 'start', sampleRate: state.audio.sampleRate, shoppingList: shopping.load(), shoppingListUpdatedAt: shopping.loadTime(), customers: customers.load(), customersUpdatedAt: customers.loadTime() }));
   ws.onmessage = ({ data }) => {
     if (typeof data !== 'string') {
       playChunk(data);
@@ -641,6 +797,16 @@ function handleMessage(message) {
     }
     case 'shop':
       addShopCard(message.query, message.links);
+      break;
+    case 'listing': {
+      const listing = { text: String(message.text || ''), links: Array.isArray(message.links) ? message.links : [] };
+      saveGame({ title: message.title, type: 'anzeige', emoji: '🏷️', listing });
+      addListingCard({ title: message.title, ...listing });
+      break;
+    }
+    case 'customers':
+      customers.store(message.items, { sync: false, updatedAt: message.updatedAt });
+      if (message.show) showCustomers();
       break;
     case 'shopping_list':
       storeShoppingList(message.items, { sync: false, updatedAt: message.updatedAt });

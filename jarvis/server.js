@@ -12,6 +12,7 @@ import { buildSettings, missingConfig } from './agent-config.js';
 import { attemptLogin, clearedCookie, isAuthenticated, passwordConfigured, sessionCookie, tokenMatches } from './auth.js';
 import { cloudTools, findCloudTool } from './cloud-tools.js';
 import { addItems, sanitizeList } from './shopping.js';
+import { sanitizeCustomers } from './customers.js';
 import { findTool as findLaptopTool, functionDefinitions as laptopFunctions } from './laptop/tools.js';
 
 if (!process.env.TZ) process.env.TZ = 'Europe/Berlin';
@@ -71,28 +72,40 @@ function readBody(request, limit = 2048) {
 const laptop = { ws: null, calls: new Map() };
 const sessions = new Set();
 
-// One shopping list for all devices. The free server forgets it while it
-// sleeps, so every device keeps a copy; the newest copy wins when a device
-// connects, and every change is sent to all open devices.
-const sharedList = { items: [], updatedAt: 0 };
-
-function setSharedList(items) {
-  sharedList.items = sanitizeList(items);
-  sharedList.updatedAt = Date.now();
-  for (const session of sessions) session.toBrowser({ type: 'shopping_list', items: sharedList.items, updatedAt: sharedList.updatedAt });
+// Lists shared by all devices (shopping list, customers). The free server
+// forgets them while it sleeps, so every device keeps a copy stamped with the
+// server's version time; the newest copy wins when a device connects, and
+// every change is sent to all open devices.
+function createSharedStore(type, sanitize, mergeUnstamped) {
+  const store = { items: [], updatedAt: 0 };
+  return {
+    get items() {
+      return store.items;
+    },
+    set(items) {
+      store.items = sanitize(items);
+      store.updatedAt = Date.now();
+      for (const session of sessions) this.send(session);
+    },
+    send(session, extra = {}) {
+      session.toBrowser({ type, items: store.items, updatedAt: store.updatedAt, ...extra });
+    },
+    adopt(items, updatedAt) {
+      const deviceItems = sanitize(items);
+      const deviceTime = Math.min(Number(updatedAt) || 0, Date.now());
+      if (deviceTime > store.updatedAt) {
+        store.items = deviceItems;
+        store.updatedAt = deviceTime;
+      } else if (!deviceTime && deviceItems.length && mergeUnstamped) {
+        // Saved by an older app version without a timestamp: merge instead of losing items.
+        this.set(mergeUnstamped(store.items, deviceItems));
+      }
+    }
+  };
 }
 
-function adoptDeviceList(items, updatedAt) {
-  const deviceItems = sanitizeList(items);
-  const deviceTime = Math.min(Number(updatedAt) || 0, Date.now());
-  if (deviceTime > sharedList.updatedAt) {
-    sharedList.items = deviceItems;
-    sharedList.updatedAt = deviceTime;
-  } else if (!deviceTime && deviceItems.length) {
-    // Saved by an older app version without a timestamp: merge instead of losing items.
-    setSharedList(addItems(sharedList.items, deviceItems.map((item) => item.text)).list);
-  }
-}
+const shoppingStore = createSharedStore('shopping_list', sanitizeList, (current, device) => addItems(current, device.map((item) => item.text)).list);
+const customerStore = createSharedStore('customers', sanitizeCustomers, null);
 
 function laptopConnected() {
   return laptop.ws?.readyState === WebSocket.OPEN;
@@ -328,12 +341,22 @@ browserWss.on('connection', (browser, request) => {
     showShop({ query, links }) {
       toBrowser({ type: 'shop', query, links });
     },
+    showListing({ title, text, links }) {
+      toBrowser({ type: 'listing', title, text, links });
+    },
     getShoppingList() {
-      return sharedList.items;
+      return shoppingStore.items;
     },
     setShoppingList(list, { show = false } = {}) {
-      setSharedList(list);
-      if (show) toBrowser({ type: 'shopping_list', items: sharedList.items, updatedAt: sharedList.updatedAt, show: true });
+      shoppingStore.set(list);
+      if (show) shoppingStore.send(session, { show: true });
+    },
+    getCustomers() {
+      return customerStore.items;
+    },
+    setCustomers(list, { show = false } = {}) {
+      customerStore.set(list);
+      if (show) customerStore.send(session, { show: true });
     },
     origin,
     laptopConnected
@@ -481,15 +504,19 @@ browserWss.on('connection', (browser, request) => {
       return;
     }
     if (message.type === 'start') {
-      adoptDeviceList(message.shoppingList, message.shoppingListUpdatedAt);
-      toBrowser({ type: 'shopping_list', items: sharedList.items, updatedAt: sharedList.updatedAt });
+      shoppingStore.adopt(message.shoppingList, message.shoppingListUpdatedAt);
+      shoppingStore.send(session);
+      customerStore.adopt(message.customers, message.customersUpdatedAt);
+      customerStore.send(session);
       const rate = Number(message.sampleRate);
       startAgent(rate >= 8000 && rate <= 96000 ? rate : 48000).catch((error) => {
         agent = null;
         toBrowser({ type: 'error', message: `Jarvis konnte nicht starten: ${error.message}` });
       });
     } else if (message.type === 'shopping_list_update') {
-      setSharedList(message.items);
+      shoppingStore.set(message.items);
+    } else if (message.type === 'customers_update') {
+      customerStore.set(message.items);
     } else if (message.type === 'confirm_response') {
       confirmations.get(message.id)?.(message.approved === true);
     } else if (message.type === 'text' && agentOpen && String(message.text || '').trim()) {

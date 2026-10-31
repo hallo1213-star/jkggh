@@ -74,6 +74,10 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM1 2v2h2l3.6 7.6-1.4 2.4A2 2 0 0 0 7 17h12v-2H7.4l1.1-2h7.5a2 2 0 0 0 1.7-1l3.6-6.5A1 1 0 0 0 20.4 4H5.2l-.9-2H1Z"/></svg>
           <span>Einkaufsliste</span>
         </button>
+        <button class="ctrl" id="customers-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 1 7l11 5 9-4.1V15h2V7L12 2Zm-7 9.2v4.3C5 18 8.1 20 12 20s7-2 7-4.5v-4.3l-7 3.2-7-3.2Z"/></svg>
+          <span>Kunden</span>
+        </button>
         <button class="ctrl" id="reconnect" type="button" hidden>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.75 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35Z"/></svg>
           <span>Neu verbinden</span>
@@ -137,6 +141,19 @@
         <button type="submit" aria-label="Hinzufügen">+</button>
       </form>
       <button class="ctrl shopping-clear" id="shopping-clear-done" type="button">Erledigte entfernen</button>
+    </div>
+  </div>
+
+  <div class="modal" id="customers-modal" hidden>
+    <div class="modal-card games-card customers-card" role="dialog" aria-modal="true" aria-labelledby="customers-title">
+      <div class="games-head">
+        <h3 id="customers-title">Meine Kunden</h3>
+        <button class="icon-btn" id="customers-close" type="button" aria-label="Schließen">✕</button>
+      </div>
+      <p class="customers-summary" id="customers-summary"></p>
+      <ul class="customer-list" id="customer-list"></ul>
+      <p class="hint" id="customers-empty">Noch keine Kunden. Sag zum Beispiel: „Mach eine Website-Vorschau für den Friseur Haarscharf in der Bahnhofstraße.“</p>
+      <p class="hint">Tipp: Besuch den Laden und zeig die Vorschau auf dem Handy. Angebots-Mails gehen erst raus, wenn der Laden zugestimmt hat (Status „Interessiert“).</p>
     </div>
   </div>
 

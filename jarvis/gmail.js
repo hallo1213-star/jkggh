@@ -166,7 +166,8 @@ export async function describeEmail({ to, subject, body, replyToId }) {
   };
 }
 
-export async function sendEmail({ to, subject, body, replyToId }) {
+// `html` is an optional formatted version of the same text (e.g. with a button link).
+export async function sendEmail({ to, subject, body, replyToId, html }) {
   const recipients = normalizeRecipients(to);
   const text = String(body ?? '').trim();
   if (!text) throw new Error('Die E-Mail hat keinen Text.');
@@ -180,6 +181,7 @@ export async function sendEmail({ to, subject, body, replyToId }) {
       to: recipients,
       subject: String(subject || reply?.subject || '(kein Betreff)').slice(0, 200),
       text: text.slice(0, 20000),
+      ...(html ? { html } : {}),
       ...(reply?.inReplyTo ? { inReplyTo: reply.inReplyTo, references: reply.references } : {})
     }), 'Das Senden');
     return { gesendet: true, an: recipients, messageId: info.messageId };

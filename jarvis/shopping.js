@@ -78,3 +78,14 @@ export function shopLinks(query) {
     { name: 'Google Shopping', url: `https://www.google.com/search?tbm=shop&q=${q}` }
   ];
 }
+
+// Price research for selling something used: current offers and sold items.
+export function sellLinks(query) {
+  const words = clean(query);
+  const slug = encodeURIComponent(words.toLocaleLowerCase('de-DE').replace(/\s+/g, '-'));
+  return [
+    { name: 'Kleinanzeigen: ähnliche Angebote', url: `https://www.kleinanzeigen.de/s-${slug}/k0` },
+    { name: 'eBay: verkaufte Preise', url: `https://www.ebay.de/sch/i.html?_nkw=${encodeURIComponent(words)}&LH_Sold=1&LH_Complete=1` },
+    { name: 'Kleinanzeigen öffnen', url: 'https://www.kleinanzeigen.de/' }
+  ];
+}

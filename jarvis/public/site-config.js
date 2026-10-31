@@ -4,7 +4,8 @@
 // validated here because anyone can edit a link.
 import { decodeJson, encodeJson } from './link-codec.js';
 
-export const SECTION_TYPES = ['hero', 'text', 'features', 'gallery', 'list', 'pricing', 'faq', 'quote', 'event', 'contact'];
+export const SECTION_TYPES = ['hero', 'text', 'features', 'gallery', 'list', 'pricing', 'hours', 'faq', 'quote', 'event', 'cta', 'contact', 'impressum'];
+export const WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
 export const FONTS = ['modern', 'klassisch', 'verspielt', 'technisch'];
 export const MODES = ['hell', 'dunkel'];
 
@@ -42,7 +43,7 @@ function items(value, max, mapItem) {
 }
 
 const sectionCleaners = {
-  hero: (s) => ({ heading: text(s.heading, 90), text: text(s.text, 400), button_text: text(s.button_text, 40), button_link: safeLink(s.button_link) }),
+  hero: (s) => ({ badge: text(s.badge, 40), heading: text(s.heading, 90), text: text(s.text, 400), button_text: text(s.button_text, 40), button_link: safeLink(s.button_link) }),
   text: (s) => ({ heading: text(s.heading, 90), text: text(s.text, 2500) }),
   features: (s) => ({ heading: text(s.heading, 90), items: items(s.items, 8, (i) => (text(i?.title, 60) ? { icon: emoji(i.icon), title: text(i.title, 60), text: text(i.text, 300) } : null)) }),
   gallery: (s) => ({ heading: text(s.heading, 90), items: items(s.items, 12, (i) => (emoji(i?.emoji) ? { emoji: emoji(i.emoji), caption: text(i.caption, 60) } : null)) }),
@@ -51,6 +52,10 @@ const sectionCleaners = {
   faq: (s) => ({ heading: text(s.heading, 90), items: items(s.items, 10, (i) => (text(i?.q, 200) && text(i?.a, 600) ? { q: text(i.q, 200), a: text(i.a, 600) } : null)) }),
   quote: (s) => ({ text: text(s.text, 400), author: text(s.author, 60) }),
   event: (s) => ({ heading: text(s.heading, 90), date: text(s.date, 40), time: text(s.time, 40), place: text(s.place, 120), text: text(s.text, 600) }),
+  // Opening hours: one row per day or day range ("Mo–Fr"), "Geschlossen" allowed.
+  hours: (s) => ({ heading: text(s.heading, 90), text: text(s.text, 200), items: items(s.items, 10, (i) => (text(i?.day, 30) ? { day: text(i.day, 30), time: text(i.time, 40) || 'Geschlossen' } : null)) }),
+  cta: (s) => ({ heading: text(s.heading, 90), text: text(s.text, 300), button_text: text(s.button_text, 40), button_link: safeLink(s.button_link) }),
+  impressum: (s) => ({ heading: text(s.heading, 60) || 'Impressum', text: text(s.text, 1500) }),
   contact: (s) => ({
     heading: text(s.heading, 90),
     text: text(s.text, 400),
@@ -81,7 +86,9 @@ export function sanitizeSite(input = {}) {
       accent: HEX.test(colors.accent) ? colors.accent : '#f59e0b'
     },
     sections,
-    footer: text(input.footer, 160)
+    footer: text(input.footer, 160),
+    // Preview for a shop: no Jarvis branding or download for visitors, plus a "Vorschau" ribbon.
+    pitch: input.pitch === true
   };
 }
 

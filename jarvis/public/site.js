@@ -1,7 +1,15 @@
 // Renders a Jarvis website from the link's #fragment. All content is set as
 // text (never as HTML) and links are checked in site-config.js.
-import { decodeSite, sanitizeSite } from './site-config.js';
+import { WEEKDAYS, decodeSite, sanitizeSite } from './site-config.js';
 
+// Opened inside the Jarvis app (same-origin frame): show share/download tools.
+const inJarvis = (() => {
+  try {
+    return window.parent !== window && window.parent.location.origin === location.origin;
+  } catch {
+    return false;
+  }
+})();
 const site = decodeSite(location.hash) || sanitizeSite({ sections: [{ type: 'hero', heading: 'Diese Website ist leer', text: 'Der Link scheint unvollständig zu sein.' }] });
 const fonts = {
   modern: { heading: 'Poppins', body: 'Poppins', query: 'family=Poppins:wght@400;600;700' },
@@ -42,6 +50,30 @@ function sectionShell(section, index) {
   return { node, wrap };
 }
 
+function stagger(node, index) {
+  node.classList.add('stagger');
+  node.style.setProperty('--i', String(Math.min(index, 8)));
+  return node;
+}
+
+// Which weekday indexes (0 = Montag) a label like "Mo–Fr", "Samstag" or
+// "Montag bis Freitag" covers, so today's row can be highlighted.
+function dayRange(label) {
+  const names = WEEKDAYS.map((day) => day.slice(0, 2).toLowerCase());
+  const found = [...label.toLowerCase().matchAll(/(mo|di|mi|do|fr|sa|so)[a-zä]*/g)].map((match) => names.indexOf(match[1]));
+  if (!found.length) return [];
+  if (found.length >= 2 && /[-–—]|bis/.test(label)) {
+    const [from, to] = [found[0], found[found.length - 1]];
+    const days = [];
+    for (let i = from; days.length < 7; i = (i + 1) % 7) {
+      days.push(i);
+      if (i === to) break;
+    }
+    return days;
+  }
+  return found;
+}
+
 function link(href, label, className) {
   const a = el('a', className, label);
   a.href = href;
@@ -55,8 +87,11 @@ function link(href, label, className) {
 const renderers = {
   hero(section) {
     const node = el('section', 'hero');
+    for (const shape of ['one', 'two', 'three']) node.append(el('span', `hero-shape ${shape}`));
     const wrap = el('div', 'wrap reveal');
-    wrap.append(el('div', 'hero-logo', site.logo), el('h1', '', section.heading || site.title));
+    wrap.append(el('div', 'hero-logo', site.logo));
+    if (section.badge) wrap.append(el('div', 'hero-badge', section.badge));
+    wrap.append(el('h1', '', section.heading || site.title));
     if (section.text) wrap.append(el('p', '', section.text));
     if (section.button_text) wrap.append(link(section.button_link || '#section-1', section.button_text, 'button'));
     node.append(wrap);
@@ -75,7 +110,7 @@ const renderers = {
       if (item.icon) card.append(el('div', 'card-icon', item.icon));
       card.append(el('h3', '', item.title));
       if (item.text) card.append(el('p', '', item.text));
-      grid.append(card);
+      grid.append(stagger(card, grid.children.length));
     }
     wrap.append(grid);
     return node;
@@ -87,7 +122,7 @@ const renderers = {
       const tile = el('figure', 'tile');
       tile.append(el('div', 'tile-art', item.emoji));
       if (item.caption) tile.append(el('figcaption', '', item.caption));
-      grid.append(tile);
+      grid.append(stagger(tile, grid.children.length));
     }
     wrap.append(grid);
     return node;
@@ -95,7 +130,7 @@ const renderers = {
   list(section, index) {
     const { node, wrap } = sectionShell(section, index);
     const list = el('ul', 'checklist');
-    for (const item of section.items) list.append(el('li', '', item));
+    for (const item of section.items) list.append(stagger(el('li', '', item), list.children.length));
     wrap.append(list);
     return node;
   },
@@ -107,7 +142,7 @@ const renderers = {
       card.append(el('h3', '', item.name));
       if (item.price) card.append(el('div', 'price', item.price));
       if (item.text) card.append(el('p', '', item.text));
-      grid.append(card);
+      grid.append(stagger(card, grid.children.length));
     }
     wrap.append(grid);
     return node;
@@ -144,13 +179,41 @@ const renderers = {
     wrap.append(box);
     return node;
   },
+  hours(section, index) {
+    const { node, wrap } = sectionShell(section, index);
+    const box = el('div', 'hours');
+    const today = (new Date().getDay() + 6) % 7;
+    section.items.forEach((item, i) => {
+      const row = stagger(el('div', 'hours-row'), i);
+      if (dayRange(item.day).includes(today)) row.classList.add('today');
+      if (/geschlossen|zu$|ruhetag/i.test(item.time)) row.classList.add('closed');
+      row.append(el('span', '', item.day), el('span', '', item.time));
+      box.append(row);
+    });
+    wrap.append(box);
+    if (section.text) wrap.append(el('p', 'hours-note', section.text));
+    return node;
+  },
+  cta(section, index) {
+    const node = el('section', 'cta-section');
+    node.id = `section-${index}`;
+    const wrap = el('div', 'wrap reveal');
+    const box = el('div', 'cta-box');
+    box.append(el('h2', '', section.heading));
+    if (section.text) box.append(el('p', '', section.text));
+    if (section.button_text) box.append(link(section.button_link || '#top', section.button_text, 'button'));
+    wrap.append(box);
+    node.append(wrap);
+    return node;
+  },
   contact(section, index) {
     const { node, wrap } = sectionShell(section, index);
     const box = el('div', 'info');
     if (section.text) box.append(el('p', '', section.text));
+    const tel = section.phone && `tel:${section.phone.replace(/[^0-9+]/g, '')}`;
     const rows = [
       ['✉️', section.email, section.email && `mailto:${section.email}`],
-      ['📞', section.phone, section.phone && `tel:${section.phone.replace(/[^0-9+]/g, '')}`],
+      ['📞', section.phone, tel],
       ['📍', section.address, null]
     ];
     for (const [icon, value, href] of rows) {
@@ -159,10 +222,28 @@ const renderers = {
       row.append(el('span', '', icon), href ? link(href, value) : el('span', '', value));
       box.append(row);
     }
+    const actions = el('div', 'contact-actions');
+    if (tel) actions.append(link(tel, '📞 Anrufen', 'button'));
+    if (section.email) actions.append(link(`mailto:${section.email}`, '✉️ E-Mail schreiben', 'button secondary'));
+    if (section.address) actions.append(link(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(section.address)}`, '🧭 Route planen', 'button secondary'));
+    if (actions.children.length) box.append(actions);
     wrap.append(box);
+    if (tel && !document.querySelector('.call-fab')) {
+      callButton = link(tel, '📞 Anrufen', 'call-fab');
+    }
+    return node;
+  },
+  impressum(section, index) {
+    const node = el('section', 'impressum');
+    node.id = `section-${index}`;
+    const wrap = el('div', 'wrap');
+    wrap.append(el('h2', '', section.heading), paragraphs(section.text));
+    node.append(wrap);
     return node;
   }
 };
+
+let callButton = null;
 
 function render() {
   const font = fonts[site.font];
@@ -203,7 +284,7 @@ function render() {
     const node = renderers[section.type](section, index);
     node.id = `section-${index}`;
     main.append(node);
-    if (section.heading && section.type !== 'hero') nav.append(link(`#section-${index}`, section.heading));
+    if (section.heading && !['hero', 'cta', 'impressum'].includes(section.type)) nav.append(link(`#section-${index}`, section.heading));
   });
 
   const footer = el('footer', 'site-footer');
@@ -211,6 +292,24 @@ function render() {
   footerWrap.append(el('div', '', site.footer || `© ${new Date().getFullYear()} ${site.title}`));
   footer.append(footerWrap);
   root.append(header, main, footer);
+  if (callButton) root.append(callButton);
+
+  // Visitors (e.g. the shop owner) see neither Jarvis branding nor a download button.
+  document.getElementById('toolbar').hidden = !inJarvis;
+  if (site.pitch) {
+    const ribbon = el('div', 'preview-ribbon', `Vorschau – ein Website-Entwurf für ${site.title}`);
+    document.body.prepend(ribbon);
+  }
+
+  const progress = el('div', 'progress');
+  document.body.prepend(progress);
+  const onScroll = () => {
+    const max = document.documentElement.scrollHeight - innerHeight;
+    progress.style.transform = `scaleX(${max > 0 ? Math.min(1, scrollY / max) : 0})`;
+    header.classList.toggle('scrolled', scrollY > 10);
+  };
+  addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
 
   const observer = 'IntersectionObserver' in window
     ? new IntersectionObserver((entries) => {

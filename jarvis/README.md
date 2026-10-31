@@ -63,6 +63,7 @@ Tipp: Lege eine Verknüpfung zu `Laptop-verbinden.bat` in den Autostart-Ordner (
 |---|---|---|
 | Gespräch | Fragen, Erklärungen, Ideen, Texte formulieren | nein |
 | **E-Mails** | „Hab ich neue Mails?“, „Was schreibt Amazon?“, „Lies mir die Mail von Oma vor“, „Antworte ihr, dass ich Sonntag komme“* | nein |
+| **Geld verdienen** | „Mach eine Website-Vorschau für den Friseur Haarscharf in der Bahnhofstraße“, „Der Laden ist interessiert, schick das Angebot“, „Zeig meine Kunden“, „Schreib eine Anzeige für meine PS4“ | nein |
 | **Einkaufen** | „Such mir günstige Bluetooth-Kopfhörer“, „Setz Milch und Batterien auf die Einkaufsliste“, „Was steht drauf?“, „Schick mir die Liste per Mail“* | nein |
 | **Websites** | „Erstelle eine Website für meinen Fußballverein“, „Eine Seite für meine Geburtstagsparty am Samstag“, „Mach sie dunkler und füg Preise hinzu“ | nein |
 | **Spiele** | „Mach mir ein Weltraum-Spiel“, „Ein Quiz über Fußball“, „Ein Memory mit Tieren“, „Mach es schwerer“ | nein |
@@ -96,6 +97,28 @@ So geht Jarvis mit deinen Mails um:
 
 Falls Google kein App-Passwort anbietet (z. B. bei Schul-/Firmenkonten oder „Erweitertem Schutz“), funktioniert diese Methode nicht.
 
+## Geld verdienen 💰
+
+Jarvis verdient nicht von allein Geld – aber er erledigt die Arbeit, für die andere bezahlen.
+
+### Website-Geschäft für Läden
+
+1. **Laden finden:** Viele kleine Läden (Friseur, Imbiss, Nagelstudio, Handwerker, Verein) haben keine oder eine veraltete Website.
+2. **Vorschau bauen:** „Jarvis, mach eine Website-Vorschau für den Friseur Haarscharf in der Bahnhofstraße.“ Jarvis legt den Laden in deiner **Kundenliste** an und baut eine animierte Website mit Leistungen, Öffnungszeiten (heute wird hervorgehoben), Aktions-Banner, Anrufen-/Route-Knöpfen und Impressum-Bereich.
+3. **Hingehen und zeigen:** Besuch den Laden und zeig die Vorschau auf deinem Handy (Kunden → ↗ Vorschau). Der Laden sieht **kein Jarvis-Logo und keinen Download-Knopf**, nur ein Band „Vorschau – ein Website-Entwurf für …“.
+4. **Angebot per Mail – erst nach Zustimmung:** Sagt der Laden „Schicken Sie mir das mal“, sag Jarvis: „Haarscharf ist interessiert, die Mail ist info@… , Preis 150 €“ und dann „Schick das Angebot“. Du siehst die Mail vorher und bestätigst sie; sie enthält einen Knopf zur Vorschau.
+5. **Verkauft?** Status auf „Gekauft“ setzen und die Website in Jarvis **herunterladen** (Datei ohne Vorschau-Band) – die kann der Laden bei seinem Webhoster hochladen.
+
+**Wichtig – damit du keinen Ärger bekommst:**
+- **Keine Werbe-Mails ohne Einverständnis.** In Deutschland sind unerwünschte Werbe-E-Mails auch an Firmen nicht erlaubt und können teure Abmahnungen bringen. Jarvis sperrt Angebots-Mails deshalb, bis ein Kunde auf „Interessiert“ steht.
+- **Nichts erfinden:** Jarvis schreibt keine erfundenen Bewertungen, Preise oder Öffnungszeiten. Frag den Laden nach den echten Angaben.
+- **Impressum & Datenschutz:** Geschäftliche Websites brauchen ein Impressum (und meist eine Datenschutzerklärung). Die Angaben muss der Inhaber liefern.
+- **Gewerbe:** Wer regelmäßig Geld verdient, muss in Deutschland in der Regel ein Gewerbe anmelden. Bist du unter 18, brauchst du die Zustimmung deiner Eltern.
+
+### Kleinanzeigen
+
+„Ich will meine alte PlayStation verkaufen“ – Jarvis fragt kurz nach Zustand und Zubehör und schreibt eine ehrliche, ansprechende Anzeige mit **Titel kopieren / Text kopieren** und Links zum Preisvergleich (ähnliche Angebote bei Kleinanzeigen, **verkaufte** Preise bei eBay). Die Anzeige landet auch unter **Meine Projekte**.
+
 ## Einkaufen
 
 - **Produktsuche:** Jarvis zeigt eine Karte mit Knöpfen zu **Amazon**, **idealo** (Preisvergleich) und **Google Shopping**. Du tippst drauf und bestellst selbst in deinem Konto – Jarvis bestellt und bezahlt bewusst nie selbst (keine gespeicherten Zahlungsdaten, keine versehentlichen Bestellungen durch Verhörer).
@@ -105,11 +128,11 @@ Falls Google kein App-Passwort anbietet (z. B. bei Schul-/Firmenkonten oder „E
 
 ## Websites
 
-Beschreib Jarvis einfach, was du brauchst – er schreibt die Texte, wählt Farben, Schrift und Logo und baut die Seite aus fertigen Bausteinen: Startbereich, Text, Vorteile, Galerie, Listen (z. B. Speisekarte, Trainingszeiten), Preise, Fragen & Antworten, Zitat, Termin und Kontakt.
+Beschreib Jarvis einfach, was du brauchst – er schreibt die Texte, wählt Farben, Schrift und Logo und baut die Seite aus fertigen Bausteinen: Startbereich, Text, Vorteile, Galerie, Listen (z. B. Speisekarte, Trainingszeiten), Preise, Öffnungszeiten, Fragen & Antworten, Zitat, Termin, Aktions-Banner, Kontakt und Impressum – mit Animationen (bewegter Farbverlauf, einfliegende Elemente, Glanz-Knöpfe, Scroll-Fortschritt).
 
 - **↗ Öffnen** zeigt die Website direkt in der App. Während sie offen ist, kannst du Änderungen sagen („mach die Überschrift größer“, „andere Farben“) – die Seite aktualisiert sich von selbst.
 - **Teilen:** Die ganze Website steckt im Link; jeder kann sie ohne dein Passwort ansehen.
-- **Herunterladen:** speichert die Website als fertige HTML-Datei (ohne Skripte), die du überall hochladen oder per Mail verschicken kannst.
+- **Herunterladen:** speichert die Website als fertige HTML-Datei (ohne Skripte), die du überall hochladen kannst. Teilen und Herunterladen gibt es nur in Jarvis – wer den Link öffnet, sieht nur die Website.
 - **Meine Projekte** listet alle Spiele und Websites.
 - Jarvis erfindet keine Kontaktdaten, Preise oder Termine – die übernimmt er nur von dir.
 - Bilder hochladen geht (noch) nicht; die Seiten nutzen Emojis und Farbverläufe.
