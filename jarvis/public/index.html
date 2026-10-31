@@ -70,6 +70,10 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 6h10a5 5 0 0 1 4.9 6l-1 5a2.5 2.5 0 0 1-4.3 1.2L14.7 16H9.3l-1.9 2.2A2.5 2.5 0 0 1 3.1 17l-1-5A5 5 0 0 1 7 6Zm0 3v1.5H5.5v2H7V14h2v-1.5h1.5v-2H9V9H7Zm8.5 1a1.25 1.25 0 1 0 0 2.5 1.25 1.25 0 0 0 0-2.5Zm2.5 1.5a1 1 0 1 0 0 2 1 1 0 0 0 0-2Z"/></svg>
           <span>Meine Projekte</span>
         </button>
+        <button class="ctrl" id="shopping-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a2 2 0 1 0 0 4 2 2 0 0 0 0-4Zm10 0a2 2 0 1 0 0 4 2 2 0 0 0 0-4ZM1 2v2h2l3.6 7.6-1.4 2.4A2 2 0 0 0 7 17h12v-2H7.4l1.1-2h7.5a2 2 0 0 0 1.7-1l3.6-6.5A1 1 0 0 0 20.4 4H5.2l-.9-2H1Z"/></svg>
+          <span>Einkaufsliste</span>
+        </button>
         <button class="ctrl" id="reconnect" type="button" hidden>
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17.65 6.35A7.95 7.95 0 0 0 12 4a8 8 0 1 0 7.75 10h-2.08A6 6 0 1 1 12 6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35Z"/></svg>
           <span>Neu verbinden</span>
@@ -117,6 +121,22 @@
       </div>
       <ul class="games-list" id="games-list"></ul>
       <p class="hint" id="games-empty">Noch nichts erstellt. Sag zum Beispiel: „Mach mir ein Weltraum-Spiel“ oder „Erstelle eine Website für meinen Fußballverein“.</p>
+    </div>
+  </div>
+
+  <div class="modal" id="shopping-modal" hidden>
+    <div class="modal-card games-card" role="dialog" aria-modal="true" aria-labelledby="shopping-title">
+      <div class="games-head">
+        <h3 id="shopping-title">Einkaufsliste</h3>
+        <button class="icon-btn" id="shopping-close" type="button" aria-label="Schließen">✕</button>
+      </div>
+      <ul class="shopping-list" id="shopping-list"></ul>
+      <p class="hint" id="shopping-empty">Die Liste ist leer. Sag zum Beispiel: „Setz Milch und Brot auf die Einkaufsliste.“</p>
+      <form class="composer" id="shopping-form" autocomplete="off">
+        <input id="shopping-input" type="text" maxlength="80" placeholder="Artikel hinzufügen …" aria-label="Artikel hinzufügen">
+        <button type="submit" aria-label="Hinzufügen">+</button>
+      </form>
+      <button class="ctrl shopping-clear" id="shopping-clear-done" type="button">Erledigte entfernen</button>
     </div>
   </div>
 

@@ -403,6 +403,8 @@ body {
   backdrop-filter: blur(4px);
 }
 .modal[hidden] { display: none; }
+/* Confirmations must stay on top of every other dialog and the game/website view. */
+#confirm { z-index: 60; }
 
 .modal-card {
   width: min(520px, 100%);
@@ -532,6 +534,22 @@ body {
 @media (max-width: 420px) {
   #status-chip { display: none; }
 }
+
+/* --- Shopping --- */
+.shop-card { padding: 14px; border: 1px solid var(--cyan); background: linear-gradient(135deg, rgba(56, 225, 255, 0.14), rgba(56, 225, 255, 0.03)); }
+.shop-card-title { display: block; margin-bottom: 10px; font-weight: 700; font-size: 17px; overflow-wrap: anywhere; }
+.shop-links { display: flex; flex-wrap: wrap; gap: 8px; }
+.shop-links a { flex: 1 1 120px; padding: 10px 12px; border: 1px solid var(--panel-edge); background: rgba(2, 12, 20, 0.6); color: var(--cyan-soft); font-weight: 700; text-align: center; text-decoration: none; }
+.shop-links a::after { content: ' ↗'; }
+.shop-links a:hover { border-color: var(--cyan); background: rgba(56, 225, 255, 0.14); }
+
+.shopping-list { list-style: none; margin: 0 0 6px; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 50vh; overflow-y: auto; }
+.shopping-list li { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--panel-edge); background: rgba(56, 225, 255, 0.04); }
+.shopping-list label { flex: 1; display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 17px; overflow-wrap: anywhere; }
+.shopping-list input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--cyan); flex: none; }
+.shopping-list li.done label span { text-decoration: line-through; color: var(--muted); }
+.shopping-list .icon-btn { width: 30px; height: 30px; font-size: 13px; }
+.shopping-clear { margin-top: 12px; width: 100%; justify-content: center; }
 
 /* --- Login --- */
 .login-page { display: grid; place-items: center; min-height: 100vh; padding: 16px; }

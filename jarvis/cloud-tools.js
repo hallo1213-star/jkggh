@@ -1,7 +1,8 @@
 // Functions that run in the cloud and work even when the laptop is off.
 import { normalizeUrl, searchUrls } from './laptop/tools.js';
 import { DIFFICULTIES, GAME_TYPES, encodeGame, sanitizeGame } from './public/game-config.js';
-import { describeEmail, listEmails, readEmail, sendEmail } from './gmail.js';
+import { describeEmail, gmailConfigured, listEmails, readEmail, sendEmail } from './gmail.js';
+import { addItems, listAsText, removeItems, shopLinks } from './shopping.js';
 import { FONTS, MODES, SECTION_TYPES, encodeSite, sanitizeSite } from './public/site-config.js';
 
 const timeZone = process.env.TZ || 'Europe/Berlin';
@@ -217,6 +218,85 @@ export const cloudTools = [
     label: (a) => `E-Mail senden an ${a.to}`,
     confirm: async ({ to, subject, body, reply_to_id: replyToId }) => describeEmail({ to, subject, body, replyToId }),
     run: async ({ to, subject, body, reply_to_id: replyToId }) => sendEmail({ to, subject, body, replyToId })
+  },
+  {
+    name: 'shop_search',
+    description: 'Zeigt dem Nutzer eine Einkaufskarte mit Such-Links zu Amazon, idealo (Preisvergleich) und Google Shopping für ein Produkt. Du kannst selbst nichts bestellen oder bezahlen – der Nutzer tippt auf einen Link und bestellt in seinem eigenen Konto.',
+    parameters: {
+      type: 'object',
+      properties: { query: { type: 'string', description: 'Präziser Suchbegriff, z. B. "Bluetooth Kopfhörer Noise Cancelling"' } },
+      required: ['query']
+    },
+    label: (a) => `Produktsuche: ${a.query}`,
+    run: async ({ query }, context) => {
+      if (!String(query ?? '').trim()) throw new Error('Kein Suchbegriff angegeben.');
+      context.showShop({ query: String(query).trim().slice(0, 80), links: shopLinks(query) });
+      return { angezeigt: true, hinweis: 'Der Nutzer sieht Knöpfe für Amazon, idealo und Google Shopping. Preise und Angebote kennst du nicht.' };
+    }
+  },
+  {
+    name: 'shopping_list_add',
+    description: 'Setzt einen oder mehrere Artikel auf die Einkaufsliste des Nutzers.',
+    parameters: {
+      type: 'object',
+      properties: { items: { type: 'array', items: { type: 'string' }, description: 'Artikel, z. B. ["Milch", "2 Packungen Nudeln"]' } },
+      required: ['items']
+    },
+    label: (a) => `Einkaufsliste: + ${(a.items || []).join(', ')}`,
+    run: async ({ items }, context) => {
+      const { list, added } = addItems(context.getShoppingList(), items);
+      context.setShoppingList(list);
+      return { hinzugefuegt: added, bereitsDrauf: (Array.isArray(items) ? items : [items]).length - added.length, anzahl: list.length };
+    }
+  },
+  {
+    name: 'shopping_list_remove',
+    description: 'Streicht Artikel von der Einkaufsliste. Mit clear: true wird die ganze Liste geleert (nur wenn der Nutzer das ausdrücklich will; er muss es bestätigen).',
+    parameters: {
+      type: 'object',
+      properties: {
+        items: { type: 'array', items: { type: 'string' }, description: 'Zu streichende Artikel' },
+        clear: { type: 'boolean', description: 'Ganze Liste leeren' }
+      }
+    },
+    label: (a) => (a.clear ? 'Einkaufsliste leeren' : `Einkaufsliste: − ${(a.items || []).join(', ')}`),
+    confirm: async ({ clear }, context) => (clear ? { title: 'Ganze Einkaufsliste leeren?', detail: listAsText(context.getShoppingList()) || '(Die Liste ist schon leer.)' } : null),
+    run: async ({ items, clear }, context) => {
+      if (clear) {
+        context.setShoppingList([]);
+        return { geleert: true };
+      }
+      const { list, removed, notFound } = removeItems(context.getShoppingList(), items || []);
+      context.setShoppingList(list);
+      return { gestrichen: removed, nichtGefunden: notFound, anzahl: list.length };
+    }
+  },
+  {
+    name: 'shopping_list_show',
+    description: 'Liest die Einkaufsliste und zeigt sie dem Nutzer auf dem Bildschirm an.',
+    parameters: { type: 'object', properties: {} },
+    label: () => 'Einkaufsliste angezeigt',
+    run: async (args, context) => {
+      const list = context.getShoppingList();
+      context.setShoppingList(list, { show: true });
+      return { offen: list.filter((item) => !item.done).map((item) => item.text), erledigt: list.filter((item) => item.done).map((item) => item.text) };
+    }
+  },
+  {
+    name: 'shopping_list_email',
+    description: 'Schickt die Einkaufsliste per E-Mail an die eigene Gmail-Adresse des Nutzers (nach Bestätigung auf dem Bildschirm).',
+    parameters: { type: 'object', properties: {} },
+    label: () => 'Einkaufsliste per Mail',
+    confirm: async (args, context) => {
+      if (!gmailConfigured()) return null;
+      return { title: 'Einkaufsliste an dich selbst mailen?', detail: `An: ${process.env.GMAIL_ADDRESS.trim()}\n\n${listAsText(context.getShoppingList()) || '(leer)'}` };
+    },
+    run: async (args, context) => {
+      const text = listAsText(context.getShoppingList());
+      if (!text) throw new Error('Die Einkaufsliste ist leer.');
+      if (!gmailConfigured()) throw new Error('Gmail ist noch nicht eingerichtet, deshalb kann ich die Liste nicht mailen.');
+      return sendEmail({ to: process.env.GMAIL_ADDRESS.trim(), subject: 'Einkaufsliste', body: `Deine Einkaufsliste von Jarvis:\n\n${text}` });
+    }
   },
   {
     name: 'set_timer',

@@ -37,7 +37,15 @@ const els = {
   gameOverlay: $('game-overlay'),
   gameFrame: $('game-frame'),
   gameClose: $('game-close'),
-  gameShare: $('game-share')
+  gameShare: $('game-share'),
+  shoppingButton: $('shopping-button'),
+  shoppingModal: $('shopping-modal'),
+  shoppingList: $('shopping-list'),
+  shoppingEmpty: $('shopping-empty'),
+  shoppingClose: $('shopping-close'),
+  shoppingForm: $('shopping-form'),
+  shoppingInput: $('shopping-input'),
+  shoppingClearDone: $('shopping-clear-done')
 };
 
 const state = {
@@ -311,6 +319,112 @@ els.gameShare.addEventListener('click', async () => {
   }
 });
 
+// --- Shopping ----------------------------------------------------------
+
+const SHOPPING_KEY = 'jarvis.shoppingList';
+
+function loadShoppingList() {
+  try {
+    const list = JSON.parse(localStorage.getItem(SHOPPING_KEY) || '[]');
+    return Array.isArray(list) ? list.filter((item) => typeof item?.text === 'string').slice(0, 100) : [];
+  } catch {
+    return [];
+  }
+}
+
+// Saves the list on this device; local edits are also sent to Jarvis.
+function storeShoppingList(items, { sync = true } = {}) {
+  const list = (Array.isArray(items) ? items : []).map((item) => ({ text: String(item.text).slice(0, 80), done: item.done === true }));
+  try {
+    localStorage.setItem(SHOPPING_KEY, JSON.stringify(list));
+  } catch {
+    // storage unavailable; the list still works for this session
+  }
+  if (sync && state.ws?.readyState === WebSocket.OPEN) state.ws.send(JSON.stringify({ type: 'shopping_list_update', items: list }));
+  if (!els.shoppingModal.hidden) renderShoppingList();
+}
+
+function renderShoppingList() {
+  const list = loadShoppingList();
+  els.shoppingList.replaceChildren(...list.map((item, index) => {
+    const row = document.createElement('li');
+    row.classList.toggle('done', item.done);
+    const label = document.createElement('label');
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = item.done;
+    box.addEventListener('change', () => {
+      list[index].done = box.checked;
+      storeShoppingList(list);
+    });
+    const text = document.createElement('span');
+    text.textContent = item.text;
+    label.append(box, text);
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'icon-btn';
+    remove.textContent = '✕';
+    remove.setAttribute('aria-label', `${item.text} entfernen`);
+    remove.addEventListener('click', () => storeShoppingList(list.filter((_, i) => i !== index)));
+    row.append(label, remove);
+    return row;
+  }));
+  els.shoppingEmpty.hidden = list.length > 0;
+  els.shoppingClearDone.hidden = !list.some((item) => item.done);
+}
+
+function showShoppingList() {
+  renderShoppingList();
+  els.shoppingModal.hidden = false;
+}
+
+function addShopCard(query, links) {
+  clearEmpty(els.transcript);
+  const item = document.createElement('div');
+  item.className = 'msg assistant';
+  const label = document.createElement('span');
+  label.className = 'msg-role';
+  label.textContent = 'Einkaufen';
+  const card = document.createElement('div');
+  card.className = 'shop-card';
+  const title = document.createElement('span');
+  title.className = 'shop-card-title';
+  title.textContent = `🛒 ${query}`;
+  const buttons = document.createElement('div');
+  buttons.className = 'shop-links';
+  for (const shop of Array.isArray(links) ? links : []) {
+    if (!/^https:\/\//.test(shop.url)) continue;
+    const a = document.createElement('a');
+    a.href = shop.url;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    a.textContent = shop.name;
+    buttons.append(a);
+  }
+  card.append(title, buttons);
+  item.append(label, card);
+  els.transcript.append(item);
+  els.transcript.scrollTop = els.transcript.scrollHeight;
+}
+
+els.shoppingButton.addEventListener('click', showShoppingList);
+els.shoppingClose.addEventListener('click', () => {
+  els.shoppingModal.hidden = true;
+});
+els.shoppingModal.addEventListener('click', (event) => {
+  if (event.target === els.shoppingModal) els.shoppingModal.hidden = true;
+});
+els.shoppingForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const text = els.shoppingInput.value.trim();
+  if (!text) return;
+  const list = loadShoppingList();
+  if (!list.some((item) => item.text.toLocaleLowerCase('de-DE') === text.toLocaleLowerCase('de-DE'))) list.push({ text, done: false });
+  storeShoppingList(list);
+  els.shoppingInput.value = '';
+});
+els.shoppingClearDone.addEventListener('click', () => storeShoppingList(loadShoppingList().filter((item) => !item.done)));
+
 function setLaptop(connected) {
   els.laptopChip.dataset.state = connected ? 'online' : '';
   els.laptopChipText.textContent = connected ? 'Laptop an' : 'Laptop aus';
@@ -450,7 +564,7 @@ function connect() {
   setMode('connecting');
   els.reconnect.hidden = true;
 
-  ws.onopen = () => ws.send(JSON.stringify({ type: 'start', sampleRate: state.audio.sampleRate }));
+  ws.onopen = () => ws.send(JSON.stringify({ type: 'start', sampleRate: state.audio.sampleRate, shoppingList: loadShoppingList() }));
   ws.onmessage = ({ data }) => {
     if (typeof data !== 'string') {
       playChunk(data);
@@ -511,6 +625,13 @@ function handleMessage(message) {
       addGameCard(created);
       break;
     }
+    case 'shop':
+      addShopCard(message.query, message.links);
+      break;
+    case 'shopping_list':
+      storeShoppingList(message.items, { sync: false });
+      if (message.show) showShoppingList();
+      break;
     case 'site': {
       const created = { title: message.title, type: 'website', emoji: message.emoji, url: message.url };
       saveGame(created);

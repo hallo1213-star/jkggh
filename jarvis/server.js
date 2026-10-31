@@ -11,6 +11,7 @@ import { DeepgramClient } from '@deepgram/sdk';
 import { buildSettings, missingConfig } from './agent-config.js';
 import { attemptLogin, clearedCookie, isAuthenticated, passwordConfigured, sessionCookie, tokenMatches } from './auth.js';
 import { cloudTools, findCloudTool } from './cloud-tools.js';
+import { sanitizeList } from './shopping.js';
 import { findTool as findLaptopTool, functionDefinitions as laptopFunctions } from './laptop/tools.js';
 
 if (!process.env.TZ) process.env.TZ = 'Europe/Berlin';
@@ -256,6 +257,8 @@ browserWss.on('connection', (browser, request) => {
   const confirmations = new Map();
   const cancelled = new Set();
   const timers = new Set();
+  // The shopping list lives on the device; this is the copy for this conversation.
+  let shoppingList = [];
 
   const session = {
     toBrowser(message) {
@@ -301,6 +304,16 @@ browserWss.on('connection', (browser, request) => {
     showSite({ title, emoji, url }) {
       toBrowser({ type: 'site', title, emoji, url });
     },
+    showShop({ query, links }) {
+      toBrowser({ type: 'shop', query, links });
+    },
+    getShoppingList() {
+      return shoppingList;
+    },
+    setShoppingList(list, { show = false } = {}) {
+      shoppingList = sanitizeList(list);
+      toBrowser({ type: 'shopping_list', items: shoppingList, show });
+    },
     origin,
     laptopConnected
   };
@@ -309,7 +322,7 @@ browserWss.on('connection', (browser, request) => {
     const cloudTool = findCloudTool(name);
     if (cloudTool) {
       try {
-        const request = cloudTool.confirm ? await cloudTool.confirm(args) : null;
+        const request = cloudTool.confirm ? await cloudTool.confirm(args, context) : null;
         if (request && !(await session.askConfirmation(id, request))) {
           return { state: 'denied', result: { ok: false, abgelehnt: true, hinweis: 'Der Nutzer hat die Aktion nicht bestätigt. Sie wurde nicht ausgeführt.' } };
         }
@@ -446,11 +459,14 @@ browserWss.on('connection', (browser, request) => {
       return;
     }
     if (message.type === 'start') {
+      shoppingList = sanitizeList(message.shoppingList);
       const rate = Number(message.sampleRate);
       startAgent(rate >= 8000 && rate <= 96000 ? rate : 48000).catch((error) => {
         agent = null;
         toBrowser({ type: 'error', message: `Jarvis konnte nicht starten: ${error.message}` });
       });
+    } else if (message.type === 'shopping_list_update') {
+      shoppingList = sanitizeList(message.items);
     } else if (message.type === 'confirm_response') {
       confirmations.get(message.id)?.(message.approved === true);
     } else if (message.type === 'text' && agentOpen && String(message.text || '').trim()) {

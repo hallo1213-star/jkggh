@@ -63,6 +63,7 @@ Tipp: Lege eine Verknüpfung zu `Laptop-verbinden.bat` in den Autostart-Ordner (
 |---|---|---|
 | Gespräch | Fragen, Erklärungen, Ideen, Texte formulieren | nein |
 | **E-Mails** | „Hab ich neue Mails?“, „Was schreibt Amazon?“, „Lies mir die Mail von Oma vor“, „Antworte ihr, dass ich Sonntag komme“* | nein |
+| **Einkaufen** | „Such mir günstige Bluetooth-Kopfhörer“, „Setz Milch und Batterien auf die Einkaufsliste“, „Was steht drauf?“, „Schick mir die Liste per Mail“* | nein |
 | **Websites** | „Erstelle eine Website für meinen Fußballverein“, „Eine Seite für meine Geburtstagsparty am Samstag“, „Mach sie dunkler und füg Preise hinzu“ | nein |
 | **Spiele** | „Mach mir ein Weltraum-Spiel“, „Ein Quiz über Fußball“, „Ein Memory mit Tieren“, „Mach es schwerer“ | nein |
 | Zeit | „Wie spät ist es?“, „Erinnere mich in 20 Minuten an die Wäsche“ | nein |
@@ -94,6 +95,13 @@ So geht Jarvis mit deinen Mails um:
 - **Zugang entziehen:** App-Passwort unter https://myaccount.google.com/apppasswords löschen.
 
 Falls Google kein App-Passwort anbietet (z. B. bei Schul-/Firmenkonten oder „Erweitertem Schutz“), funktioniert diese Methode nicht.
+
+## Einkaufen
+
+- **Produktsuche:** Jarvis zeigt eine Karte mit Knöpfen zu **Amazon**, **idealo** (Preisvergleich) und **Google Shopping**. Du tippst drauf und bestellst selbst in deinem Konto – Jarvis bestellt und bezahlt bewusst nie selbst (keine gespeicherten Zahlungsdaten, keine versehentlichen Bestellungen durch Verhörer).
+- **Einkaufsliste:** Jarvis fügt hinzu, streicht, liest vor und mailt dir die Liste (mit Bestätigung). Über den Knopf **Einkaufsliste** kannst du selbst abhaken, hinzufügen und Erledigtes entfernen. Die ganze Liste leert Jarvis nur nach deiner Bestätigung.
+- Die Liste wird **auf deinem Gerät** gespeichert (der kostenlose Server vergisst beim Einschlafen alles). iPhone und Laptop haben deshalb je eine eigene Liste – zum Übertragen einfach per Mail schicken lassen.
+- **Pakete:** „Wo ist mein Amazon-Paket?“ – Jarvis sucht die Versandmail in deinem Gmail.
 
 ## Websites
 
