@@ -62,6 +62,7 @@ Tipp: Lege eine Verknüpfung zu `Laptop-verbinden.bat` in den Autostart-Ordner (
 | Bereich | Beispiele | Laptop nötig? |
 |---|---|---|
 | Gespräch | Fragen, Erklärungen, Ideen, Texte formulieren | nein |
+| **Spiele** | „Mach mir ein Weltraum-Spiel“, „Ein Quiz über Fußball“, „Ein Memory mit Tieren“, „Mach es schwerer“ | nein |
 | Zeit | „Wie spät ist es?“, „Erinnere mich in 20 Minuten an die Wäsche“ | nein |
 | Web | „Wie wird das Wetter morgen?“, „Zeig mir Pizzerien in der Nähe“, „Öffne YouTube“ | nein (Link in der App) |
 | Programme | „Öffne Spotify auf dem Laptop“, „Schließ Chrome“ | ja |
@@ -72,6 +73,24 @@ Tipp: Lege eine Verknüpfung zu `Laptop-verbinden.bat` in den Autostart-Ordner (
 | Alles andere | PowerShell-Befehl, den du siehst und bestätigst* | ja |
 
 \* = erfordert deine Bestätigung in der App.
+
+## Spiele
+
+Jarvis baut auf Zuruf eigene Handy-Spiele und gestaltet Titel, Figuren, Farben und Schwierigkeit passend zu deinem Wunsch. Sechs Spieltypen:
+
+| Typ | So geht's |
+|---|---|
+| Fangen | Gutes auffangen, Gefahren ausweichen |
+| Ausweichen | Herabfallenden Hindernissen ausweichen, Bonus sammeln |
+| Springen | Endlos-Lauf: über Hindernisse springen (Doppelsprung!), Münzen sammeln |
+| Reaktion | 30 Sekunden lang so schnell wie möglich Ziele antippen |
+| Memory | Kartenpaare finden |
+| Quiz | Jarvis denkt sich die Fragen selbst aus |
+
+- **▶ Spielen** öffnet das Spiel direkt in der App; **Meine Spiele** listet alle bisherigen Spiele.
+- Steuerung: Finger ziehen/tippen am iPhone, Pfeiltasten/Leertaste am PC. Bestwerte werden gespeichert.
+- **Teilen:** Das ganze Spiel steckt im Link – Freunde können es ohne dein Passwort spielen, und es geht auch nach Render-Neustarts nicht verloren.
+- Während du spielst, ist Jarvis' Mikrofon stumm.
 
 ## Sicherheit
 

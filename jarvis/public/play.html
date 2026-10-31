@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#02070d">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Jarvis-Spiel</title>
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/game.css">
+</head>
+<body>
+  <canvas id="stage" aria-label="Spielfeld"></canvas>
+
+  <div class="hud" id="hud" hidden>
+    <span class="hud-item" id="hud-score">0</span>
+    <span class="hud-item" id="hud-extra"></span>
+    <button class="hud-btn" id="pause" type="button" aria-label="Pause">❚❚</button>
+  </div>
+
+  <section class="quiz" id="quiz" hidden aria-live="polite">
+    <div class="quiz-top">
+      <span id="quiz-progress"></span>
+      <div class="quiz-timer"><span id="quiz-timer-bar"></span></div>
+    </div>
+    <h2 id="quiz-question"></h2>
+    <div class="quiz-answers" id="quiz-answers"></div>
+  </section>
+
+  <section class="screen" id="screen">
+    <p class="screen-kicker" id="screen-kicker">Ein Jarvis-Spiel</p>
+    <div class="screen-emoji" id="screen-emoji" aria-hidden="true"></div>
+    <h1 id="screen-title">Spiel</h1>
+    <p class="screen-text" id="screen-text"></p>
+    <p class="screen-best" id="screen-best"></p>
+    <div class="screen-actions">
+      <button class="btn btn-main" id="start" type="button">Spielen</button>
+      <button class="btn btn-ghost" id="share" type="button">Teilen</button>
+    </div>
+    <p class="screen-hint" id="screen-hint"></p>
+  </section>
+
+  <script src="/game.js" type="module"></script>
+</body>
+</html>

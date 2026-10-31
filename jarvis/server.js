@@ -26,7 +26,8 @@ const host = process.env.HOST || (process.env.RENDER ? '0.0.0.0' : '127.0.0.1');
 const publicDir = join(root, 'public');
 const CONFIRM_TIMEOUT_MS = 90_000;
 const LAPTOP_CALL_TIMEOUT_MS = 16 * 60 * 1000;
-const publicFiles = new Set(['/login.html', '/login.js', '/style.css', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png']);
+// Game pages are public so games can be shared; they hold no secrets.
+const publicFiles = new Set(['/login.html', '/login.js', '/style.css', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/play.html', '/game.js', '/game.css', '/game-config.js']);
 const contentTypes = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -242,10 +243,11 @@ httpServer.on('upgrade', (request, socket, head) => {
     socket.end('HTTP/1.1 401 Unauthorized\r\n\r\n');
     return;
   }
-  browserWss.handleUpgrade(request, socket, head, (ws) => browserWss.emit('connection', ws));
+  browserWss.handleUpgrade(request, socket, head, (ws) => browserWss.emit('connection', ws, request));
 });
 
-browserWss.on('connection', (browser) => {
+browserWss.on('connection', (browser, request) => {
+  const origin = `${isSecure(request) ? 'https' : 'http'}://${request.headers.host}`;
   let agent = null;
   let agentOpen = false;
   let lastAudioAt = 0;
@@ -293,6 +295,10 @@ browserWss.on('connection', (browser) => {
     showLink(url, title) {
       toBrowser({ type: 'link', url, title });
     },
+    showGame({ title, type, emoji, url }) {
+      toBrowser({ type: 'game', gameType: type, title, emoji, url });
+    },
+    origin,
     laptopConnected
   };
 

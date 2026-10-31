@@ -28,7 +28,16 @@ const els = {
   clock: $('clock'),
   laptopChip: $('laptop-chip'),
   laptopChipText: $('laptop-chip-text'),
-  logout: $('logout')
+  logout: $('logout'),
+  gamesButton: $('games-button'),
+  gamesModal: $('games-modal'),
+  gamesList: $('games-list'),
+  gamesEmpty: $('games-empty'),
+  gamesClose: $('games-close'),
+  gameOverlay: $('game-overlay'),
+  gameFrame: $('game-frame'),
+  gameClose: $('game-close'),
+  gameShare: $('game-share')
 };
 
 const state = {
@@ -163,6 +172,131 @@ function addLink(url, title) {
   els.transcript.append(item);
   els.transcript.scrollTop = els.transcript.scrollHeight;
 }
+
+// --- Games ---------------------------------------------------------------
+
+const GAMES_KEY = 'jarvis.games';
+const gameTypeNames = { fangen: 'Fangen', ausweichen: 'Ausweichen', springen: 'Springen', reaktion: 'Reaktion', memory: 'Memory', quiz: 'Quiz' };
+let micMutedBeforeGame = false;
+
+function loadGames() {
+  try {
+    const games = JSON.parse(localStorage.getItem(GAMES_KEY) || '[]');
+    return Array.isArray(games) ? games : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveGame({ title, type, emoji, url }) {
+  const games = [{ title, type, emoji, url, created: Date.now() }, ...loadGames().filter((game) => game.url !== url)].slice(0, 30);
+  try {
+    localStorage.setItem(GAMES_KEY, JSON.stringify(games));
+  } catch {
+    // storage unavailable; the card in the conversation still works
+  }
+}
+
+// Only links to this server's game page are opened in the app.
+function isGameUrl(url) {
+  try {
+    const parsed = new URL(url, location.href);
+    return parsed.origin === location.origin && parsed.pathname === '/play.html';
+  } catch {
+    return false;
+  }
+}
+
+function gameCard({ title, type, emoji, url }) {
+  const card = document.createElement('div');
+  card.className = 'game-card';
+  const icon = document.createElement('span');
+  icon.className = 'game-card-emoji';
+  icon.textContent = emoji || '🎮';
+  const text = document.createElement('span');
+  text.className = 'game-card-text';
+  const name = document.createElement('span');
+  name.className = 'game-card-title';
+  name.textContent = title;
+  const kind = document.createElement('span');
+  kind.className = 'game-card-type';
+  kind.textContent = gameTypeNames[type] || 'Spiel';
+  text.append(name, kind);
+  const play = document.createElement('button');
+  play.type = 'button';
+  play.className = 'btn btn-primary';
+  play.textContent = '▶ Spielen';
+  play.addEventListener('click', () => openGame(url, title));
+  card.append(icon, text, play);
+  return card;
+}
+
+function addGameCard(game) {
+  clearEmpty(els.transcript);
+  const item = document.createElement('div');
+  item.className = 'msg assistant';
+  const label = document.createElement('span');
+  label.className = 'msg-role';
+  label.textContent = 'Neues Spiel';
+  item.append(label, gameCard(game));
+  els.transcript.append(item);
+  els.transcript.scrollTop = els.transcript.scrollHeight;
+  chime([660, 880, 1320]);
+}
+
+function openGame(url, title) {
+  if (!isGameUrl(url)) return;
+  els.gamesModal.hidden = true;
+  // Mute Jarvis while playing so game sounds don't reach the microphone.
+  micMutedBeforeGame = state.micMuted;
+  state.micMuted = true;
+  stopPlayback();
+  els.gameFrame.src = url;
+  els.gameOverlay.dataset.url = url;
+  els.gameOverlay.dataset.title = title || 'Jarvis-Spiel';
+  els.gameOverlay.hidden = false;
+  setMode(state.mode);
+}
+
+function closeGame() {
+  els.gameOverlay.hidden = true;
+  els.gameFrame.src = 'about:blank';
+  state.micMuted = micMutedBeforeGame;
+  setMode(state.mode);
+}
+
+function showGames() {
+  const games = loadGames();
+  els.gamesList.replaceChildren(...games.map((game) => {
+    const item = document.createElement('li');
+    item.append(gameCard(game));
+    return item;
+  }));
+  els.gamesEmpty.hidden = games.length > 0;
+  els.gamesModal.hidden = false;
+  els.gamesClose.focus();
+}
+
+els.gamesButton.addEventListener('click', showGames);
+els.gamesClose.addEventListener('click', () => {
+  els.gamesModal.hidden = true;
+});
+els.gamesModal.addEventListener('click', (event) => {
+  if (event.target === els.gamesModal) els.gamesModal.hidden = true;
+});
+els.gameClose.addEventListener('click', closeGame);
+els.gameShare.addEventListener('click', async () => {
+  const url = els.gameOverlay.dataset.url;
+  try {
+    if (navigator.share) await navigator.share({ title: els.gameOverlay.dataset.title, text: 'Ein Spiel, gebaut von Jarvis', url });
+    else {
+      await navigator.clipboard.writeText(url);
+      toast('Link kopiert – schick ihn deinen Freunden!');
+    }
+  } catch {
+    // share sheet closed
+  }
+});
 
 function setLaptop(connected) {
   els.laptopChip.dataset.state = connected ? 'online' : '';
@@ -358,6 +492,12 @@ function handleMessage(message) {
     case 'link':
       addLink(message.url, message.title);
       break;
+    case 'game': {
+      const created = { title: message.title, type: message.gameType, emoji: message.emoji, url: message.url };
+      saveGame(created);
+      addGameCard(created);
+      break;
+    }
     case 'laptop':
       setLaptop(message.connected);
       break;

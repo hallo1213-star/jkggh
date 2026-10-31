@@ -1,5 +1,6 @@
 // Functions that run in the cloud and work even when the laptop is off.
 import { normalizeUrl, searchUrls } from './laptop/tools.js';
+import { DIFFICULTIES, GAME_TYPES, encodeGame, sanitizeGame } from './public/game-config.js';
 
 const timeZone = process.env.TZ || 'Europe/Berlin';
 
@@ -52,6 +53,54 @@ export const cloudTools = [
       const href = normalizeUrl(url);
       context.showLink(href, title || new URL(href).hostname);
       return { angezeigt: true };
+    }
+  },
+  {
+    name: 'create_game',
+    description: 'Erstellt sofort ein spielbares Handy-Spiel nach dem Wunsch des Nutzers und zeigt es ihm mit einem Spielen-Knopf an. Gestalte es kreativ passend zum Thema: Titel, Spielfigur, gute und schlechte Dinge als Emojis, Farben, Schwierigkeit. Spieltypen: fangen (Gutes auffangen, Schlechtem ausweichen), ausweichen (herabfallenden Hindernissen ausweichen, Bonus sammeln), springen (Endlos-Läufer: über Hindernisse springen, Münzen sammeln), reaktion (30 Sekunden lang Ziele antippen), memory (Kartenpaare finden), quiz (Fragen mit Antwortmöglichkeiten – dann unbedingt 8 bis 10 eigene Fragen mitgeben).',
+    parameters: {
+      type: 'object',
+      properties: {
+        type: { type: 'string', enum: GAME_TYPES, description: 'Spieltyp' },
+        title: { type: 'string', description: 'Kreativer, kurzer deutscher Spieltitel (max. 40 Zeichen)' },
+        player: { type: 'string', description: 'Ein Emoji als Spielfigur, z. B. 🚀' },
+        good: { type: 'array', items: { type: 'string' }, description: '2 bis 6 Emojis für gute Dinge (Sammeln, Ziele, Memory-Motive), z. B. ["⭐","💎"]' },
+        bad: { type: 'array', items: { type: 'string' }, description: '1 bis 4 Emojis für Hindernisse/Gefahren, z. B. ["☄️"]' },
+        colors: {
+          type: 'object',
+          description: 'Farben passend zum Thema als Hex-Werte',
+          properties: {
+            bg1: { type: 'string', description: 'Hintergrund oben, z. B. #1a0b3a' },
+            bg2: { type: 'string', description: 'Hintergrund unten (dunkel), z. B. #05020d' },
+            accent: { type: 'string', description: 'Leuchtende Akzentfarbe, z. B. #ff9d2e' }
+          }
+        },
+        difficulty: { type: 'string', enum: DIFFICULTIES, description: 'Standard: mittel' },
+        questions: {
+          type: 'array',
+          description: 'Nur für quiz: 8 bis 10 Fragen auf Deutsch',
+          items: {
+            type: 'object',
+            properties: {
+              frage: { type: 'string' },
+              antworten: { type: 'array', items: { type: 'string' }, description: '3 oder 4 Antwortmöglichkeiten' },
+              richtig: { type: 'integer', description: 'Index der richtigen Antwort, beginnend bei 0' }
+            },
+            required: ['frage', 'antworten', 'richtig']
+          }
+        }
+      },
+      required: ['type', 'title', 'player']
+    },
+    label: (a) => `Spiel erstellen: ${a.title || a.type}`,
+    run: async (args, context) => {
+      const game = sanitizeGame(args);
+      if (game.type === 'quiz' && game.questions.length < 3) {
+        throw new Error('Für ein Quiz brauche ich mindestens 3 gültige Fragen mit Antworten und dem Index der richtigen Antwort. Bitte erneut mit Fragen aufrufen.');
+      }
+      const url = `${context.origin}/play.html#${encodeGame(game)}`;
+      context.showGame({ title: game.title, type: game.type, emoji: game.player, url });
+      return { erstellt: true, titel: game.title, typ: game.type, fragen: game.questions?.length, hinweis: 'Der Nutzer sieht jetzt eine Spielkarte mit Spielen-Knopf und kann das Spiel auch mit Freunden teilen.' };
     }
   },
   {
