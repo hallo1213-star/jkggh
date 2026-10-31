@@ -3,6 +3,7 @@
 // the user listed in TELEGRAM_WICHTIG (e.g. "oma@example.de, Chef").
 import { fetchInboxSince, gmailConfigured } from './gmail.js';
 import { sendTelegram, telegramConfigured } from './telegram.js';
+import { sendVoiceNote, voiceMessagesEnabled } from './voice-message.js';
 
 const PARCEL = /versand|versendet|verschickt|zugestellt|zustellung|unterwegs|lieferung|geliefert|paket|sendung|bestellung|bestellbest|abholbereit|packstation|dhl|hermes|\bdpd\b|\bups\b|\bgls\b/i;
 const NEWSLETTER = /newsletter|angebot der woche|% rabatt|gutschein|deals?\b|sale\b|werbung/i;
@@ -26,6 +27,15 @@ export function formatNotice(email, reason) {
   return `${icon} ${email.betreff}\nVon: ${email.von}`;
 }
 
+// What Jarvis says in the voice message.
+export function spokenNotice(email, reason) {
+  const name = email.von.replace(/\s*<[^>]*>\s*/, '').replace(/^"|"$/g, '').trim() || email.vonAdresse || 'einem unbekannten Absender';
+  const subject = /[.!?]$/.test(email.betreff) ? email.betreff : `${email.betreff}.`;
+  if (reason === 'Paket/Bestellung') return `Hey, Neuigkeiten zu deiner Bestellung: ${subject} Von ${name}.`;
+  if (reason === 'wichtiger Absender') return `Du hast eine neue Nachricht von ${name}: ${subject}`;
+  return `Eine wichtige Mail von ${name}: ${subject}`;
+}
+
 export function startMailWatcher({ intervalMinutes = Number(process.env.TELEGRAM_MAIL_CHECK_MINUTES) || 5, log = console } = {}) {
   let lastUid = null;
   let running = false;
@@ -37,7 +47,8 @@ export function startMailWatcher({ intervalMinutes = Number(process.env.TELEGRAM
       for (const email of emails) {
         const reason = importanceOf(email);
         if (reason && email.ungelesen) {
-          await sendTelegram(formatNotice(email, reason));
+          if (voiceMessagesEnabled()) await sendVoiceNote(spokenNotice(email, reason), formatNotice(email, reason), { log });
+          else await sendTelegram(formatNotice(email, reason));
           log.log(`Telegram-Hinweis gesendet (${reason}).`);
         }
       }

@@ -16,6 +16,7 @@ import { sanitizeCustomers } from './customers.js';
 import { sanitizeHistory, sanitizeMemories } from './memories.js';
 import { sendTelegram, startSetupHelper, telegramConfigured } from './telegram.js';
 import { startMailWatcher } from './mail-watch.js';
+import { sendVoiceNote, voiceMessagesEnabled } from './voice-message.js';
 import { findTool as findLaptopTool, functionDefinitions as laptopFunctions } from './laptop/tools.js';
 
 if (!process.env.TZ) process.env.TZ = 'Europe/Berlin';
@@ -328,7 +329,10 @@ browserWss.on('connection', (browser, request) => {
     schedule(ms, message) {
       // With Telegram the reminder also arrives when the app is closed by then.
       if (telegramConfigured()) {
-        setTimeout(() => sendTelegram(`⏰ Erinnerung: ${message}`).catch((error) => console.warn(`Telegram-Erinnerung: ${error.message}`)), ms);
+        setTimeout(() => {
+          const notice = voiceMessagesEnabled() ? sendVoiceNote(`Erinnerung: ${message}`, `⏰ Erinnerung: ${message}`) : sendTelegram(`⏰ Erinnerung: ${message}`);
+          notice.catch((error) => console.warn(`Telegram-Erinnerung: ${error.message}`));
+        }, ms);
       }
       const timer = setTimeout(() => {
         timers.delete(timer);

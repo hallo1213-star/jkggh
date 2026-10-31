@@ -7,6 +7,7 @@ import { OFFER_ALLOWED, STATUSES, findCustomer, summarize, upsertCustomer } from
 import { getNews, getWeather, lookupWikipedia } from './knowledge.js';
 import { addMemory, forgetMemory } from './memories.js';
 import { sendTelegram, telegramConfigured } from './telegram.js';
+import { sendVoiceNote } from './voice-message.js';
 import { FONTS, MODES, SECTION_TYPES, encodeSite, sanitizeSite } from './public/site-config.js';
 
 const timeZone = process.env.TZ || 'Europe/Berlin';
@@ -545,16 +546,20 @@ export const cloudTools = [
   },
   {
     name: 'telegram_send',
-    description: 'Schickt dem Nutzer selbst eine Nachricht per Telegram, z. B. eine Notiz, eine Zusammenfassung oder eine Liste zum Mitnehmen. Nur an ihn selbst.',
+    description: 'Schickt dem Nutzer selbst eine Nachricht per Telegram, z. B. eine Notiz, eine Zusammenfassung oder eine Liste zum Mitnehmen – auf Wunsch als Sprachnachricht mit deiner Stimme. Nur an ihn selbst.',
     parameters: {
       type: 'object',
-      properties: { text: { type: 'string', description: 'Die Nachricht' } },
+      properties: {
+        text: { type: 'string', description: 'Die Nachricht (bei Sprachnachricht so formuliert, wie du sie sprechen würdest)' },
+        voice: { type: 'boolean', description: 'Als Sprachnachricht senden (z. B. wenn er „Sprachnachricht“ sagt)' }
+      },
       required: ['text']
     },
-    label: () => 'Telegram-Nachricht an dich',
-    run: async ({ text }) => {
-      if (!String(text ?? '').trim()) throw new Error('Die Nachricht ist leer.');
-      return sendTelegram(String(text).trim());
+    label: (a) => (a.voice ? 'Sprachnachricht an dich' : 'Telegram-Nachricht an dich'),
+    run: async ({ text, voice }) => {
+      const message = String(text ?? '').trim();
+      if (!message) throw new Error('Die Nachricht ist leer.');
+      return voice ? sendVoiceNote(message, message) : sendTelegram(message);
     }
   },
   {

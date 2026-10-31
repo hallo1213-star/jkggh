@@ -33,6 +33,19 @@ export async function sendTelegram(text, { fetchImpl = fetch } = {}) {
   return { gesendet: true };
 }
 
+// Voice message (OGG/Opus) to the user's own chat, with the text as caption.
+export async function sendTelegramVoice(audio, caption, { fetchImpl = fetch } = {}) {
+  if (!telegramConfigured()) throw new Error('Telegram ist noch nicht eingerichtet. Bei Render müssen TELEGRAM_BOT_TOKEN und TELEGRAM_CHAT_ID eingetragen werden (siehe README).');
+  const form = new FormData();
+  form.append('chat_id', chatId());
+  form.append('voice', new Blob([audio], { type: 'audio/ogg' }), 'jarvis.ogg');
+  if (caption) form.append('caption', String(caption).slice(0, 1000));
+  const response = await fetchImpl(`${API}/bot${token()}/sendVoice`, { method: 'POST', body: form, signal: AbortSignal.timeout(TIMEOUT_MS) });
+  const data = await response.json().catch(() => ({}));
+  if (!data.ok) throw new Error(`Telegram-Sprachnachricht: ${data.description || response.status}`);
+  return { gesendet: true, sprachnachricht: true };
+}
+
 // While only the bot token is set, answer /start with the chat ID so the user
 // can copy it into Render. Once TELEGRAM_CHAT_ID is set this stops.
 export function startSetupHelper({ fetchImpl = fetch, log = console } = {}) {

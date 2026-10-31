@@ -65,7 +65,7 @@ Tipp: Lege eine Verknüpfung zu `Laptop-verbinden.bat` in den Autostart-Ordner (
 | **Gedächtnis** | „Ich wohne in Köln“, „Merk dir, dass ich Pizza liebe“, „Was weißt du über mich?“, „Vergiss das mit der Pizza“ | nein |
 | **Wetter** | „Wie wird das Wetter?“, „Regnet es morgen in Hamburg?“ | nein |
 | **Nachrichten & Wissen** | „Was gibt es Neues?“, „Wer war Albert Einstein?“, „Wie hoch ist der Eiffelturm?“ | nein |
-| **Telegram** | Automatische Hinweise bei Paketen, Bestellungen und wichtigen Mails · „Schick mir das aufs Handy“ · Erinnerungen auch bei geschlossener App | nein |
+| **Telegram** | Automatische Sprachnachrichten bei Paketen, Bestellungen und wichtigen Mails · „Schick mir eine Sprachnachricht mit der Einkaufsliste“ · Erinnerungen auch bei geschlossener App | nein |
 | **Tagesüberblick** | „Guten Morgen!“ – Wetter, ungelesene Mails, Einkaufsliste und Nachrichten | nein |
 | **E-Mails** | „Hab ich neue Mails?“, „Was schreibt Amazon?“, „Lies mir die Mail von Oma vor“, „Antworte ihr, dass ich Sonntag komme“* | nein |
 | **Geld verdienen** | „Mach eine Website-Vorschau für den Friseur Haarscharf in der Bahnhofstraße“, „Der Laden ist interessiert, schick das Angebot“, „Zeig meine Kunden“, „Schreib eine Anzeige für meine PS4“ | nein |
@@ -94,7 +94,12 @@ Jarvis schickt dir dann kostenlos Nachrichten aufs Handy – **nur bei Wichtigem
 5. **Bei Render** `TELEGRAM_CHAT_ID` = diese Zahl eintragen → **Save Changes**.
 6. In Jarvis sagen: „Teste Telegram“ – du bekommst eine Testnachricht. Fertig!
 
+**Sprachnachrichten:** Hinweise und Erinnerungen kommen als **Sprachnachricht mit Jarvis' Standardstimme** (Deepgram, auch wenn eine ElevenLabs-Stimme eingestellt ist), der Text steht darunter. Klappt die Stimme einmal nicht, kommt automatisch eine Textnachricht. Sag „Schick mir eine Sprachnachricht mit …“, um selbst eine zu bekommen. Die Sprachnachrichten zählen zu deiner Deepgram-Nutzung.
+
+**Tipp:** Für den Jarvis-Chat in Telegram einen eigenen, lauten Ton einstellen (Chat öffnen → oben auf den Namen → Benachrichtigungen → Ton).
+
 **Optional:**
+- `TELEGRAM_VOICE` = `false` – nur Textnachrichten statt Sprachnachrichten.
 - `TELEGRAM_WICHTIG` – Absender, bei denen du immer Bescheid bekommen willst, mit Komma getrennt, z. B. `oma@example.de, Chef, Schule`.
 - `TELEGRAM_MAIL_CHECK_MINUTES` – wie oft Jarvis nachschaut (Standard: alle 5 Minuten).
 
