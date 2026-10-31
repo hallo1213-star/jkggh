@@ -27,7 +27,7 @@ import { addIncome, completeUserTask, sanitizeMoney, startMoney, stopMoney, addL
 import { moneyToolStatus, relinkPages, startMoneyAgent } from './money-agent.js';
 import { gumroadConfigured, gumroadProducts } from './gumroad.js';
 import { geocodePlace, placeDetails, reversePlace } from './places.js';
-import { getActiveCall, handleStatusCallback, handleTwilioStream, hangup as hangupCall, startCall } from './phone-call.js';
+import { getActiveCall, handleStatusCallback, handleTwilioStream, hangup as hangupCall, simulateCall, startCall } from './phone-call.js';
 import { spokenPhone } from './restaurants.js';
 import { findTool as findLaptopTool, functionDefinitions as laptopFunctions } from './laptop/tools.js';
 
@@ -196,7 +196,7 @@ function callEventHandler(origin) {
     const text = r
       ? { angenommen: `✅ Bestellung bei ${event.restaurant} aufgegeben${r.preis ? ` – ${r.preis}` : ''}${r.fertigUm ? `, fertig: ${r.fertigUm}` : ''}.`, teilweise: `⚠️ Bestellung bei ${event.restaurant} nur teilweise aufgegeben${r.preis ? ` – ${r.preis}` : ''}${r.fertigUm ? `, fertig: ${r.fertigUm}` : ''}.`, abgelehnt: `❌ ${event.restaurant} hat die Bestellung nicht angenommen.`, nicht_erreicht: `📵 ${event.restaurant} nicht erreicht (${r.notiz || event.status}).` }[r.status] || `☎️ Anruf bei ${event.restaurant} beendet – Ergebnis unklar.`
       : `☎️ Anruf bei ${event.restaurant} beendet (${event.status}) – keine Bestellung bestätigt.`;
-    const full = `${text}${r?.notiz && r.status !== 'nicht_erreicht' ? `\nHinweis: ${r.notiz}` : ''}`;
+    const full = `${event.test ? '🧪 TEST – niemand wurde angerufen. ' : ''}${text}${r?.notiz && r.status !== 'nicht_erreicht' && !event.test ? `\nHinweis: ${r.notiz}` : ''}`;
     if (telegramConfigured()) sendTelegram(full).catch(() => {});
     origin?.tell?.(full);
   };
@@ -685,6 +685,17 @@ browserWss.on('connection', (browser, request) => {
     homeTown,
     showOrder(order) {
       toBrowser({ type: 'order', ...order, phoneLabel: order.phone ? spokenPhone(order.phone) : '' });
+    },
+    simulatePhoneCall(order) {
+      simulateCall({
+        order,
+        userName: process.env.USER_NAME?.trim() || order.customerName,
+        onEvent: callEventHandler({
+          tell(text) {
+            if (agentOpen) agent.sendInjectAgentMessage({ type: 'InjectAgentMessage', message: `Kurze Info zum Probeanruf: ${text}` });
+          }
+        })
+      });
     },
     async startPhoneCall(order) {
       await startCall({

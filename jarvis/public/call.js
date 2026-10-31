@@ -64,14 +64,15 @@ const RESULT_TEXT = { angenommen: '✅ Bestellung aufgegeben', teilweise: '⚠�
 
 export function handleCallEvent(message) {
   // A new call replaces the window of a finished one.
-  if (panel && panel.root.dataset.state === 'beendet' && message.event === 'status' && message.status === 'wählt') {
+  if (panel && panel.root.dataset.state === 'beendet' && message.event === 'status' && String(message.status).startsWith('wählt')) {
     panel.root.remove();
     panel = null;
   }
-  const p = ensurePanel(message.restaurant || 'Restaurant');
+  const p = ensurePanel(`${message.test ? '🧪 TEST · ' : ''}${message.restaurant || 'Restaurant'}`);
   if (message.event === 'status') {
     p.status.textContent = message.status;
-    p.root.dataset.state = message.status;
+    p.root.dataset.state = String(message.status).replace(' (Test)', '');
+    if (message.test) p.hang.hidden = true; // test call: nothing to hang up
   } else if (message.event === 'transcript') {
     p.log.append(el('p', { class: `call-line ${message.role}` }, el('small', { textContent: message.role === 'jarvis' ? 'Jarvis' : 'Restaurant' }), message.content));
     p.log.scrollTop = p.log.scrollHeight;

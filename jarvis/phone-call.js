@@ -277,3 +277,48 @@ export function handleTwilioStream(ws, { client } = {}) {
     if (call) finish(call, 'beendet');
   });
 }
+
+// Test mode ("Test: bestelle mir Pizza bei …"): the same flow, but nobody is
+// called. A simulated restaurant answers, so the user sees the live window,
+// the transcript and the result exactly like in a real call.
+export function simulateCall({ order, userName, onEvent, speed = 1 }) {
+  if (activeCall && !['beendet', 'fehlgeschlagen'].includes(activeCall.status)) throw new Error('Jarvis telefoniert gerade schon.');
+  const who = userName || order.customerName;
+  const restaurant = order.restaurant.name;
+  const items = order.items.map((item) => describeItem(item).replace(/ – für .*$/, '')).join(', ');
+  const total = order.total !== null && order.total !== undefined ? order.total : 8.5 * order.items.reduce((sum, item) => sum + item.quantity, 0);
+  const price = `${total.toFixed(2).replace('.', ',')} €`;
+  const eta = order.mode === 'lieferung' ? 'in etwa 40 Minuten' : 'in etwa 20 Minuten';
+  const call = { token: `test-${Date.now()}`, order, status: 'wählt', result: null, test: true };
+  activeCall = call;
+  const say = (role, content) => ({ event: 'transcript', role, content, test: true, restaurant });
+  const steps = [
+    { event: 'status', status: 'wählt (Test)' },
+    { event: 'status', status: 'klingelt (Test)' },
+    { event: 'status', status: 'verbunden (Test)' },
+    say('restaurant', `${restaurant}, hallo?`),
+    say('jarvis', `Hallo, guten Tag! Hier ist Jarvis, ein KI-Assistent. Ich rufe für ${who} an und würde gern etwas ${order.mode === 'lieferung' ? 'zum Liefern' : 'zum Abholen'} bestellen. Ist das in Ordnung?`),
+    say('restaurant', 'Ja klar, was darf es sein?'),
+    say('jarvis', `Gerne: ${items}.`),
+    say('restaurant', order.mode === 'lieferung' ? 'Alles klar. Und wohin soll es gehen?' : 'Gut. Auf welchen Namen?'),
+    say('jarvis', order.mode === 'lieferung' ? `Nach ${order.address}, auf den Namen ${order.customerName}.${order.callbackPhone ? ` Rückrufnummer ${spokenPhone(order.callbackPhone)}.` : ''}` : `Auf den Namen ${order.customerName}.`),
+    say('restaurant', `Okay, das macht dann ${price} und ist ${eta} ${order.mode === 'lieferung' ? 'bei Ihnen' : 'fertig'}.`),
+    say('jarvis', `Super. Also noch mal kurz: ${items}, für ${price}, ${eta}. Vielen Dank und einen schönen Tag!`),
+    { event: 'result', result: { status: 'angenommen', preis: price, fertigUm: eta, notiz: 'TEST – es wurde niemand angerufen.' } },
+    say('restaurant', 'Danke, tschüss!')
+  ];
+  steps.forEach((step, index) => {
+    setTimeout(() => {
+      if (step.event === 'status') call.status = step.status;
+      if (step.event === 'result') call.result = step.result;
+      onEvent({ ...step, test: true, restaurant });
+      if (index === steps.length - 1) {
+        setTimeout(() => {
+          call.status = 'beendet';
+          onEvent({ event: 'ended', status: 'beendet', result: call.result, restaurant, test: true });
+        }, 900 / speed);
+      }
+    }, (600 + index * 1700) / speed);
+  });
+  return { test: true };
+}

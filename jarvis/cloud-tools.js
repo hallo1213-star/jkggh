@@ -864,12 +864,13 @@ export const cloudTools = [
         name: { type: 'string', description: 'Name des Restaurants, z. B. "Qusys Pizza"' },
         town: { type: 'string', description: 'Stadt/Ort; leer = Wohnort aus dem Gedächtnis' },
         phone: { type: 'string', description: 'Nur wenn der Nutzer die Nummer selbst nennt' },
-        website: { type: 'string', description: 'Nur wenn der Nutzer die Website/Speisekarte nennt' }
+        website: { type: 'string', description: 'Nur wenn der Nutzer die Website/Speisekarte nennt' },
+        test: { type: 'boolean', description: 'true, wenn seine Nachricht mit „Test:“ beginnt – dann ist es eine Probebestellung, bei der niemand angerufen wird' }
       },
       required: ['name']
     },
-    label: (a) => `Restaurant suchen: ${a.name}`,
-    run: async ({ name, town, phone, website }, context) => {
+    label: (a) => `${a.test ? 'TEST – ' : ''}Restaurant suchen: ${a.name}`,
+    run: async ({ name, town, phone, website, test }, context) => {
       const place = String(town ?? '').trim() || context.homeTown?.() || '';
       const hits = await findRestaurant(name, place).catch(() => []);
       const hit = hits[0] || null;
@@ -882,7 +883,9 @@ export const cloudTools = [
       };
       const draft = context.orderDraft;
       for (const key of Object.keys(draft)) delete draft[key];
+      if (test && !restaurant.phone) restaurant.phone = '+49301234567'; // test: any number, nobody is called
       draft.restaurant = restaurant;
+      draft.test = test === true;
       let menuNote;
       if (restaurant.website) {
         try {
@@ -900,7 +903,7 @@ export const cloudTools = [
         speisekarte: menuNote,
         weitereTreffer: hits.slice(1).map((h) => `${h.name}, ${h.address}`),
         naechsterSchritt: 'Frag jetzt, was er und seine Familie essen möchten (Gericht, Größe, Extras, für wen), ob Lieferung oder Abholung (bei Lieferung die Adresse), den Namen für die Bestellung und eine Rückrufnummer. Dann order_prepare.',
-        anrufMoeglich: twilioConfigured() ? 'ja' : 'Twilio ist noch nicht eingerichtet – Jarvis kann dann nicht selbst anrufen, aber einen Spickzettel und einen Anrufen-Knopf zeigen.'
+        anrufMoeglich: test ? 'TESTMODUS: Mach alle Schritte ganz normal (fragen, prüfen, vorlesen, bestätigen lassen). Beim Anruf wird niemand angerufen – ein simuliertes Restaurant antwortet. Sag am Anfang kurz, dass es ein Test ist.' : twilioConfigured() ? 'ja' : 'Twilio ist noch nicht eingerichtet – Jarvis kann dann nicht selbst anrufen, aber einen Spickzettel und einen Anrufen-Knopf zeigen.'
       };
     }
   },
@@ -992,6 +995,7 @@ export const cloudTools = [
     confirm: async (args, context) => {
       const order = context.orderDraft?.order;
       if (!order || !context.orderDraft.ready) return null;
+      if (context.orderDraft.test) return { title: `TEST: Probeanruf bei ${order.restaurant.name} starten?`, detail: `${orderSummary(order)}\n\n🧪 Das ist nur ein Test – es wird NIEMAND angerufen. Ein simuliertes Restaurant antwortet.` };
       if (!twilioConfigured()) return null;
       return { title: `${order.restaurant.name} jetzt anrufen und bestellen?`, detail: `${orderSummary(order)}
 
@@ -1001,6 +1005,11 @@ Jarvis ruft ${spokenPhone(order.restaurant.phone)} an und sagt, dass er ein KI-A
       const draft = context.orderDraft;
       if (!draft?.order) throw new Error('Es gibt noch keine Bestellung. Zuerst order_find_restaurant und order_prepare.');
       if (!draft.ready) throw new Error('Die Bestellung ist noch nicht fertig (Gericht nicht auf der Karte oder Telefonnummer fehlt).');
+      if (draft.test) {
+        context.simulatePhoneCall(draft.order);
+        draft.ready = false;
+        return { angerufen: false, test: true, hinweis: 'TEST: Es wird niemand angerufen, ein simuliertes Restaurant antwortet. Sag kurz: „Ich starte den Probeanruf.“ Das Ergebnis kommt gleich automatisch.' };
+      }
       if (!twilioConfigured()) {
         context.showOrder?.({ summary: orderSummary(draft.order), phone: draft.order.restaurant.phone, manual: true });
         return { angerufen: false, hinweis: 'Twilio ist nicht eingerichtet, deshalb kann Jarvis nicht selbst anrufen. Der Nutzer sieht jetzt einen Anrufen-Knopf und den Spickzettel. Erkläre kurz, dass er für automatische Anrufe Twilio einrichten kann (README).' };

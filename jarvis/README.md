@@ -208,6 +208,8 @@ Sag z. B. **„Bestell bei Qusys Pizza etwas für mich und meine Familie.“** D
 
 Jarvis bestellt nur genau das, was du bestätigt hast: keine Extras, keinen Ersatz und keine Bank- oder Kartendaten. Lehnt das Restaurant eine Bestellung von einer KI ab, entschuldigt er sich und legt auf.
 
+**Testmodus (ohne Anruf):** Schreib oder sag **„Test: bestelle mir Pizza bei Qusys Pizza“**. Jarvis macht alles genauso: Restaurant suchen, fragen, Speisekarte prüfen, vorlesen und bestätigen lassen. Beim Anruf ruft er aber **niemanden** an, stattdessen antwortet ein simuliertes Restaurant im Live-Fenster (markiert mit 🧪 TEST). Dafür braucht es kein Twilio.
+
 **Einrichten (einmalig): Twilio, das Telefon für Jarvis**
 1. Konto anlegen auf [twilio.com](https://www.twilio.com/try-twilio). Mit einem Testkonto darfst du nur deine eigene, bestätigte Nummer anrufen. Für Restaurants musst du das Konto **upgraden**: Guthaben aufladen, z. B. 20 $, denn Anrufe kosten ein paar Cent pro Minute.
 2. Unter **Console → Account Info**: `Account SID` und `Auth Token` kopieren.
