@@ -27,6 +27,11 @@ try {
   // no .env (on Render the values come from the dashboard)
 }
 
+// One failed message (e.g. to a conversation that just closed) must never take
+// the whole server down for every device; log it instead.
+process.on('unhandledRejection', (error) => console.error('Unerwarteter Fehler:', error?.message || error));
+process.on('uncaughtException', (error) => console.error('Unerwarteter Fehler:', error?.message || error));
+
 const port = Number(process.env.PORT || 3000);
 const host = process.env.HOST || (process.env.RENDER ? '0.0.0.0' : '127.0.0.1');
 const publicDir = join(root, 'public');
@@ -327,7 +332,12 @@ browserWss.on('connection', (browser, request) => {
   const toBrowser = session.toBrowser;
   // Tells the running conversation whether the laptop is reachable right now.
   session.updatePrompt = () => {
-    if (agentOpen && settingsApplied) agent.sendUpdatePrompt({ type: 'UpdatePrompt', prompt: buildPrompt({ laptopConnected: laptopConnected(), memories: memoryStore.items }) });
+    if (!agentOpen || !settingsApplied) return;
+    try {
+      agent.sendUpdatePrompt({ type: 'UpdatePrompt', prompt: buildPrompt({ laptopConnected: laptopConnected(), memories: memoryStore.items }) });
+    } catch (error) {
+      console.warn(`Konnte Laptop-Status nicht ans Gespräch melden: ${error.message}`);
+    }
   };
   sessions.add(session);
   toBrowser({ type: 'laptop', connected: laptopConnected() });
@@ -467,7 +477,9 @@ browserWss.on('connection', (browser, request) => {
         break;
       case 'FunctionCallRequest':
         // Not awaited: a pending confirmation must not hold up the audio stream.
-        for (const call of message.functions) if (call.client_side) handleFunctionCall(call);
+        for (const call of message.functions) {
+          if (call.client_side) handleFunctionCall(call).catch((error) => console.error(`Funktion ${call.name}: ${error.message}`));
+        }
         break;
       case 'FunctionCallCancelled':
         for (const call of message.functions) {
