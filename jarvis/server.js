@@ -8,7 +8,7 @@ import { dirname, extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocket, WebSocketServer } from 'ws';
 import { DeepgramClient } from '@deepgram/sdk';
-import { buildSettings, missingConfig } from './agent-config.js';
+import { buildPrompt, buildSettings, missingConfig } from './agent-config.js';
 import { attemptLogin, clearedCookie, isAuthenticated, passwordConfigured, sessionCookie, tokenMatches } from './auth.js';
 import { cloudTools, findCloudTool } from './cloud-tools.js';
 import { addItems, sanitizeList } from './shopping.js';
@@ -117,7 +117,10 @@ function laptopConnected() {
 }
 
 function broadcastLaptopStatus() {
-  for (const session of sessions) session.toBrowser({ type: 'laptop', connected: laptopConnected() });
+  for (const session of sessions) {
+    session.toBrowser({ type: 'laptop', connected: laptopConnected() });
+    session.updatePrompt?.();
+  }
 }
 
 // Resolves with the connector's result message: { ok, result } | { ok: false, error } | { ok: false, denied }.
@@ -322,6 +325,10 @@ browserWss.on('connection', (browser, request) => {
     }
   };
   const toBrowser = session.toBrowser;
+  // Tells the running conversation whether the laptop is reachable right now.
+  session.updatePrompt = () => {
+    if (agentOpen && settingsApplied) agent.sendUpdatePrompt({ type: 'UpdatePrompt', prompt: buildPrompt({ laptopConnected: laptopConnected(), memories: memoryStore.items }) });
+  };
   sessions.add(session);
   toBrowser({ type: 'laptop', connected: laptopConnected() });
 
