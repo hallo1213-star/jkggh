@@ -139,6 +139,22 @@ Falls Google kein App-Passwort anbietet (z. B. bei Schul-/Firmenkonten oder „E
 
 Jarvis redet wie ein guter Freund: locker, mit Humor und eigener Meinung, fragt nach, greift auf, was du erzählt hast, und reagiert auf deine Stimmung. Er begrüßt dich jedes Mal etwas anders. Ehrlich bleibt er trotzdem: Fragst du ernsthaft, sagt er dir, dass er eine KI ist. Geht es dir richtig schlecht, nimmt er das ernst und nennt Hilfe (Telefonseelsorge 0800 111 0 111, Nummer gegen Kummer 116 111, Notruf 112).
 
+## Planer, Notizen, Geld & Lernen 📅
+
+Alles per Sprache – und zum Nachschauen über den Knopf **Planer** (Tabs Termine, Notizen, Ausgaben, Vokabeln). Die Daten werden zwischen Handy und Laptop abgeglichen.
+
+- **Morgen-Briefing:** „Schick mir jeden Morgen um 7 Uhr ein Briefing.“ Jarvis schickt dir dann per Telegram eine Sprachnachricht mit Wetter, heutigen Terminen, ungelesenen Mails, Einkaufsliste und Nachrichten. Ort ändern: „Fürs Briefing nimm Hamburg.“ Ausschalten: „Kein Briefing mehr.“
+- **Erinnerungen:** einmalig, täglich, werktags oder wöchentlich – „Erinnere mich jeden Montag um 18 Uhr an den Müll.“ / „Erinnere mich täglich um 9 an meine Tabletten.“
+- **Termine:** „Trag ein: Zahnarzt am 12. November um 15 Uhr.“ Jarvis erinnert dich standardmäßig eine Stunde vorher (änderbar: „… erinnere mich einen Tag vorher“). „Was steht diese Woche an?“
+- **Notizen / Tagebuch:** „Notiere: Idee für die Website …“, „Was hab ich mir zu Website notiert?“
+- **Haushaltsbuch:** „Ich hab 12,50 € für Essen ausgegeben.“, „Wie viel hab ich diesen Monat ausgegeben?“, „Lösch die letzte Ausgabe.“
+- **Vokabeltrainer:** „Speicher Englisch Unit 3: Hund – dog, Katze – cat …“, dann „Frag mich Englisch Unit 3 ab.“ Jarvis fragt eine Vokabel nach der anderen und sagt dir, ob es stimmt.
+
+**Wichtig:**
+- Erinnerungen und Briefing kommen per **Telegram** (Sprachnachricht, wenn `TELEGRAM_VOICE` an ist) und zusätzlich in der offenen App. Dafür muss der Server wach sein – der cron-job.org-Ping auf `/health` alle 10 Minuten (siehe Telegram-Abschnitt) ist hier Pflicht.
+- Der Planer wird als **angepinnte Nachricht „🗂 Jarvis-Daten – bitte nicht löschen“** in deinem Telegram-Chat gesichert. Der kostenlose Render-Server vergisst beim Neustart alles – aus dieser Nachricht holt Jarvis deine Termine und Erinnerungen zurück. Bitte nicht löschen oder entpinnen.
+- Notizen, Ausgaben und Vokabeln liegen auf deinen Geräten (Browser-Speicher) und werden beim Verbinden abgeglichen.
+
 ## Webcams
 
 - **Autobahn:** Verkehrskameras mit aktuellen Bildern aus den offenen Daten der Autobahn GmbH, z. B. „A1 bei Köln“.

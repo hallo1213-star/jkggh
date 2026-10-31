@@ -9,6 +9,8 @@ import { addMemory, forgetMemory } from './memories.js';
 import { sendTelegram, telegramConfigured } from './telegram.js';
 import { sendVoiceNote } from './voice-message.js';
 import { getAutobahnWebcams, normalizeRoad, webcamSearchLinks } from './webcams.js';
+import { REPEATS, addAppointment, addReminder, describeReminder, localNow, normalizeTime, removeEntry, sanitizePlanner, upcomingAppointments } from './planner.js';
+import { addExpense, addNote, addVocab, findNotes, quizPairs, removeLastExpense, removeNote, removeVocabList, summarizeExpenses } from './personal.js';
 import { FONTS, MODES, SECTION_TYPES, encodeSite, sanitizeSite } from './public/site-config.js';
 
 const timeZone = process.env.TZ || 'Europe/Berlin';
@@ -599,6 +601,233 @@ export const cloudTools = [
       if (!String(place ?? '').trim()) throw new Error('Für welchen Ort oder welche Autobahn soll ich Webcams suchen?');
       context.showWebcams({ title: `Webcams ${String(place).trim()}`, cams: [], links: webcamSearchLinks(place) });
       return { angezeigt: true, hinweis: 'Der Nutzer bekommt eine Suche nach öffentlichen Live-Webcams. Was darauf zu sehen ist, weißt du nicht.' };
+    }
+  },
+  {
+    name: 'briefing_settings',
+    description: 'Stellt das automatische Morgen-Briefing ein: Jarvis schickt dann jeden Morgen zur gewünschten Uhrzeit von selbst eine Telegram-Sprachnachricht mit Wetter, Terminen, Mails, Einkaufsliste und Nachrichten. time leer lassen und enabled=false zum Ausschalten.',
+    parameters: {
+      type: 'object',
+      properties: {
+        time: { type: 'string', description: 'Uhrzeit, z. B. "07:00"' },
+        place: { type: 'string', description: 'Ort für das Wetter (Standard: gespeicherter Wohnort)' },
+        enabled: { type: 'boolean', description: 'false schaltet das Briefing aus' }
+      }
+    },
+    label: (a) => (a.enabled === false ? 'Morgen-Briefing aus' : `Morgen-Briefing ${a.time || ''}`),
+    run: async ({ time, place, enabled }, context) => {
+      const planner = sanitizePlanner(context.getStore('planner'));
+      if (enabled === false) {
+        context.setStore('planner', { ...planner, briefing: { ...planner.briefing, time: null } });
+        return { ausgeschaltet: true };
+      }
+      const value = normalizeTime(time) || planner.briefing.time;
+      if (!value) throw new Error('Um wie viel Uhr soll das Morgen-Briefing kommen?');
+      context.setStore('planner', { ...planner, briefing: { time: value, place: String(place ?? planner.briefing.place ?? '').trim().slice(0, 80) } });
+      return { uhrzeit: value, ort: place || planner.briefing.place || '(gespeicherter Wohnort)', telegram: telegramConfigured(), hinweis: telegramConfigured() ? undefined : 'Ohne Telegram kommt das Briefing nur in einer geöffneten App an.' };
+    }
+  },
+  {
+    name: 'reminder_add',
+    description: 'Legt eine Erinnerung an – einmalig an einem Datum oder wiederkehrend (täglich, werktags, wöchentlich an einem Wochentag). Jarvis erinnert per Telegram-Sprachnachricht, auch bei geschlossener App. Für kurze Countdowns („in 10 Minuten“) set_timer nutzen.',
+    parameters: {
+      type: 'object',
+      properties: {
+        text: { type: 'string', description: 'Woran erinnert wird, z. B. "Müll rausbringen"' },
+        time: { type: 'string', description: 'Uhrzeit, z. B. "19:00"' },
+        repeat: { type: 'string', enum: REPEATS, description: 'einmal, taeglich, werktags oder woechentlich' },
+        weekday: { type: 'string', description: 'Nur bei woechentlich: Wochentag, z. B. "montag"' },
+        date: { type: 'string', description: 'Nur bei einmal: Datum JJJJ-MM-TT' }
+      },
+      required: ['text', 'time', 'repeat']
+    },
+    label: (a) => `Erinnerung: ${a.text}`,
+    run: async (args, context) => {
+      const { planner, reminder, existing } = addReminder(context.getStore('planner'), args);
+      context.setStore('planner', planner);
+      return { gespeichert: describeReminder(reminder), gabEsSchon: Boolean(existing), telegram: telegramConfigured() };
+    }
+  },
+  {
+    name: 'reminder_list',
+    description: 'Zählt die gespeicherten Erinnerungen auf und zeigt den Planer an.',
+    parameters: { type: 'object', properties: {} },
+    label: () => 'Erinnerungen angezeigt',
+    run: async (args, context) => {
+      const planner = sanitizePlanner(context.getStore('planner'));
+      context.setStore('planner', planner, { show: true });
+      return { erinnerungen: planner.reminders.map(describeReminder), morgenBriefing: planner.briefing.time };
+    }
+  },
+  {
+    name: 'reminder_remove',
+    description: 'Löscht eine Erinnerung (Text oder eindeutiges Stichwort).',
+    parameters: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] },
+    label: (a) => `Erinnerung gelöscht: ${a.text}`,
+    run: async ({ text }, context) => {
+      const { planner, removed } = removeEntry(context.getStore('planner'), 'reminders', text);
+      context.setStore('planner', planner);
+      return removed ? { geloescht: removed } : { nichtGefunden: true };
+    }
+  },
+  {
+    name: 'appointment_add',
+    description: 'Speichert einen Termin. Jarvis erinnert vorher (Standard 60 Minuten, per Telegram) und nennt ihn im Morgen-Briefing. Rechne Angaben wie „Freitag“ oder „morgen“ selbst in ein Datum um (heute siehe oben).',
+    parameters: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'z. B. "Zahnarzt"' },
+        date: { type: 'string', description: 'Datum JJJJ-MM-TT' },
+        time: { type: 'string', description: 'Uhrzeit, z. B. "15:00" (optional)' },
+        remind_minutes: { type: 'integer', description: 'Wie viele Minuten vorher erinnern (Standard 60)' }
+      },
+      required: ['title', 'date']
+    },
+    label: (a) => `Termin: ${a.title} ${a.date}${a.time ? ` ${a.time}` : ''}`,
+    run: async ({ title, date, time, remind_minutes: remindMinutes }, context) => {
+      const { planner, appointment, existing } = addAppointment(context.getStore('planner'), { title, date, time, remindMinutes });
+      context.setStore('planner', planner);
+      return { gespeichert: appointment, gabEsSchon: Boolean(existing), telegram: telegramConfigured() };
+    }
+  },
+  {
+    name: 'appointment_list',
+    description: 'Zählt die kommenden Termine auf (Standard: nächste 14 Tage) und zeigt den Planer an.',
+    parameters: { type: 'object', properties: { days: { type: 'integer' } } },
+    label: () => 'Termine angezeigt',
+    run: async ({ days }, context) => {
+      const planner = sanitizePlanner(context.getStore('planner'));
+      context.setStore('planner', planner, { show: true });
+      return { heute: localNow().date, termine: upcomingAppointments(planner, { days: Math.min(Math.max(Number(days) || 14, 0), 365) }) };
+    }
+  },
+  {
+    name: 'appointment_remove',
+    description: 'Löscht einen Termin (Titel oder eindeutiges Stichwort).',
+    parameters: { type: 'object', properties: { title: { type: 'string' } }, required: ['title'] },
+    label: (a) => `Termin gelöscht: ${a.title}`,
+    run: async ({ title }, context) => {
+      const { planner, removed } = removeEntry(context.getStore('planner'), 'appointments', title);
+      context.setStore('planner', planner);
+      return removed ? { geloescht: removed } : { nichtGefunden: true };
+    }
+  },
+  {
+    name: 'note_add',
+    description: 'Notiert etwas für den Nutzer (Notiz, Idee, Tagebucheintrag).',
+    parameters: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] },
+    label: () => 'Notiz gespeichert',
+    run: async ({ text }, context) => {
+      const { notes, note } = addNote(context.getStore('notes'), text, localNow().date);
+      context.setStore('notes', notes);
+      return { gespeichert: note.text, anzahl: notes.length };
+    }
+  },
+  {
+    name: 'note_find',
+    description: 'Sucht in den Notizen (Stichworte) oder liefert die neuesten Notizen, und zeigt sie an.',
+    parameters: { type: 'object', properties: { query: { type: 'string', description: 'Stichworte (leer = neueste)' } } },
+    label: (a) => (a.query ? `Notizen: ${a.query}` : 'Notizen angezeigt'),
+    run: async ({ query }, context) => {
+      context.setStore('notes', context.getStore('notes'), { show: true });
+      return { notizen: findNotes(context.getStore('notes'), query).map((note) => `${note.date}: ${note.text}`) };
+    }
+  },
+  {
+    name: 'note_remove',
+    description: 'Löscht eine Notiz (eindeutiges Stichwort daraus).',
+    parameters: { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] },
+    label: () => 'Notiz gelöscht',
+    run: async ({ query }, context) => {
+      const { notes, removed } = removeNote(context.getStore('notes'), query);
+      context.setStore('notes', notes);
+      return removed ? { geloescht: removed } : { nichtGefunden: true };
+    }
+  },
+  {
+    name: 'expense_add',
+    description: 'Trägt eine Ausgabe ins Haushaltsbuch ein (Betrag in Euro, Kategorie wie Essen, Freizeit, Kleidung, Handy, Schule, Transport).',
+    parameters: {
+      type: 'object',
+      properties: {
+        amount: { type: 'number', description: 'Betrag in Euro, z. B. 12.5' },
+        category: { type: 'string' },
+        note: { type: 'string', description: 'Wofür, optional' }
+      },
+      required: ['amount']
+    },
+    label: (a) => `Ausgabe: ${a.amount} € ${a.category || ''}`,
+    run: async ({ amount, category, note }, context) => {
+      const { expenses, expense } = addExpense(context.getStore('expenses'), { amount, category, note, date: localNow().date });
+      context.setStore('expenses', expenses);
+      return { gespeichert: expense, monat: summarizeExpenses(expenses, localNow().date.slice(0, 7)).gesamt };
+    }
+  },
+  {
+    name: 'expense_summary',
+    description: 'Überblick über die Ausgaben eines Monats (gesamt, nach Kategorie, letzte Einträge) und zeigt das Haushaltsbuch an.',
+    parameters: { type: 'object', properties: { month: { type: 'string', description: 'Monat JJJJ-MM (Standard: aktueller Monat)' } } },
+    label: () => 'Ausgaben-Überblick',
+    run: async ({ month }, context) => {
+      context.setStore('expenses', context.getStore('expenses'), { show: true });
+      return summarizeExpenses(context.getStore('expenses'), month || localNow().date.slice(0, 7));
+    }
+  },
+  {
+    name: 'expense_remove_last',
+    description: 'Löscht die zuletzt eingetragene Ausgabe (z. B. bei einem Versehen).',
+    parameters: { type: 'object', properties: {} },
+    label: () => 'Letzte Ausgabe gelöscht',
+    run: async (args, context) => {
+      const { expenses, removed } = removeLastExpense(context.getStore('expenses'));
+      context.setStore('expenses', expenses);
+      return removed ? { geloescht: removed } : { nichtsDa: true };
+    }
+  },
+  {
+    name: 'vocab_add',
+    description: 'Speichert Vokabeln in einer Liste (z. B. "Englisch Unit 3"); a = Deutsch, b = Fremdsprache.',
+    parameters: {
+      type: 'object',
+      properties: {
+        list: { type: 'string' },
+        pairs: { type: 'array', items: { type: 'object', properties: { a: { type: 'string' }, b: { type: 'string' } } } }
+      },
+      required: ['list', 'pairs']
+    },
+    label: (a) => `Vokabeln: ${a.list}`,
+    run: async ({ list, pairs }, context) => {
+      const result = addVocab(context.getStore('vocab'), list, pairs);
+      context.setStore('vocab', result.vocab);
+      return { liste: result.list.name, hinzugefuegt: result.added, insgesamt: result.list.pairs.length };
+    }
+  },
+  {
+    name: 'vocab_quiz',
+    description: 'Holt zufällige Vokabeln aus einer Liste zum Abfragen. Frag sie dann einzeln im Gespräch ab (Deutsch nennen, Übersetzung erfragen), sag ob richtig, und lobe.',
+    parameters: { type: 'object', properties: { list: { type: 'string' }, count: { type: 'integer', description: 'Anzahl, Standard 10' } } },
+    label: (a) => `Vokabel-Abfrage ${a.list || ''}`,
+    run: async ({ list, count }, context) => quizPairs(context.getStore('vocab'), list, count)
+  },
+  {
+    name: 'vocab_lists',
+    description: 'Zeigt die vorhandenen Vokabellisten.',
+    parameters: { type: 'object', properties: {} },
+    label: () => 'Vokabellisten angezeigt',
+    run: async (args, context) => {
+      context.setStore('vocab', context.getStore('vocab'), { show: true });
+      return { listen: context.getStore('vocab').map((list) => `${list.name} (${list.pairs.length})`) };
+    }
+  },
+  {
+    name: 'vocab_remove_list',
+    description: 'Löscht eine Vokabelliste.',
+    parameters: { type: 'object', properties: { list: { type: 'string' } }, required: ['list'] },
+    label: (a) => `Vokabelliste gelöscht: ${a.list}`,
+    run: async ({ list }, context) => {
+      const result = removeVocabList(context.getStore('vocab'), list);
+      context.setStore('vocab', result.vocab);
+      return result.removed ? { geloescht: result.removed } : { nichtGefunden: true };
     }
   },
   {

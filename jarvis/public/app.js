@@ -58,7 +58,12 @@ const els = {
   memoryEmpty: $('memory-empty'),
   memoryClose: $('memory-close'),
   historyClear: $('history-clear'),
-  chips: $('chips')
+  chips: $('chips'),
+  plannerButton: $('planner-button'),
+  plannerModal: $('planner-modal'),
+  plannerClose: $('planner-close'),
+  plannerBody: $('planner-body'),
+  plannerHint: $('planner-hint')
 };
 
 const state = {
@@ -350,10 +355,9 @@ function syncedList({ key, timeKey, updateType, clean, onChange }) {
   return {
     load() {
       try {
-        const list = JSON.parse(localStorage.getItem(key) || '[]');
-        return Array.isArray(list) ? clean(list) : [];
+        return clean(JSON.parse(localStorage.getItem(key) || 'null'));
       } catch {
-        return [];
+        return clean(null);
       }
     },
     loadTime() {
@@ -364,7 +368,7 @@ function syncedList({ key, timeKey, updateType, clean, onChange }) {
       }
     },
     store(items, { sync = true, updatedAt } = {}) {
-      const list = clean(Array.isArray(items) ? items : []);
+      const list = clean(items);
       const online = state.ws?.readyState === WebSocket.OPEN;
       try {
         localStorage.setItem(key, JSON.stringify(list));
@@ -386,7 +390,7 @@ const memories = syncedList({
   key: 'jarvis.memories',
   timeKey: 'jarvis.memoriesUpdatedAt',
   updateType: 'memories_update',
-  clean: (list) => list.filter((item) => typeof item?.text === 'string').slice(0, 60).map((item) => ({ text: item.text.slice(0, 200) })),
+  clean: (list) => (Array.isArray(list) ? list : []).filter((item) => typeof item?.text === 'string').slice(0, 60).map((item) => ({ text: item.text.slice(0, 200) })),
   onChange: () => {
     if (!els.memoryModal.hidden) renderMemories();
   }
@@ -469,6 +473,141 @@ els.historyClear.addEventListener('click', () => {
   for (const node of els.transcript.querySelectorAll('.past, .history-divider')) node.remove();
   els.historyClear.textContent = 'Verlauf gelöscht ✓';
 });
+
+// --- Planner: appointments, reminders, notes, expenses, vocabulary ----------------
+
+const asArray = (value) => (Array.isArray(value) ? value : []);
+const personalStores = {
+  planner: syncedList({
+    key: 'jarvis.planner', timeKey: 'jarvis.plannerUpdatedAt', updateType: 'planner_update',
+    clean: (value) => ({
+      briefing: { time: value?.briefing?.time || null, place: String(value?.briefing?.place || '') },
+      reminders: asArray(value?.reminders).filter((item) => typeof item?.text === 'string'),
+      appointments: asArray(value?.appointments).filter((item) => typeof item?.title === 'string')
+    }),
+    onChange: () => renderPlannerIfOpen()
+  }),
+  notes: syncedList({ key: 'jarvis.notes', timeKey: 'jarvis.notesUpdatedAt', updateType: 'notes_update', clean: (value) => asArray(value).filter((item) => typeof item?.text === 'string'), onChange: () => renderPlannerIfOpen() }),
+  expenses: syncedList({ key: 'jarvis.expenses', timeKey: 'jarvis.expensesUpdatedAt', updateType: 'expenses_update', clean: (value) => asArray(value).filter((item) => Number(item?.amount) > 0), onChange: () => renderPlannerIfOpen() }),
+  vocab: syncedList({ key: 'jarvis.vocab', timeKey: 'jarvis.vocabUpdatedAt', updateType: 'vocab_update', clean: (value) => asArray(value).filter((item) => typeof item?.name === 'string'), onChange: () => renderPlannerIfOpen() })
+};
+let plannerTab = 'termine';
+const WEEKDAY_NAMES = { montag: 'Montag', dienstag: 'Dienstag', mittwoch: 'Mittwoch', donnerstag: 'Donnerstag', freitag: 'Freitag', samstag: 'Samstag', sonntag: 'Sonntag' };
+const euro = (value) => `${Number(value).toFixed(2).replace('.', ',')} €`;
+const germanDate = (iso) => (/^\d{4}-\d{2}-\d{2}$/.test(iso || '') ? new Date(`${iso}T12:00:00`).toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short' }) : iso);
+
+function plannerRow(title, detail, onDelete) {
+  const row = document.createElement('div');
+  row.className = 'planner-row';
+  const info = document.createElement('div');
+  const b = document.createElement('b');
+  b.textContent = title;
+  info.append(b);
+  if (detail) {
+    const small = document.createElement('small');
+    small.textContent = detail;
+    info.append(small);
+  }
+  row.append(info);
+  if (onDelete) {
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'icon-btn';
+    remove.textContent = '✕';
+    remove.setAttribute('aria-label', `${title} löschen`);
+    remove.addEventListener('click', onDelete);
+    row.append(remove);
+  }
+  return row;
+}
+
+function plannerSection(label) {
+  const heading = document.createElement('div');
+  heading.className = 'planner-section';
+  heading.textContent = label;
+  return heading;
+}
+
+function renderPlanner() {
+  for (const tab of document.querySelectorAll('#planner-modal .tab')) tab.setAttribute('aria-selected', String(tab.dataset.tab === plannerTab));
+  const body = [];
+  let hint = '';
+  if (plannerTab === 'termine') {
+    const planner = personalStores.planner.load();
+    const save = (next) => personalStores.planner.store(next);
+    body.push(plannerSection('Morgen-Briefing'));
+    body.push(plannerRow(planner.briefing.time ? `Jeden Morgen um ${planner.briefing.time} Uhr` : 'Aus', planner.briefing.time ? `Wetter${planner.briefing.place ? ` für ${planner.briefing.place}` : ''}, Termine, Mails, Einkaufsliste und Nachrichten per Telegram` : 'Sag z. B. „Schick mir jeden Morgen um 7 ein Briefing“.',
+      planner.briefing.time ? () => save({ ...planner, briefing: { ...planner.briefing, time: null } }) : null));
+    body.push(plannerSection('Termine'));
+    if (!planner.appointments.length) body.push(plannerRow('Keine Termine', 'Sag z. B. „Ich hab Freitag um 15 Uhr Zahnarzt“.'));
+    for (const item of planner.appointments) {
+      body.push(plannerRow(item.title, `${germanDate(item.date)}${item.time ? `, ${item.time} Uhr` : ''} · Erinnerung ${item.remindMinutes >= 60 ? `${Math.round(item.remindMinutes / 60)} Std.` : `${item.remindMinutes} Min.`} vorher`,
+        () => save({ ...planner, appointments: planner.appointments.filter((entry) => entry.id !== item.id) })));
+    }
+    body.push(plannerSection('Erinnerungen'));
+    if (!planner.reminders.length) body.push(plannerRow('Keine Erinnerungen', 'Sag z. B. „Erinner mich jeden Montag um 19 Uhr an den Müll“.'));
+    for (const item of planner.reminders) {
+      const when = item.repeat === 'taeglich' ? 'täglich' : item.repeat === 'werktags' ? 'werktags' : item.repeat === 'woechentlich' ? `jeden ${WEEKDAY_NAMES[item.weekday] || item.weekday}` : germanDate(item.date);
+      body.push(plannerRow(item.text, `${when} um ${item.time} Uhr`, () => save({ ...planner, reminders: planner.reminders.filter((entry) => entry.id !== item.id) })));
+    }
+    hint = 'Erinnerungen und das Briefing kommen per Telegram – auch wenn die App zu ist.';
+  } else if (plannerTab === 'notizen') {
+    const notes = personalStores.notes.load();
+    if (!notes.length) body.push(plannerRow('Noch keine Notizen', 'Sag z. B. „Notier dir, dass ich Lisa ein Buch leihen wollte“.'));
+    for (const note of [...notes].reverse()) body.push(plannerRow(note.text, germanDate(note.date), () => personalStores.notes.store(notes.filter((entry) => entry.id !== note.id))));
+  } else if (plannerTab === 'ausgaben') {
+    const expenses = personalStores.expenses.load();
+    const month = new Date().toLocaleDateString('sv-SE').slice(0, 7);
+    const thisMonth = expenses.filter((item) => String(item.date).startsWith(month));
+    const total = document.createElement('div');
+    total.className = 'planner-total';
+    total.textContent = 'Diesen Monat: ';
+    const sum = document.createElement('b');
+    sum.textContent = euro(thisMonth.reduce((acc, item) => acc + Number(item.amount), 0));
+    total.append(sum);
+    body.push(total);
+    if (!expenses.length) body.push(plannerRow('Noch keine Ausgaben', 'Sag z. B. „Ich hab 12 Euro für Essen ausgegeben“.'));
+    for (const item of [...expenses].reverse().slice(0, 60)) {
+      body.push(plannerRow(`${euro(item.amount)} · ${item.category}`, `${germanDate(item.date)}${item.note ? ` · ${item.note}` : ''}`, () => personalStores.expenses.store(expenses.filter((entry) => entry.id !== item.id))));
+    }
+  } else {
+    const lists = personalStores.vocab.load();
+    if (!lists.length) body.push(plannerRow('Noch keine Vokabeln', 'Sag z. B. „Speicher Englisch-Vokabeln: Hund – dog, Katze – cat“ und dann „Frag mich ab“.'));
+    for (const list of lists) {
+      const preview = list.pairs.slice(0, 4).map((pair) => `${pair.a} – ${pair.b}`).join(', ');
+      body.push(plannerRow(`${list.name} (${list.pairs.length})`, preview, () => {
+        if (confirm(`Vokabelliste „${list.name}“ löschen?`)) personalStores.vocab.store(lists.filter((entry) => entry.id !== list.id));
+      }));
+    }
+    hint = 'Abfragen: „Frag mich die Vokabeln ab“.';
+  }
+  els.plannerBody.replaceChildren(...body);
+  els.plannerHint.textContent = hint;
+}
+
+function renderPlannerIfOpen() {
+  if (!els.plannerModal.hidden) renderPlanner();
+}
+
+function showPlanner(tab) {
+  if (tab) plannerTab = tab;
+  renderPlanner();
+  els.plannerModal.hidden = false;
+}
+
+els.plannerButton.addEventListener('click', () => showPlanner());
+els.plannerClose.addEventListener('click', () => {
+  els.plannerModal.hidden = true;
+});
+els.plannerModal.addEventListener('click', (event) => {
+  if (event.target === els.plannerModal) els.plannerModal.hidden = true;
+});
+for (const tab of document.querySelectorAll('#planner-modal .tab')) {
+  tab.addEventListener('click', () => {
+    plannerTab = tab.dataset.tab;
+    renderPlanner();
+  });
+}
 
 // --- Weather & news cards ------------------------------------------------------
 
@@ -608,7 +747,7 @@ function addNewsCard(news) {
 
 // --- Suggestions ------------------------------------------------------------------
 
-const SUGGESTIONS = ['Guten Morgen!', 'Wie wird das Wetter?', 'Was gibt es Neues?', 'Hab ich neue Mails?', 'Mach mir ein Spiel', 'Was weißt du über mich?', 'Zeig meine Einkaufsliste', 'Erstelle eine Website'];
+const SUGGESTIONS = ['Guten Morgen!', 'Wie wird das Wetter?', 'Was steht diese Woche an?', 'Was gibt es Neues?', 'Hab ich neue Mails?', 'Mach mir ein Spiel', 'Was weißt du über mich?', 'Zeig meine Einkaufsliste', 'Erstelle eine Website'];
 els.chips.replaceChildren(...SUGGESTIONS.map((text) => {
   const chip = document.createElement('button');
   chip.type = 'button';
@@ -627,7 +766,7 @@ const customers = syncedList({
   key: 'jarvis.customers',
   timeKey: 'jarvis.customersUpdatedAt',
   updateType: 'customers_update',
-  clean: (list) => list.filter((customer) => typeof customer?.name === 'string' && typeof customer?.id === 'string').slice(0, 100),
+  clean: (list) => (Array.isArray(list) ? list : []).filter((customer) => typeof customer?.name === 'string' && typeof customer?.id === 'string').slice(0, 100),
   onChange: () => {
     if (!els.customersModal.hidden) renderCustomers();
   }
@@ -760,7 +899,7 @@ const shopping = syncedList({
   key: 'jarvis.shoppingList',
   timeKey: 'jarvis.shoppingListUpdatedAt',
   updateType: 'shopping_list_update',
-  clean: (list) => list.filter((item) => typeof item?.text === 'string').slice(0, 100).map((item) => ({ text: item.text.slice(0, 80), done: item.done === true })),
+  clean: (list) => (Array.isArray(list) ? list : []).filter((item) => typeof item?.text === 'string').slice(0, 100).map((item) => ({ text: item.text.slice(0, 80), done: item.done === true })),
   onChange: () => {
     if (!els.shoppingModal.hidden) renderShoppingList();
   }
@@ -988,7 +1127,7 @@ function connect() {
   setMode('connecting');
   els.reconnect.hidden = true;
 
-  ws.onopen = () => ws.send(JSON.stringify({ type: 'start', sampleRate: state.audio.sampleRate, shoppingList: shopping.load(), shoppingListUpdatedAt: shopping.loadTime(), customers: customers.load(), customersUpdatedAt: customers.loadTime(), memories: memories.load(), memoriesUpdatedAt: memories.loadTime(), history: loadHistory().slice(-16) }));
+  ws.onopen = () => ws.send(JSON.stringify({ type: 'start', sampleRate: state.audio.sampleRate, shoppingList: shopping.load(), shoppingListUpdatedAt: shopping.loadTime(), customers: customers.load(), customersUpdatedAt: customers.loadTime(), memories: memories.load(), memoriesUpdatedAt: memories.loadTime(), history: loadHistory().slice(-16), stores: Object.fromEntries(Object.entries(personalStores).map(([name, store]) => [name, { items: store.load(), updatedAt: store.loadTime() }])) }));
   ws.onmessage = ({ data }) => {
     if (typeof data !== 'string') {
       playChunk(data);
@@ -1034,6 +1173,13 @@ function handleMessage(message) {
       break;
     case 'news':
       addNewsCard(message.news);
+      break;
+    case 'planner':
+    case 'notes':
+    case 'expenses':
+    case 'vocab':
+      personalStores[message.type].store(message.items, { sync: false, updatedAt: message.updatedAt });
+      if (message.show) showPlanner({ planner: 'termine', notes: 'notizen', expenses: 'ausgaben', vocab: 'vokabeln' }[message.type]);
       break;
     case 'memories':
       memories.store(message.items, { sync: false, updatedAt: message.updatedAt });

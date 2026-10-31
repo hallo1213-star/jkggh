@@ -14,8 +14,13 @@ import { cloudTools, findCloudTool } from './cloud-tools.js';
 import { addItems, sanitizeList } from './shopping.js';
 import { sanitizeCustomers } from './customers.js';
 import { sanitizeHistory, sanitizeMemories } from './memories.js';
-import { sendTelegram, startSetupHelper, telegramConfigured } from './telegram.js';
+import { loadPinnedBackup, savePinnedBackup, sendTelegram, startSetupHelper, telegramConfigured } from './telegram.js';
 import { startMailWatcher } from './mail-watch.js';
+import { sanitizePlanner } from './planner.js';
+import { sanitizeExpenses, sanitizeNotes, sanitizeVocab } from './personal.js';
+import { composeBriefing, startScheduler } from './scheduler.js';
+import { getNews, getWeather } from './knowledge.js';
+import { gmailConfigured, listEmails } from './gmail.js';
 import { sendVoiceNote, voiceMessagesEnabled } from './voice-message.js';
 import { findTool as findLaptopTool, functionDefinitions as laptopFunctions } from './laptop/tools.js';
 
@@ -85,16 +90,20 @@ const sessions = new Set();
 // forgets them while it sleeps, so every device keeps a copy stamped with the
 // server's version time; the newest copy wins when a device connects, and
 // every change is sent to all open devices.
-function createSharedStore(type, sanitize, mergeUnstamped) {
-  const store = { items: [], updatedAt: 0 };
+function createSharedStore(type, sanitize, mergeUnstamped, onChange = () => {}) {
+  const store = { items: sanitize(undefined), updatedAt: 0 };
   return {
     get items() {
       return store.items;
+    },
+    get updatedAt() {
+      return store.updatedAt;
     },
     set(items) {
       store.items = sanitize(items);
       store.updatedAt = Date.now();
       for (const session of sessions) this.send(session);
+      onChange(store);
     },
     send(session, extra = {}) {
       session.toBrowser({ type, items: store.items, updatedAt: store.updatedAt, ...extra });
@@ -105,6 +114,7 @@ function createSharedStore(type, sanitize, mergeUnstamped) {
       if (deviceTime > store.updatedAt) {
         store.items = deviceItems;
         store.updatedAt = deviceTime;
+        onChange(store);
       } else if (!deviceTime && deviceItems.length && mergeUnstamped) {
         // Saved by an older app version without a timestamp: merge instead of losing items.
         this.set(mergeUnstamped(store.items, deviceItems));
@@ -116,6 +126,38 @@ function createSharedStore(type, sanitize, mergeUnstamped) {
 const shoppingStore = createSharedStore('shopping_list', sanitizeList, (current, device) => addItems(current, device.map((item) => item.text)).list);
 const customerStore = createSharedStore('customers', sanitizeCustomers, null);
 const memoryStore = createSharedStore('memories', sanitizeMemories, (current, device) => [...current, ...device]);
+const notesStore = createSharedStore('notes', sanitizeNotes, null);
+const expensesStore = createSharedStore('expenses', sanitizeExpenses, null);
+const vocabStore = createSharedStore('vocab', sanitizeVocab, null);
+
+// The planner is also kept as a pinned Telegram message, so reminders and the
+// briefing survive restarts even when no device is open.
+let backupTimer = null;
+const plannerStore = createSharedStore('planner', sanitizePlanner, null, (store) => {
+  clearTimeout(backupTimer);
+  backupTimer = setTimeout(() => {
+    savePinnedBackup({ planner: store.items, updatedAt: store.updatedAt }).catch((error) => console.warn(`Telegram-Sicherung: ${error.message}`));
+  }, 2000);
+});
+const syncedStores = { planner: plannerStore, notes: notesStore, expenses: expensesStore, vocab: vocabStore };
+
+// Scheduled messages go to Telegram (as a voice message if enabled) and to every open app.
+async function deliverNotice({ spoken, caption }) {
+  for (const session of sessions) session.toBrowser({ type: 'timer', message: caption });
+  if (telegramConfigured()) {
+    if (voiceMessagesEnabled()) await sendVoiceNote(spoken, caption);
+    else await sendTelegram(caption);
+  }
+}
+
+// "Wohnt in Köln" from the memory, used as the briefing's weather location.
+function homeTown() {
+  for (const memory of memoryStore.items) {
+    const match = /wohnt in ([^,.;]+)/i.exec(memory.text);
+    if (match) return match[1].trim();
+  }
+  return '';
+}
 
 function laptopConnected() {
   return laptop.ws?.readyState === WebSocket.OPEN;
@@ -386,6 +428,14 @@ browserWss.on('connection', (browser, request) => {
     getMemories() {
       return memoryStore.items;
     },
+    // Planner, notes, expenses and vocabulary lists (synced like the shopping list).
+    getStore(name) {
+      return syncedStores[name].items;
+    },
+    setStore(name, value, { show = false } = {}) {
+      syncedStores[name].set(value);
+      if (show) syncedStores[name].send(session, { show: true });
+    },
     setMemories(list, { show = false } = {}) {
       memoryStore.set(list);
       if (show) memoryStore.send(session, { show: true });
@@ -585,6 +635,10 @@ browserWss.on('connection', (browser, request) => {
       customerStore.send(session);
       memoryStore.adopt(message.memories, message.memoriesUpdatedAt);
       memoryStore.send(session);
+      for (const [name, store] of Object.entries(syncedStores)) {
+        store.adopt(message.stores?.[name]?.items, message.stores?.[name]?.updatedAt);
+        store.send(session);
+      }
       const rate = Number(message.sampleRate);
       startAgent(rate >= 8000 && rate <= 96000 ? rate : 48000, sanitizeHistory(message.history)).catch((error) => {
         agent = null;
@@ -596,6 +650,8 @@ browserWss.on('connection', (browser, request) => {
       customerStore.set(message.items);
     } else if (message.type === 'memories_update') {
       memoryStore.set(message.items);
+    } else if (/^(planner|notes|expenses|vocab)_update$/.test(message.type)) {
+      syncedStores[message.type.replace('_update', '')].set(message.items);
     } else if (message.type === 'confirm_response') {
       confirmations.get(message.id)?.(message.approved === true);
     } else if (message.type === 'text' && agentOpen && String(message.text || '').trim()) {
@@ -626,4 +682,27 @@ httpServer.listen(port, host, () => {
   }
   if (telegramConfigured()) console.log('  Telegram: Hinweise bei wichtigen Mails und Erinnerungen sind aktiv.');
   startMailWatcher();
+  if (telegramConfigured()) {
+    loadPinnedBackup()
+      .then((backup) => {
+        if (backup?.planner) {
+          plannerStore.adopt(backup.planner, backup.updatedAt);
+          console.log('  Planer aus der Telegram-Sicherung geladen.');
+        }
+      })
+      .catch((error) => console.warn(`  Telegram-Sicherung konnte nicht geladen werden: ${error.message}`));
+  }
+  startScheduler({
+    getPlanner: () => plannerStore.items,
+    setPlanner: (planner) => plannerStore.set(planner),
+    deliver: deliverNotice,
+    briefing: () => composeBriefing({
+      planner: plannerStore.items,
+      place: plannerStore.items.briefing.place || homeTown(),
+      getWeather,
+      unreadMail: gmailConfigured() ? () => listEmails({ unreadOnly: true, limit: 5 }) : null,
+      shopping: shoppingStore.items,
+      getNews
+    })
+  });
 });

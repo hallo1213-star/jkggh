@@ -21,7 +21,9 @@ async function call(method, body, fetchImpl) {
   const data = await response.json().catch(() => ({}));
   if (!data.ok) {
     if (response.status === 401) throw new Error('Telegram lehnt den Bot-Schlüssel ab. Bitte TELEGRAM_BOT_TOKEN bei Render prüfen.');
-    if (response.status === 400 || response.status === 403) throw new Error('Telegram kann dir nicht schreiben. Hast du dem Bot schon /start geschickt und stimmt TELEGRAM_CHAT_ID?');
+    if ((response.status === 400 || response.status === 403) && /chat not found|blocked|deactivated|initiate conversation/i.test(data.description || '')) {
+      throw new Error('Telegram kann dir nicht schreiben. Hast du dem Bot schon /start geschickt und stimmt TELEGRAM_CHAT_ID?');
+    }
     throw new Error(`Telegram-Fehler: ${data.description || response.status}`);
   }
   return data.result;
@@ -44,6 +46,44 @@ export async function sendTelegramVoice(audio, caption, { fetchImpl = fetch } = 
   const data = await response.json().catch(() => ({}));
   if (!data.ok) throw new Error(`Telegram-Sprachnachricht: ${data.description || response.status}`);
   return { gesendet: true, sprachnachricht: true };
+}
+
+// A pinned message in the user's own chat stores Jarvis' planner (reminders,
+// appointments, briefing time), so they survive server restarts even when no
+// device is open. Format: first line is a marker, then JSON.
+const BACKUP_MARKER = '🗂 Jarvis-Daten – bitte nicht löschen';
+let backupMessageId = null;
+
+export async function loadPinnedBackup({ fetchImpl = fetch } = {}) {
+  if (!telegramConfigured()) return null;
+  const chat = await call('getChat', { chat_id: chatId() }, fetchImpl);
+  const pinned = chat?.pinned_message;
+  if (!pinned?.text?.startsWith(BACKUP_MARKER)) return null;
+  backupMessageId = pinned.message_id;
+  try {
+    return JSON.parse(pinned.text.slice(BACKUP_MARKER.length).trim());
+  } catch {
+    return null;
+  }
+}
+
+export async function savePinnedBackup(data, { fetchImpl = fetch } = {}) {
+  if (!telegramConfigured()) return false;
+  const textValue = `${BACKUP_MARKER}\n${JSON.stringify(data)}`;
+  if (textValue.length > 4000) throw new Error('Zu viele Einträge für die Telegram-Sicherung.');
+  if (backupMessageId) {
+    try {
+      await call('editMessageText', { chat_id: chatId(), message_id: backupMessageId, text: textValue }, fetchImpl);
+      return true;
+    } catch (error) {
+      if (/not modified/i.test(error.message)) return true;
+      backupMessageId = null; // deleted by the user: send a new one
+    }
+  }
+  const message = await call('sendMessage', { chat_id: chatId(), text: textValue, disable_notification: true }, fetchImpl);
+  backupMessageId = message.message_id;
+  await call('pinChatMessage', { chat_id: chatId(), message_id: backupMessageId, disable_notification: true }, fetchImpl);
+  return true;
 }
 
 // While only the bot token is set, answer /start with the chat ID so the user
