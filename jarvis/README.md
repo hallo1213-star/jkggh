@@ -66,7 +66,7 @@ Tipp: Lege eine Verknüpfung zu `Laptop-verbinden.bat` in den Autostart-Ordner (
 | **Wetter** | „Wie wird das Wetter?“, „Regnet es morgen in Hamburg?“ | nein |
 | **Nachrichten & Wissen** | „Was gibt es Neues?“, „Wer war Albert Einstein?“, „Wie hoch ist der Eiffelturm?“ | nein |
 | **Telegram** | Automatische Sprachnachrichten bei Paketen, Bestellungen und wichtigen Mails · „Schick mir eine Sprachnachricht mit der Einkaufsliste“ · Erinnerungen auch bei geschlossener App | nein |
-| **Kamera (Handy)** | „Was siehst du?“, „Wie findest du meine neue Frisur?“, „Was steht auf dem Zettel?“ | nein |
+| **Webcams** | „Wie sieht's auf der A1 bei Köln aus?“, „Zeig mir Webcams von Sankt Peter-Ording“ (nur offiziell öffentliche Kameras) | nein |
 | **Tagesüberblick** | „Guten Morgen!“ – Wetter, ungelesene Mails, Einkaufsliste und Nachrichten | nein |
 | **E-Mails** | „Hab ich neue Mails?“, „Was schreibt Amazon?“, „Lies mir die Mail von Oma vor“, „Antworte ihr, dass ich Sonntag komme“* | nein |
 | **Geld verdienen** | „Mach eine Website-Vorschau für den Friseur Haarscharf in der Bahnhofstraße“, „Der Laden ist interessiert, schick das Angebot“, „Zeig meine Kunden“, „Schreib eine Anzeige für meine PS4“ | nein |
@@ -83,22 +83,6 @@ Tipp: Lege eine Verknüpfung zu `Laptop-verbinden.bat` in den Autostart-Ordner (
 | Alles andere | PowerShell-Befehl, den du siehst und bestätigst* | ja |
 
 \* = erfordert deine Bestätigung in der App.
-
-## Kamera einrichten (einmalig, ca. 2 Minuten)
-
-Auf dem Handy kann Jarvis durch deine Kamera schauen – nur wenn du ihn fragst. Die Kamera öffnet sich **sichtbar** mit Vorschau, nach einem 3-2-1-Countdown (oder Tipp auf den Auslöser) macht Jarvis **ein einzelnes Foto**, mit „Abbrechen“ jederzeit möglich. Das Foto wird nicht gespeichert. Für Frisur und Outfit nimmt er die Frontkamera, für Dinge und Texte die Rückkamera („Wechseln“ tauscht sie).
-
-Für das Ansehen nutzt Jarvis **Google Gemini** (kostenloser Zugang mit Tageslimit):
-1. https://aistudio.google.com öffnen und mit deinem Google-Konto anmelden.
-2. **Get API key** → **Create API key** → Schlüssel kopieren.
-3. **Bei Render** → dein Dienst → **Environment** → `GEMINI_API_KEY` = der Schlüssel → **Save Changes**.
-4. Sag auf dem Handy: „Was siehst du?“ – beim ersten Mal fragt das iPhone, ob Jarvis die Kamera benutzen darf.
-
-**Gut zu wissen:**
-- Beim **kostenlosen** Gemini-Zugang darf Google die Fotos laut seinen Bedingungen zur Verbesserung seiner Dienste verwenden. Fotografiere nichts, was niemand sehen soll.
-- Jarvis erkennt keine Personen anhand des Gesichts und äußert sich nicht zu Gewicht, Alter, Herkunft oder Gesundheit.
-- Meldet Jarvis, dass ein Gemini-Modell nicht mehr existiert, trag bei Render `GEMINI_MODEL` mit einem aktuellen Modellnamen aus Google AI Studio ein.
-- Ist das kostenlose Tageslimit erreicht, geht es am nächsten Tag wieder.
 
 ## Telegram einrichten (einmalig, ca. 3 Minuten)
 
@@ -150,6 +134,16 @@ Falls Google kein App-Passwort anbietet (z. B. bei Schul-/Firmenkonten oder „E
 - Erzählst du Jarvis etwas über dich (Wohnort, Hobbys, Lieblingsessen, Familie), merkt er es sich – auf iPhone und Laptop. Er nutzt es ganz natürlich, z. B. deinen Wohnort fürs Wetter.
 - **Ansehen und löschen:** oben rechts auf das Gehirn-Symbol tippen. Passwörter, PINs und Bank- oder Kartendaten merkt sich Jarvis nie.
 - Jarvis **knüpft an euer letztes Gespräch an** – auch nach dem Schließen der App. Der Verlauf bleibt auf deinem Gerät und lässt sich im Gedächtnis-Fenster löschen.
+
+## Persönlichkeit
+
+Jarvis redet wie ein guter Freund: locker, mit Humor und eigener Meinung, fragt nach, greift auf, was du erzählt hast, und reagiert auf deine Stimmung. Er begrüßt dich jedes Mal etwas anders. Ehrlich bleibt er trotzdem: Fragst du ernsthaft, sagt er dir, dass er eine KI ist. Geht es dir richtig schlecht, nimmt er das ernst und nennt Hilfe (Telefonseelsorge 0800 111 0 111, Nummer gegen Kummer 116 111, Notruf 112).
+
+## Webcams
+
+- **Autobahn:** Verkehrskameras mit aktuellen Bildern aus den offenen Daten der Autobahn GmbH, z. B. „A1 bei Köln“.
+- **Orte:** Suche nach öffentlichen Live-Webcams (Stadt, Strand, Berge, Skigebiet).
+- Nur **offiziell öffentliche** Kameras – private oder ungesicherte Kameras sucht oder öffnet Jarvis nie.
 
 ## Wetter, Nachrichten & Wissen
 

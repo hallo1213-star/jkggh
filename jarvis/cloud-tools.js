@@ -8,7 +8,7 @@ import { getNews, getWeather, lookupWikipedia } from './knowledge.js';
 import { addMemory, forgetMemory } from './memories.js';
 import { sendTelegram, telegramConfigured } from './telegram.js';
 import { sendVoiceNote } from './voice-message.js';
-import { describeImage, visionConfigured } from './vision.js';
+import { getAutobahnWebcams, normalizeRoad, webcamSearchLinks } from './webcams.js';
 import { FONTS, MODES, SECTION_TYPES, encodeSite, sanitizeSite } from './public/site-config.js';
 
 const timeZone = process.env.TZ || 'Europe/Berlin';
@@ -580,21 +580,25 @@ export const cloudTools = [
     }
   },
   {
-    name: 'look_camera',
-    description: 'Schaut durch die Handykamera des Nutzers: Die Kamera öffnet sich sichtbar in der App, macht nach einem Countdown ein Foto, und du bekommst eine Beschreibung bzw. Einschätzung zurück. Für „Was siehst du?“, „Wie findest du meine Frisur/mein Outfit?“, „Was ist das?“, „Lies das vor“. Nur auf dem Handy.',
+    name: 'find_webcams',
+    description: 'Zeigt offiziell öffentliche Webcams: Verkehrskameras einer deutschen Autobahn (Autobahn GmbH, mit aktuellen Bildern, optional in der Nähe eines Ortes) oder eine Suche nach öffentlichen Live-Webcams eines Ortes (Stadt, Strand, Berge, Skigebiet). Niemals private oder ungesicherte Kameras.',
     parameters: {
       type: 'object',
       properties: {
-        question: { type: 'string', description: 'Was der Nutzer wissen möchte, z. B. "Wie findest du meine neue Frisur?"' },
-        camera: { type: 'string', enum: ['front', 'back'], description: 'front = Selfie-Kamera (für Frisur, Outfit, Gesicht), back = Rückkamera (für Dinge, Texte, Umgebung)' }
-      },
-      required: ['question']
+        road: { type: 'string', description: 'Autobahn für Verkehrskameras, z. B. "A1"' },
+        place: { type: 'string', description: 'Ort, z. B. "Köln" (bei Autobahnen: Kameras in der Nähe dieses Ortes)' }
+      }
     },
-    label: (a) => `Kamera: ${a.question}`,
-    run: async ({ question, camera }, context) => {
-      if (!visionConfigured()) throw new Error('Die Kamera-Funktion ist noch nicht eingerichtet. Bei Render muss GEMINI_API_KEY eingetragen werden (Schlüssel kostenlos bei Google AI Studio).');
-      const photo = await context.requestPhoto({ question: String(question ?? '').slice(0, 200), facing: camera === 'back' ? 'back' : 'front' });
-      return describeImage({ imageBase64: photo, question });
+    label: (a) => `Webcams: ${[a.road, a.place].filter(Boolean).join(' bei ') || '?'}`,
+    run: async ({ road, place }, context) => {
+      if (normalizeRoad(road)) {
+        const result = await getAutobahnWebcams(road, { near: place });
+        context.showWebcams({ title: `Verkehrskameras ${result.autobahn}${result.nurInDerNaehe ? ` bei ${place}` : ''}`, cams: result.kameras, links: [] });
+        return { ...result, kameras: result.kameras.map(({ titel, ort }) => ({ titel, ort })), hinweis: 'Die Kamerabilder werden dem Nutzer angezeigt.' };
+      }
+      if (!String(place ?? '').trim()) throw new Error('Für welchen Ort oder welche Autobahn soll ich Webcams suchen?');
+      context.showWebcams({ title: `Webcams ${String(place).trim()}`, cams: [], links: webcamSearchLinks(place) });
+      return { angezeigt: true, hinweis: 'Der Nutzer bekommt eine Suche nach öffentlichen Live-Webcams. Was darauf zu sehen ist, weißt du nicht.' };
     }
   },
   {

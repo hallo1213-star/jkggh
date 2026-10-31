@@ -182,22 +182,6 @@
     <iframe id="game-frame" title="Spiel oder Website" allow="autoplay; fullscreen"></iframe>
   </div>
 
-  <div class="camera-overlay" id="camera-overlay" hidden>
-    <video id="camera-video" playsinline muted autoplay></video>
-    <div class="camera-top">
-      <span class="camera-badge">● Jarvis schaut</span>
-      <span id="camera-question"></span>
-    </div>
-    <div class="camera-count" id="camera-count" aria-live="assertive"></div>
-    <div class="camera-flash" id="camera-flash"></div>
-    <div class="camera-bar">
-      <button class="ctrl" id="camera-cancel" type="button">✕ Abbrechen</button>
-      <button class="camera-shutter" id="camera-shutter" type="button" aria-label="Foto jetzt aufnehmen"></button>
-      <button class="ctrl" id="camera-flip" type="button">⟲ Wechseln</button>
-    </div>
-    <canvas id="camera-canvas" hidden></canvas>
-  </div>
-
   <div class="toasts" id="toasts" aria-live="assertive"></div>
 
   <script src="/app.js" type="module"></script>

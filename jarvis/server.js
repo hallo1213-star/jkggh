@@ -6,7 +6,6 @@ import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { dirname, extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { randomUUID } from 'node:crypto';
 import { WebSocket, WebSocketServer } from 'ws';
 import { DeepgramClient } from '@deepgram/sdk';
 import { buildPrompt, buildSettings, missingConfig } from './agent-config.js';
@@ -37,7 +36,6 @@ const port = Number(process.env.PORT || 3000);
 const host = process.env.HOST || (process.env.RENDER ? '0.0.0.0' : '127.0.0.1');
 const publicDir = join(root, 'public');
 const CONFIRM_TIMEOUT_MS = 90_000;
-const PHOTO_TIMEOUT_MS = 60_000;
 const LAPTOP_CALL_TIMEOUT_MS = 16 * 60 * 1000;
 // Game and website pages are public so they can be shared; they hold no secrets.
 const publicFiles = new Set(['/login.html', '/login.js', '/style.css', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/play.html', '/game.js', '/game.css', '/game-config.js', '/site.html', '/site.js', '/site.css', '/site-config.js', '/link-codec.js']);
@@ -54,7 +52,6 @@ const functionDefinitions = [
   ...laptopFunctions
 ];
 
-const randomId = () => randomUUID().replace(/-/g, '').slice(0, 12);
 const isSecure = (request) => request.headers['x-forwarded-proto'] === 'https';
 // Render appends the real client address as the last X-Forwarded-For entry.
 const clientId = (request) => String(request.headers['x-forwarded-for'] || request.socket.remoteAddress || '').split(',').pop().trim();
@@ -275,7 +272,7 @@ const httpServer = createServer(async (request, response) => {
 
 // Browser connections need a valid login cookie and must come from a page on
 // this same host; the laptop connector authenticates with LAPTOP_TOKEN.
-const browserWss = new WebSocketServer({ noServer: true, maxPayload: 3 * 1024 * 1024 });
+const browserWss = new WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 });
 httpServer.on('upgrade', (request, socket, head) => {
   const { pathname } = new URL(request.url, 'http://localhost');
   if (pathname === '/laptop') {
@@ -307,7 +304,6 @@ browserWss.on('connection', (browser, request) => {
   let keepAlive = null;
   let queue = Promise.resolve();
   const confirmations = new Map();
-  const photoRequests = new Map();
   const cancelled = new Set();
   const timers = new Set();
 
@@ -394,22 +390,8 @@ browserWss.on('connection', (browser, request) => {
       memoryStore.set(list);
       if (show) memoryStore.send(session, { show: true });
     },
-    // Opens the phone camera in the app; resolves with one JPEG (base64) or
-    // rejects if the user cancels, the device has no camera or nothing comes.
-    requestPhoto({ question, facing }) {
-      return new Promise((resolve, reject) => {
-        const id = randomId();
-        const timeout = setTimeout(() => finish(null, new Error('Es kam kein Foto. Die Kamera wurde nicht rechtzeitig benutzt.')), PHOTO_TIMEOUT_MS);
-        function finish(image, error) {
-          clearTimeout(timeout);
-          photoRequests.delete(id);
-          toBrowser({ type: 'camera_close', id });
-          if (error) reject(error);
-          else resolve(image);
-        }
-        photoRequests.set(id, finish);
-        toBrowser({ type: 'camera_request', id, question, facing });
-      });
+    showWebcams({ title, cams, links }) {
+      toBrowser({ type: 'webcams', title, cams, links });
     },
     showWeather(weather) {
       toBrowser({ type: 'weather', weather });
@@ -608,12 +590,6 @@ browserWss.on('connection', (browser, request) => {
         agent = null;
         toBrowser({ type: 'error', message: `Jarvis konnte nicht starten: ${error.message}` });
       });
-    } else if (message.type === 'camera_photo') {
-      const image = String(message.image || '');
-      if (image.length > 2_000_000 || !/^[A-Za-z0-9+/=]+$/.test(image)) photoRequests.get(message.id)?.(null, new Error('Das Foto war ungültig oder zu groß.'));
-      else photoRequests.get(message.id)?.(image);
-    } else if (message.type === 'camera_cancel') {
-      photoRequests.get(message.id)?.(null, new Error(message.reason === 'kein-handy' ? 'Die Kamera-Funktion gibt es nur auf dem Handy.' : message.reason === 'keine-kamera' ? 'Auf die Kamera konnte nicht zugegriffen werden (keine Erlaubnis oder keine Kamera).' : 'Der Nutzer hat das Foto abgebrochen.'));
     } else if (message.type === 'shopping_list_update') {
       shoppingStore.set(message.items);
     } else if (message.type === 'customers_update') {
@@ -629,7 +605,6 @@ browserWss.on('connection', (browser, request) => {
 
   browser.on('close', () => {
     sessions.delete(session);
-    for (const finish of photoRequests.values()) finish(null, new Error('Die App wurde geschlossen.'));
     for (const finish of confirmations.values()) finish(false);
     for (const timer of timers) clearTimeout(timer);
     clearInterval(keepAlive);
