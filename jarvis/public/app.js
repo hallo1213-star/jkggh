@@ -1,5 +1,7 @@
 // Jarvis interface (desktop and iPhone): captures the microphone, plays Jarvis's
 // voice, shows the conversation and asks for confirmation before important actions.
+import { initMoney, showMoney } from './money.js';
+
 const OUTPUT_SAMPLE_RATE = 24000;
 
 const $ = (id) => document.getElementById(id);
@@ -1016,6 +1018,8 @@ function toast(message, kind = '') {
   setTimeout(() => item.remove(), kind === 'error' ? 9000 : 6000);
 }
 
+initMoney({ toast });
+
 function chime(frequencies = [880, 1320]) {
   if (!state.audio) return;
   const now = state.audio.currentTime;
@@ -1180,6 +1184,9 @@ function handleMessage(message) {
     case 'vocab':
       personalStores[message.type].store(message.items, { sync: false, updatedAt: message.updatedAt });
       if (message.show) showPlanner({ planner: 'termine', notes: 'notizen', expenses: 'ausgaben', vocab: 'vokabeln' }[message.type]);
+      break;
+    case 'money_show':
+      showMoney();
       break;
     case 'memories':
       memories.store(message.items, { sync: false, updatedAt: message.updatedAt });

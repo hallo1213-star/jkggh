@@ -11,6 +11,8 @@ import { sendVoiceNote } from './voice-message.js';
 import { getAutobahnWebcams, normalizeRoad, webcamSearchLinks } from './webcams.js';
 import { REPEATS, addAppointment, addReminder, describeReminder, localNow, normalizeTime, removeEntry, sanitizePlanner, upcomingAppointments } from './planner.js';
 import { addExpense, addNote, addVocab, findNotes, quizPairs, removeLastExpense, removeNote, removeVocabList, summarizeExpenses } from './personal.js';
+import { findTaskByTitle, summarizeMoney } from './money-state.js';
+import { llmProvider } from './llm.js';
 import { FONTS, MODES, SECTION_TYPES, encodeSite, sanitizeSite } from './public/site-config.js';
 
 const timeZone = process.env.TZ || 'Europe/Berlin';
@@ -848,6 +850,76 @@ export const cloudTools = [
       context.schedule(ms, String(message || 'Dein Timer ist abgelaufen.'));
       const due = new Date(Date.now() + ms).toLocaleTimeString('de-DE', { timeZone, hour: '2-digit', minute: '2-digit' });
       return { gestellt: true, faelligUm: due };
+    }
+  },
+  {
+    name: 'money_mode',
+    description: 'Autonomer Geld-Modus: start = Jarvis arbeitet ab jetzt selbstständig im Hintergrund an einer echten, legalen Einnahmequelle (analysiert Möglichkeiten, wählt eine aus, plant, erstellt digitale Produkte, Verkaufsseiten und Marketingtexte, wertet aus). Schritte, die Konten, Geld oder Veröffentlichungen brauchen, übernimmt der Nutzer selbst. stop = ausschalten. Für „Verdien Geld für mich“ → start (goal = sein Wunsch, falls er etwas Bestimmtes will).',
+    parameters: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['start', 'stop'] },
+        goal: { type: 'string', description: 'Optional: konkreter Auftrag, z. B. "digitale Vorlagen für Studenten" oder "Websites für Läden". Leer lassen für das bestehende Projekt.' }
+      },
+      required: ['action']
+    },
+    label: (a) => (a.action === 'stop' ? 'Geld-Modus aus' : `Geld-Modus an${a.goal ? `: ${a.goal}` : ''}`),
+    run: async ({ action, goal }, context) => {
+      if (action === 'start' && !llmProvider()) throw new Error('Für den Geld-Modus fehlt noch ein KI-Schlüssel bei Render: GEMINI_API_KEY (kostenlos bei aistudio.google.com) oder ANTHROPIC_API_KEY. Siehe README, Abschnitt Geld-Modus.');
+      const result = context.moneyCommand({ action: action === 'stop' ? 'stop' : 'start', goal });
+      context.showMoney();
+      return { ...result, hinweis: action === 'stop' ? 'Ausgeschaltet. Bisherige Ergebnisse bleiben im Geld-Dashboard.' : 'Läuft jetzt im Hintergrund, auch wenn die App zu ist (solange der Server wach ist). Fortschritt im Geld-Dashboard und per Telegram. Er verspricht keine Einnahmen – echte Zahlen kommen nur aus Gumroad oder seinen Einträgen.' };
+    }
+  },
+  {
+    name: 'money_status',
+    description: 'Zeigt den Stand des Geld-Modus: aktuelles Projekt, erledigte und offene Aufgaben, was auf den Nutzer wartet, erstellte Produkte und die echten Einnahmen. Öffnet das Geld-Dashboard.',
+    parameters: { type: 'object', properties: {} },
+    label: () => 'Geld-Modus: Stand',
+    run: async (args, context) => {
+      const { state, waitingForDevice } = context.getMoney();
+      context.showMoney();
+      return { ...summarizeMoney(state), ...(waitingForDevice ? { hinweis: 'Daten werden gerade vom Gerät geladen.' } : {}) };
+    }
+  },
+  {
+    name: 'money_income_add',
+    description: 'Trägt eine echte Einnahme ein, die der Nutzer erhalten hat (z. B. Verkauf, bezahlter Auftrag). Nur auf seine Aussage hin, nie erfinden.',
+    parameters: {
+      type: 'object',
+      properties: {
+        amount: { type: 'number', description: 'Betrag in Euro' },
+        source: { type: 'string', description: 'Woher, z. B. "Etsy", "Website für Bäckerei"' },
+        note: { type: 'string' }
+      },
+      required: ['amount']
+    },
+    label: (a) => `Einnahme: ${a.amount} €${a.source ? ` (${a.source})` : ''}`,
+    run: async (args, context) => {
+      const { income } = context.moneyCommand({ action: 'income_add', ...args });
+      return { eingetragen: `${income.amount.toFixed(2).replace('.', ',')} €`, quelle: income.source };
+    }
+  },
+  {
+    name: 'money_task_done',
+    description: 'Markiert eine Aufgabe des Geld-Modus, die auf den Nutzer gewartet hat, als erledigt (z. B. „Gumroad-Konto angelegt“, „Produkt hochgeladen“). Wenn er einen Shop-Link nennt, mitgeben: Er wird zum Kauf-Knopf der Verkaufsseiten.',
+    parameters: {
+      type: 'object',
+      properties: {
+        task: { type: 'string', description: 'Teil des Aufgabentitels; leer, wenn nur eine Aufgabe wartet' },
+        link: { type: 'string', description: 'Optional: https-Link zum Produkt im Shop' }
+      }
+    },
+    label: (a) => `Geld-Modus: erledigt${a.task ? ` – ${a.task}` : ''}`,
+    run: async ({ task, link }, context) => {
+      const { state } = context.getMoney();
+      const hit = findTaskByTitle(state, task);
+      if (!hit) {
+        const waiting = state.projects.flatMap((p) => p.tasks.filter((t) => t.status === 'wartet').map((t) => t.title));
+        throw new Error(waiting.length ? `Welche Aufgabe genau? Offen für dich: ${waiting.join(' / ')}` : 'Gerade wartet keine Aufgabe auf dich.');
+      }
+      const result = context.moneyCommand({ action: 'task_done', id: hit.task.id, link });
+      return { erledigt: result.task, shopLink: result.buyLink, hinweis: 'Jarvis arbeitet jetzt mit den nächsten Schritten weiter.' };
     }
   },
   {

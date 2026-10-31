@@ -48,6 +48,20 @@ export async function sendTelegramVoice(audio, caption, { fetchImpl = fetch } = 
   return { gesendet: true, sprachnachricht: true };
 }
 
+// A file (e.g. a product Jarvis created) to the user's own chat – a durable copy
+// that survives restarts of the free server.
+export async function sendTelegramDocument(content, filename, caption, { fetchImpl = fetch } = {}) {
+  if (!telegramConfigured()) throw new Error('Telegram ist noch nicht eingerichtet.');
+  const form = new FormData();
+  form.append('chat_id', chatId());
+  form.append('document', new Blob([content], { type: 'application/octet-stream' }), filename);
+  if (caption) form.append('caption', String(caption).slice(0, 1000));
+  const response = await fetchImpl(`${API}/bot${token()}/sendDocument`, { method: 'POST', body: form, signal: AbortSignal.timeout(TIMEOUT_MS) });
+  const data = await response.json().catch(() => ({}));
+  if (!data.ok) throw new Error(`Telegram-Datei: ${data.description || response.status}`);
+  return { gesendet: true };
+}
+
 // A pinned message in the user's own chat stores Jarvis' planner (reminders,
 // appointments, briefing time), so they survive server restarts even when no
 // device is open. Format: first line is a marker, then JSON.

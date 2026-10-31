@@ -18,3 +18,7 @@ services:
         generateValue: true
       - key: SESSION_SECRET
         generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GUMROAD_ACCESS_TOKEN
+        sync: false

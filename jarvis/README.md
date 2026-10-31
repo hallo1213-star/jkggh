@@ -139,6 +139,41 @@ Falls Google kein App-Passwort anbietet (z. B. bei Schul-/Firmenkonten oder „E
 
 Jarvis redet wie ein guter Freund: locker, mit Humor und eigener Meinung, fragt nach, greift auf, was du erzählt hast, und reagiert auf deine Stimmung. Er begrüßt dich jedes Mal etwas anders. Ehrlich bleibt er trotzdem: Fragst du ernsthaft, sagt er dir, dass er eine KI ist. Geht es dir richtig schlecht, nimmt er das ernst und nennt Hilfe (Telefonseelsorge 0800 111 0 111, Nummer gegen Kummer 116 111, Notruf 112).
 
+## Autonomer Geld-Modus 🤖💶
+
+Sag **„Jarvis, verdien Geld für mich“** (oder tippe im Knopf **Geld** auf den Schalter). Ab dann arbeitet Jarvis im Hintergrund selbstständig, auch wenn die App zu ist. Er wartet nicht nach jedem Schritt auf dich:
+
+1. **Analyse:** prüft 3–5 realistische Einnahmequellen (bewertet nach Startkosten, Zeit bis zum ersten Euro, Potenzial), berücksichtigt, was er über dich weiß, und wählt die beste.
+2. **Plan:** legt konkrete Aufgaben an.
+3. **Ausführen:** recherchiert Plattformen/Preise/Zielgruppe, **erstellt fertige digitale Produkte** (E-Books, Leitfäden, Checklisten, Vorlagen, CSV-Planer, kleine HTML-Tools), schreibt **Marketingtexte** (Produktbeschreibung, Tags, Anzeigen, Social-Media-Posts) und baut **Verkaufsseiten** (öffentlicher Link).
+4. **Dich einbinden, wo es rechtlich nötig ist:** Konten anlegen, Produkt hochladen, Preis festlegen, Geld ausgeben, Gewerbe anmelden – das darf nur du. Solche Schritte erscheinen als **„Wartet auf dich“** mit genauer Anleitung (auch per Telegram). Danach „Erledigt“ tippen und den Shop-Link einfügen – Jarvis setzt ihn automatisch als Kauf-Knopf in seine Verkaufsseiten und arbeitet weiter.
+5. **Auswerten & lernen:** prüft regelmäßig die echten Ergebnisse (Gumroad-Verkäufe, deine Einträge), notiert Erkenntnisse und plant neue Aufgaben.
+
+Jedes fertige Produkt kommt zusätzlich als **Datei per Telegram** – so geht nichts verloren.
+
+**Das Dashboard (Knopf „Geld“):** Schalter EIN/AUS, echte Einnahmen (von dir eingetragen) und echte Gumroad-Verkäufe, die Schätzung der KI (klar als Schätzung markiert), laufendes Projekt mit Fortschritt, erstellte Produkte (ansehen/herunterladen), Verkaufsseiten, „Wartet auf dich“, API-/Tool-Status und das Aufgabenprotokoll. Es werden **keine Einnahmen erfunden oder simuliert**.
+
+**Sprachbefehle:** „Wie läuft's mit dem Geld?“ · „Ich hab das Produkt hochgeladen, der Link ist …“ · „Ich hab 15 Euro mit Etsy verdient“ · „Hör auf mit dem Geld-Modus“ · „Verdien Geld mit Websites für Läden“ (neuer Auftrag = neues Projekt).
+
+**Einrichten (bei Render → Environment):**
+
+| Variable | Pflicht? | Woher |
+|---|---|---|
+| `GEMINI_API_KEY` | ja (oder Claude) | kostenlos: [aistudio.google.com](https://aistudio.google.com) → „Get API key“ → „Create API key“ |
+| `ANTHROPIC_API_KEY` | Alternative, kostenpflichtig | [console.anthropic.com](https://console.anthropic.com) → API Keys (wird bevorzugt, wenn gesetzt) |
+| `GUMROAD_ACCESS_TOKEN` | optional, für echte Verkaufszahlen | gumroad.com → Settings → Advanced → Applications → App anlegen → „Generate access token“ |
+| `MONEY_INTERVAL_MINUTES` | optional (Standard 2) | Abstand zwischen zwei Arbeitsschritten |
+| `MONEY_MAX_TASKS_PER_DAY` | optional (Standard 25) | Obergrenze pro Tag (schont das kostenlose KI-Kontingent) |
+
+Telegram sollte eingerichtet sein (Berichte, Dateien, „Wartet auf dich“), und der cron-job.org-Ping auf `/health` muss laufen, sonst schläft der kostenlose Server ein und Jarvis arbeitet nicht weiter.
+
+**Grenzen, ehrlich:**
+- Jarvis hat keinen Live-Internetzugang zum Recherchieren. Die Recherche stammt aus dem Wissen der KI und ist als „bitte prüfen“ markiert.
+- Gumroad erlaubt über die API kein Anlegen von Produkten. Hochladen bleibt also dein Schritt (ca. 5 Minuten). Etsy, Ko-fi usw. gehen genauso von Hand.
+- Ob und wie viel verkauft wird, kann niemand garantieren. Am Anfang sind 0–100 € im Monat normal. Für Reichweite (Posts, Pins) sorgst du mit den fertigen Texten.
+- Bei regelmäßigen Einnahmen brauchst du ein Gewerbe. Unter 18 brauchst du die Zustimmung deiner Eltern. Eine Verkaufsseite braucht ein Impressum (Jarvis legt den Abschnitt an, du trägst Name und Anschrift ein).
+- Daten: Der kostenlose Server vergisst bei einem Neustart alles. Dein Gerät hat eine Kopie und gibt sie beim nächsten Öffnen zurück, dann arbeitet Jarvis weiter. Die Produkte liegen außerdem als Dateien in Telegram.
+
 ## Planer, Notizen, Geld & Lernen 📅
 
 Alles per Sprache – und zum Nachschauen über den Knopf **Planer** (Tabs Termine, Notizen, Ausgaben, Vokabeln). Die Daten werden zwischen Handy und Laptop abgeglichen.
@@ -171,7 +206,7 @@ Alles per Sprache – und zum Nachschauen über den Knopf **Planer** (Tabs Termi
 
 ## Geld verdienen 💰
 
-Jarvis verdient nicht von allein Geld – aber er erledigt die Arbeit, für die andere bezahlen.
+Neben dem autonomen Geld-Modus (oben) hilft Jarvis bei diesen Geschäften direkt im Gespräch:
 
 ### Website-Geschäft für Läden
 

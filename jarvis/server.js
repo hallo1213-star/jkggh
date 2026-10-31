@@ -22,6 +22,10 @@ import { composeBriefing, startScheduler } from './scheduler.js';
 import { getNews, getWeather } from './knowledge.js';
 import { gmailConfigured, listEmails } from './gmail.js';
 import { sendVoiceNote, voiceMessagesEnabled } from './voice-message.js';
+import { sendTelegramDocument } from './telegram.js';
+import { addIncome, completeUserTask, sanitizeMoney, startMoney, stopMoney, addLog as addMoneyLog, updateProject, updateTask, incomeTotals } from './money-state.js';
+import { moneyToolStatus, relinkPages, startMoneyAgent } from './money-agent.js';
+import { gumroadConfigured, gumroadProducts } from './gumroad.js';
 import { findTool as findLaptopTool, functionDefinitions as laptopFunctions } from './laptop/tools.js';
 
 if (!process.env.TZ) process.env.TZ = 'Europe/Berlin';
@@ -133,12 +137,41 @@ const vocabStore = createSharedStore('vocab', sanitizeVocab, null);
 // The planner is also kept as a pinned Telegram message, so reminders and the
 // briefing survive restarts even when no device is open.
 let backupTimer = null;
-const plannerStore = createSharedStore('planner', sanitizePlanner, null, (store) => {
+function scheduleBackup() {
   clearTimeout(backupTimer);
   backupTimer = setTimeout(() => {
-    savePinnedBackup({ planner: store.items, updatedAt: store.updatedAt }).catch((error) => console.warn(`Telegram-Sicherung: ${error.message}`));
+    savePinnedBackup({ planner: plannerStore.items, updatedAt: plannerStore.updatedAt, money: moneyCompact() }).catch((error) => console.warn(`Telegram-Sicherung: ${error.message}`));
   }, 2000);
-});
+}
+const plannerStore = createSharedStore('planner', sanitizePlanner, null, scheduleBackup);
+
+// --- Money mode --------------------------------------------------------------
+// The full state (products can be long) lives here and on the user's devices;
+// the pinned Telegram backup only holds whether the mode is on. After a restart
+// the worker waits until a device has sent its copy back (`pending`).
+const money = { state: sanitizeMoney(), updatedAt: 0, pending: null, origin: process.env.RENDER_EXTERNAL_URL || '' };
+function moneyCompact() {
+  return money.state.enabled || money.pending ? { enabled: money.pending?.enabled ?? money.state.enabled, goal: (money.pending?.goal ?? money.state.goal).slice(0, 200), activeProjectId: money.pending?.activeProjectId ?? money.state.activeProjectId, updatedAt: money.pending?.updatedAt ?? money.updatedAt } : null;
+}
+function setMoney(state) {
+  const before = JSON.stringify(moneyCompact());
+  money.state = sanitizeMoney(state);
+  money.updatedAt = Date.now();
+  if (JSON.stringify(moneyCompact()) !== before) scheduleBackup();
+}
+function adoptMoney(state, updatedAt) {
+  const time = Math.min(Number(updatedAt) || 0, Date.now());
+  if (time <= money.updatedAt) return false;
+  money.state = sanitizeMoney(state);
+  money.updatedAt = time;
+  money.pending = null;
+  return true;
+}
+// Everything except the long product texts (those load on demand).
+function moneyOverview() {
+  const { state } = money;
+  return { ...state, products: state.products.map(({ content, ...rest }) => ({ ...rest, size: content.length })), pages: state.pages.map(({ site, ...rest }) => rest) };
+}
 const syncedStores = { planner: plannerStore, notes: notesStore, expenses: expensesStore, vocab: vocabStore };
 
 // Scheduled messages go to Telegram (as a voice message if enabled) and to every open app.
@@ -277,6 +310,16 @@ const httpServer = createServer(async (request, response) => {
     return;
   }
 
+  if (pathname.startsWith('/api/money')) {
+    if (!isAuthenticated(request)) {
+      sendJson(response, 401, { error: 'Nicht angemeldet' });
+      return;
+    }
+    if (!money.origin || !process.env.RENDER_EXTERNAL_URL) money.origin = `${isSecure(request) ? 'https' : 'http'}://${request.headers.host}`;
+    await handleMoneyApi(request, response, pathname);
+    return;
+  }
+
   const route = pathname === '/' ? '/index.html' : pathname;
   if (!publicFiles.has(route) && !isAuthenticated(request)) {
     if (route === '/index.html') {
@@ -309,6 +352,119 @@ const httpServer = createServer(async (request, response) => {
     response.end('Nicht gefunden');
   }
 });
+
+async function handleMoneyApi(request, response, pathname) {
+  try {
+    if (request.method === 'GET' && pathname === '/api/money') {
+      let gumroad = null;
+      let gumroadError = null;
+      if (gumroadConfigured()) gumroad = await gumroadProducts().catch((error) => { gumroadError = error.message; return null; });
+      sendJson(response, 200, {
+        version: money.updatedAt,
+        waitingForDevice: Boolean(money.pending),
+        state: moneyOverview(),
+        totals: incomeTotals(money.state, gumroad),
+        gumroad: gumroad ? { products: gumroad.products, checkedAt: gumroad.checkedAt } : null,
+        gumroadError,
+        tools: moneyToolStatus({ telegram: telegramConfigured(), gmail: gmailConfigured(), laptop: laptopConnected() }),
+        origin: money.origin
+      });
+      return;
+    }
+    if (request.method === 'GET' && pathname === '/api/money/full') {
+      sendJson(response, 200, { version: money.updatedAt, state: money.state });
+      return;
+    }
+    if (request.method !== 'POST' || !String(request.headers['content-type'] || '').startsWith('application/json')) {
+      sendJson(response, 405, { error: 'Nicht erlaubt' });
+      return;
+    }
+    if (pathname === '/api/money/restore') {
+      const body = JSON.parse(await readBody(request, 5 * 1024 * 1024));
+      const adopted = adoptMoney(body.state, body.version);
+      if (adopted) console.log('Geld-Modus: Daten vom Gerät übernommen.');
+      sendJson(response, 200, { ok: true, adopted, version: money.updatedAt });
+      return;
+    }
+    if (pathname === '/api/money/command') {
+      const body = JSON.parse(await readBody(request, 8192));
+      const result = applyMoneyCommand(body);
+      sendJson(response, 200, { ok: true, ...result, version: money.updatedAt });
+      return;
+    }
+    sendJson(response, 404, { error: 'Nicht gefunden' });
+  } catch (error) {
+    sendJson(response, 400, { error: error.message });
+  }
+}
+
+// Changes from the dashboard and from voice commands.
+function applyMoneyCommand({ action, ...args }) {
+  // Acting in the dashboard means the current data is the right one.
+  money.pending = null;
+  const state = money.state;
+  const without = (list, id) => list.filter((item) => item.id !== id);
+  switch (action) {
+    case 'start':
+      setMoney(startMoney(state, args.goal));
+      setTimeout(() => moneyAgent?.tick(), 500);
+      return { message: 'Geld-Modus läuft.' };
+    case 'stop':
+      setMoney(stopMoney(state));
+      return { message: 'Geld-Modus ist aus.' };
+    case 'run_now':
+      if (!state.enabled) throw new Error('Der Geld-Modus ist aus.');
+      setTimeout(() => moneyAgent?.tick(), 100);
+      return { message: 'Nächster Schritt startet.' };
+    case 'income_add': {
+      const { state: next, income } = addIncome(state, args);
+      setMoney(next);
+      return { income };
+    }
+    case 'income_remove':
+      setMoney(addMoneyLog({ ...state, income: without(state.income, args.id) }, 'Einnahme gelöscht'));
+      return {};
+    case 'task_done': {
+      const done = completeUserTask(state, args.id, { link: args.link, note: args.note });
+      setMoney(done.buyLink ? relinkPages(done.state, done.project.id, done.buyLink) : done.state);
+      setTimeout(() => moneyAgent?.tick(), 500);
+      return { task: done.task.title, buyLink: done.buyLink || null };
+    }
+    case 'task_retry': {
+      const project = state.projects.find((p) => p.tasks.some((t) => t.id === args.id));
+      if (!project) throw new Error('Aufgabe nicht gefunden.');
+      setMoney(updateTask(state, project.id, args.id, { status: 'offen', attempts: 0, result: '' }));
+      setTimeout(() => moneyAgent?.tick(), 500);
+      return {};
+    }
+    case 'task_skip': {
+      const project = state.projects.find((p) => p.tasks.some((t) => t.id === args.id));
+      if (!project) throw new Error('Aufgabe nicht gefunden.');
+      setMoney(updateTask(state, project.id, args.id, { status: 'erledigt', result: 'Übersprungen' }));
+      return {};
+    }
+    case 'project_activate': {
+      if (!state.projects.some((p) => p.id === args.id)) throw new Error('Projekt nicht gefunden.');
+      let next = { ...state, activeProjectId: args.id, projects: state.projects.map((p) => (p.id === args.id ? { ...p, status: 'aktiv' } : p.status === 'aktiv' ? { ...p, status: 'pausiert' } : p)) };
+      next = updateProject(next, args.id, { status: 'aktiv' });
+      setMoney(addMoneyLog(next, 'Projekt gewechselt'));
+      return {};
+    }
+    case 'project_delete':
+      setMoney(addMoneyLog({ ...state, activeProjectId: state.activeProjectId === args.id ? null : state.activeProjectId, projects: without(state.projects, args.id), products: state.products.filter((p) => p.projectId !== args.id), pages: state.pages.filter((p) => p.projectId !== args.id) }, 'Projekt gelöscht'));
+      return {};
+    case 'product_delete':
+      setMoney({ ...state, products: without(state.products, args.id) });
+      return {};
+    case 'page_delete':
+      setMoney({ ...state, pages: without(state.pages, args.id) });
+      return {};
+    default:
+      throw new Error('Unbekannte Aktion.');
+  }
+}
+
+let moneyAgent = null;
 
 // --- WebSockets ------------------------------------------------------------
 
@@ -439,6 +595,15 @@ browserWss.on('connection', (browser, request) => {
     setMemories(list, { show = false } = {}) {
       memoryStore.set(list);
       if (show) memoryStore.send(session, { show: true });
+    },
+    getMoney() {
+      return { state: money.state, waitingForDevice: Boolean(money.pending) };
+    },
+    moneyCommand(command) {
+      return applyMoneyCommand(command);
+    },
+    showMoney() {
+      toBrowser({ type: 'money_show' });
     },
     showWebcams({ title, cams, links }) {
       toBrowser({ type: 'webcams', title, cams, links });
@@ -689,9 +854,21 @@ httpServer.listen(port, host, () => {
           plannerStore.adopt(backup.planner, backup.updatedAt);
           console.log('  Planer aus der Telegram-Sicherung geladen.');
         }
+        if (backup?.money?.enabled && !money.updatedAt) {
+          money.pending = backup.money;
+          console.log('  Geld-Modus war an – er arbeitet weiter, sobald Jarvis einmal auf einem Gerät geöffnet wird.');
+        }
       })
       .catch((error) => console.warn(`  Telegram-Sicherung konnte nicht geladen werden: ${error.message}`));
   }
+  moneyAgent = startMoneyAgent({
+    getState: () => (money.pending ? { ...money.state, enabled: false } : money.state),
+    setState: setMoney,
+    notify: (text) => (telegramConfigured() ? sendTelegram(text) : Promise.resolve()),
+    sendFile: (content, filename, caption) => (telegramConfigured() ? sendTelegramDocument(content, filename, caption) : Promise.resolve()),
+    getMemories: () => memoryStore.items.map((memory) => memory.text),
+    origin: () => money.origin
+  });
   startScheduler({
     getPlanner: () => plannerStore.items,
     setPlanner: (planner) => plannerStore.set(planner),
