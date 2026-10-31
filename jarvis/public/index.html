@@ -233,6 +233,14 @@
       </div>
       <button class="icon-btn globe-close" id="globe-close" type="button" aria-label="Erdkugel schließen">✕</button>
     </div>
+    <aside class="globe-panel globe-left" id="globe-left" hidden aria-label="Lage vor Ort">
+      <div class="globe-panel-head"><span>Lage vor Ort</span><button type="button" class="globe-panel-switch" data-switch="right">Meldungen ⇄</button><button type="button" class="globe-panel-close" data-close="globe-left" aria-label="Schließen">✕</button></div>
+      <div class="globe-panel-body" id="globe-left-body"></div>
+    </aside>
+    <aside class="globe-panel globe-right" id="globe-right" hidden aria-label="Aktuelle Meldungen">
+      <div class="globe-panel-head"><span id="globe-right-title">Aktuelle Meldungen</span><button type="button" class="globe-panel-switch" data-switch="left">Lage ⇄</button><button type="button" class="globe-panel-close" data-close="globe-right" aria-label="Schließen">✕</button></div>
+      <div class="globe-panel-body" id="globe-right-body"></div>
+    </aside>
     <div class="globe-hud globe-info">
       <p id="globe-coords">–</p>
       <p id="globe-status">Bereit</p>
@@ -248,6 +256,8 @@
         <button class="ctrl" id="globe-night" type="button" aria-pressed="false">Nacht</button>
         <button class="ctrl" id="globe-labels" type="button" aria-pressed="false">Namen</button>
         <button class="ctrl" id="globe-locate" type="button">Mein Standort</button>
+        <button class="ctrl globe-panel-toggle" id="globe-show-left" type="button" hidden>Lage</button>
+        <button class="ctrl globe-panel-toggle" id="globe-show-right" type="button" hidden>Meldungen</button>
       </div>
     </div>
     <div class="globe-loading" id="globe-loading" hidden><span class="globe-spinner"></span>Satellitendaten werden geladen …</div>

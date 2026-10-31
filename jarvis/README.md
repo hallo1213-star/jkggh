@@ -201,6 +201,8 @@ Alles per Sprache – und zum Nachschauen über den Knopf **Planer** (Tabs Termi
 
 - „Jarvis, wie sieht es gerade in Berlin Neukölln aus?“ → Jarvis fliegt von der Erde nach Berlin und zoomt auf Neukölln. Dazu sagt er dir, was **wirklich aktuell** ist: Wetter, Bewölkung, Ortszeit, Tag oder Nacht, Sonnenuntergang und ein paar Infos zum Ort.
 - „Zeig mir Paris / New York / Berlin“, „Zoom auf Neukölln“, „Zeig mir die ganze Erde“, „Dreh die Erde“, „Zeig mir die Erde bei Nacht“, „Wo bin ich gerade?“ (fragt einmal nach Erlaubnis für den Standort), „Mach die Erde zu“.
+- **Was ist dort los?** „Zeig mir die Proteste in Paris“, „Wie ist die Lage in Kiew?“, „Gibt es Unwetter in Spanien?“ → Jarvis fliegt hin. **Links** steht die Lage vor Ort (Wetter, Ortszeit, Tag/Nacht, Infos), **rechts** stehen aktuelle Meldungen zum Thema (Google News, mit Quelle und Uhrzeit). Dazu fasst Jarvis die Lage in ein paar Sätzen zusammen. Auf dem Handy erscheinen die Panels unten und lassen sich umschalten. Folgefragen wie „Und gibt es dort Streiks?“ beziehen sich auf den gerade gezeigten Ort.
+- „Zeig mir …“ mit einem Land, einer Stadt oder einem Ort öffnet die Erdbeobachtung immer automatisch.
 - Unten gibt es ein Suchfeld und Knöpfe für Ganze Erde, Drehen, Nacht, Namen (Ortsnamen einblenden) und Mein Standort.
 
 **Woher die Bilder kommen:**

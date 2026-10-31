@@ -26,7 +26,7 @@ import { sendTelegramDocument } from './telegram.js';
 import { addIncome, completeUserTask, sanitizeMoney, startMoney, stopMoney, addLog as addMoneyLog, updateProject, updateTask, incomeTotals } from './money-state.js';
 import { moneyToolStatus, relinkPages, startMoneyAgent } from './money-agent.js';
 import { gumroadConfigured, gumroadProducts } from './gumroad.js';
-import { geocodePlace, reversePlace } from './places.js';
+import { geocodePlace, placeDetails, reversePlace } from './places.js';
 import { findTool as findLaptopTool, functionDefinitions as laptopFunctions } from './laptop/tools.js';
 
 if (!process.env.TZ) process.env.TZ = 'Europe/Berlin';
@@ -320,7 +320,11 @@ const httpServer = createServer(async (request, response) => {
     try {
       if (pathname === '/api/globe/config') sendJson(response, 200, { ionToken: process.env.CESIUM_ION_TOKEN?.trim() || null });
       else if (pathname === '/api/globe/search') sendJson(response, 200, { place: await geocodePlace(params.get('q')) });
-      else if (pathname === '/api/globe/reverse') sendJson(response, 200, { place: await reversePlace(params.get('lat'), params.get('lon')) });
+      else if (pathname === '/api/globe/details') {
+        const place = await geocodePlace(params.get('q'));
+        const details = await placeDetails(place, params.get('topic') || '');
+        sendJson(response, 200, { place, left: details.left, right: details.right });
+      } else if (pathname === '/api/globe/reverse') sendJson(response, 200, { place: await reversePlace(params.get('lat'), params.get('lon')) });
       else sendJson(response, 404, { error: 'Nicht gefunden' });
     } catch (error) {
       sendJson(response, 400, { error: error.message });
@@ -626,6 +630,7 @@ browserWss.on('connection', (browser, request) => {
     showGlobe(command) {
       toBrowser({ type: 'globe', ...command });
     },
+    globeMemory: {},
     showWebcams({ title, cams, links }) {
       toBrowser({ type: 'webcams', title, cams, links });
     },

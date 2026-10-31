@@ -146,6 +146,40 @@ export async function getNews({ fetchImpl = fetch, limit = 6 } = {}) {
   throw new Error(`Die Nachrichten sind gerade nicht erreichbar${lastError ? ` (${lastError.message})` : ''}.`);
 }
 
+// Current news about a topic or place (e.g. "Proteste Paris") from the Google
+// News RSS search – free, no key. Returns headlines with source and time.
+export function parseNewsSearch(xml, limit = 8) {
+  const items = [];
+  for (const match of String(xml).matchAll(/<item\b[^>]*>([\s\S]*?)<\/item>/g)) {
+    const field = (name) => {
+      const found = new RegExp(`<${name}\\b[^>]*>([\\s\\S]*?)</${name}>`).exec(match[1]);
+      return found ? decodeEntities(found[1]) : '';
+    };
+    const source = field('source');
+    let title = field('title');
+    if (source && title.endsWith(` - ${source}`)) title = title.slice(0, -(source.length + 3));
+    const link = field('link');
+    const date = Date.parse(field('pubDate'));
+    if (!title) continue;
+    items.push({
+      titel: title.slice(0, 220),
+      quelle: source.slice(0, 60),
+      zeit: Number.isNaN(date) ? null : new Date(date).toISOString(),
+      link: /^https:\/\//.test(link) ? link : ''
+    });
+  }
+  return items.sort((a, b) => (b.zeit || '').localeCompare(a.zeit || '')).slice(0, limit);
+}
+
+export async function searchNews(query, { fetchImpl = fetch, limit = 8, days = 7 } = {}) {
+  const q = String(query ?? '').trim().slice(0, 120);
+  if (!q) throw new Error('Wonach soll ich in den Nachrichten suchen?');
+  const url = `https://news.google.com/rss/search?q=${encodeURIComponent(`${q} when:${days}d`)}&hl=de&gl=DE&ceid=DE:de`;
+  const response = await fetchImpl(url, { headers: { 'user-agent': USER_AGENT }, signal: AbortSignal.timeout(TIMEOUT_MS) });
+  if (!response.ok) throw new Error(`Die Nachrichtensuche antwortet mit Status ${response.status}.`);
+  return { suche: q, quelle: 'Google News', meldungen: parseNewsSearch(await response.text(), Math.min(Math.max(Number(limit) || 8, 1), 15)) };
+}
+
 // --- Wikipedia ---------------------------------------------------------------
 
 export async function lookupWikipedia(query, { fetchImpl = fetch } = {}) {

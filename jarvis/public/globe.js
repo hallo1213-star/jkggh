@@ -25,8 +25,16 @@ const els = {
   night: $('globe-night'),
   labels: $('globe-labels'),
   locate: $('globe-locate'),
-  loading: $('globe-loading')
+  loading: $('globe-loading'),
+  left: $('globe-left'),
+  leftBody: $('globe-left-body'),
+  right: $('globe-right'),
+  rightBody: $('globe-right-body'),
+  rightTitle: $('globe-right-title'),
+  showLeft: $('globe-show-left'),
+  showRight: $('globe-show-right')
 };
+const narrow = () => window.matchMedia('(max-width: 899px)').matches;
 
 let viewer = null;
 let loading = null;
@@ -298,11 +306,95 @@ function located(place) {
   setStatus(`Du bist hier: ${place.name}`);
 }
 
+
+// --- Side panels: left = situation on site, right = current news ----------
+
+function el(tag, props = {}, ...children) {
+  const node = document.createElement(tag);
+  for (const [key, value] of Object.entries(props)) {
+    if (key === 'class') node.className = value;
+    else node[key] = value;
+  }
+  for (const child of children.flat()) if (child !== null && child !== undefined && child !== false && child !== '') node.append(child);
+  return node;
+}
+
+function syncToggles() {
+  els.showLeft.hidden = !els.leftBody.childElementCount || !els.left.hidden;
+  els.showRight.hidden = !els.rightBody.childElementCount || !els.right.hidden;
+}
+
+function showPanel(side) {
+  const [panel, other] = side === 'left' ? [els.left, els.right] : [els.right, els.left];
+  panel.hidden = false;
+  if (narrow()) other.hidden = true; // phones: one sheet at a time
+  syncToggles();
+}
+
+function hidePanels(clear = false) {
+  els.left.hidden = true;
+  els.right.hidden = true;
+  if (clear) {
+    els.leftBody.replaceChildren();
+    els.rightBody.replaceChildren();
+  }
+  syncToggles();
+}
+
+const ago = (iso) => {
+  if (!iso) return '';
+  const minutes = Math.round((Date.now() - Date.parse(iso)) / 60000);
+  if (minutes < 60) return `vor ${Math.max(minutes, 1)} Min.`;
+  if (minutes < 48 * 60) return `vor ${Math.round(minutes / 60)} Std.`;
+  return new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+};
+
+function panelsLoading(place, topic) {
+  els.leftBody.replaceChildren(el('h4', { textContent: place.name }), el('p', { class: 'muted', textContent: 'Aktuelle Daten werden geladen …' }));
+  els.rightTitle.textContent = topic ? `Meldungen: ${topic}` : 'Aktuelle Meldungen';
+  els.rightBody.replaceChildren(el('p', { class: 'muted', textContent: topic ? `Suche Meldungen zu „${topic}“ in ${place.name} …` : `Suche Meldungen zu ${place.name} …` }));
+  if (narrow()) showPanel(topic ? 'right' : 'left');
+  else { els.left.hidden = false; els.right.hidden = false; syncToggles(); }
+}
+
+function renderPanels({ place, left, right }) {
+  const w = left.weather;
+  els.leftBody.replaceChildren(
+    el('h4', { textContent: place.name }),
+    el('p', { class: 'muted', textContent: [place.kind, place.label].filter(Boolean).join(' · ') }),
+    w ? el('div', { class: 'globe-weather' },
+      el('span', { class: 'big', textContent: w.symbol }),
+      el('b', { textContent: `${w.temperatur ?? '–'}°C` }),
+      el('span', { textContent: `${w.wetter}${w.gefuehlt !== null ? ` · gefühlt ${w.gefuehlt}°` : ''}` })) : el('p', { class: 'muted', textContent: 'Wetter gerade nicht verfügbar.' }),
+    w ? el('div', { class: 'globe-facts' },
+      el('div', {}, el('small', { textContent: 'Ortszeit' }), `${w.ortszeit || '–'}${w.tagOderNacht ? ` · ${w.tagOderNacht}` : ''}`),
+      el('div', {}, el('small', { textContent: 'Bewölkung' }), w.bewoelkungProzent !== null ? `${w.bewoelkungProzent} %` : '–'),
+      el('div', {}, el('small', { textContent: 'Wind' }), w.windKmh !== null ? `${w.windKmh} km/h` : '–'),
+      el('div', {}, el('small', { textContent: 'Sonne' }), `${w.heute?.sonnenaufgang || '–'} – ${w.heute?.sonnenuntergang || '–'}`)) : null,
+    left.info ? el('p', { textContent: left.info.text }) : null,
+    left.info?.link ? el('a', { class: 'more', href: left.info.link, target: '_blank', rel: 'noopener noreferrer', textContent: 'Mehr bei Wikipedia ↗' }) : null,
+    el('p', { class: 'globe-note', textContent: 'Wetter & Uhrzeit: live (Open-Meteo). Satellitenbild: Archivaufnahme, nicht live.' })
+  );
+  els.rightTitle.textContent = right.topic ? `Meldungen: ${right.topic}` : 'Aktuelle Meldungen';
+  const items = right.items || [];
+  els.rightBody.replaceChildren(
+    ...(items.length ? items.map((item) => el('div', { class: 'globe-news' },
+      item.link ? el('a', { href: item.link, target: '_blank', rel: 'noopener noreferrer', textContent: item.titel }) : el('span', { textContent: item.titel }),
+      el('small', { textContent: [item.quelle, ago(item.zeit)].filter(Boolean).join(' · ') }))) : [el('p', { class: 'muted', textContent: right.error || (right.topic ? `Keine aktuellen Meldungen zu „${right.topic}“ gefunden.` : 'Keine aktuellen Meldungen gefunden.') })]),
+    el('p', { class: 'globe-note', textContent: `Quelle: Google News${right.query ? ` – Suche „${right.query}“` : ''}. Die Erdkugel zeigt das Ereignis nicht live.` })
+  );
+  if (narrow()) showPanel(right.topic ? 'right' : 'left');
+  else { els.left.hidden = false; els.right.hidden = false; syncToggles(); }
+}
+
 // Commands from the voice assistant (see the "globe" cloud tool).
 export async function handleGlobeMessage(message) {
   switch (message.action) {
     case 'fly':
+      panelsLoading(message.place, message.topic);
       return flyToPlace(message.place);
+    case 'panels':
+      return renderPanels(message);
     case 'located':
       return located(message.place);
     case 'error':
@@ -315,7 +407,10 @@ export async function handleGlobeMessage(message) {
   }
   await openGlobe();
   if (!viewer) return undefined;
-  if (message.action === 'ganze_erde') wholeEarth();
+  if (message.action === 'ganze_erde') {
+    hidePanels(true);
+    wholeEarth();
+  }
   else if (message.action === 'drehen') {
     if (viewer.camera.positionCartographic.height < 3_000_000) wholeEarth();
     setSpin(true);
@@ -336,7 +431,10 @@ async function search(query) {
     const response = await fetch(`/api/globe/search?q=${encodeURIComponent(q)}`);
     const data = await response.json();
     if (!response.ok) throw new Error(data.error || 'Suche fehlgeschlagen');
+    panelsLoading(data.place, null);
     flyToPlace(data.place);
+    const details = await fetch(`/api/globe/details?q=${encodeURIComponent(q)}`).then((r) => (r.ok ? r.json() : null)).catch(() => null);
+    if (details) renderPanels(details);
   } catch (error) {
     setStatus(error.message);
   }
@@ -356,7 +454,22 @@ export function initGlobe({ send, toast }) {
     search(input.value);
     input.blur();
   });
-  els.earth.addEventListener('click', () => viewer && wholeEarth());
+  els.earth.addEventListener('click', () => {
+    if (!viewer) return;
+    hidePanels(true);
+    wholeEarth();
+  });
+  els.showLeft.addEventListener('click', () => showPanel('left'));
+  els.showRight.addEventListener('click', () => showPanel('right'));
+  for (const button of els.overlay.querySelectorAll('.globe-panel-switch')) {
+    button.addEventListener('click', () => showPanel(button.dataset.switch));
+  }
+  for (const button of els.overlay.querySelectorAll('.globe-panel-close')) {
+    button.addEventListener('click', () => {
+      $(button.dataset.close).hidden = true;
+      syncToggles();
+    });
+  }
   els.spin.addEventListener('click', () => viewer && setSpin(!spinning));
   els.night.addEventListener('click', () => viewer && setNight(!layers.night.show));
   els.labels.addEventListener('click', () => {

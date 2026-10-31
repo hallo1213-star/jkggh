@@ -4,8 +4,8 @@ import { DIFFICULTIES, GAME_TYPES, encodeGame, sanitizeGame } from './public/gam
 import { describeEmail, gmailConfigured, listEmails, readEmail, sendEmail } from './gmail.js';
 import { addItems, listAsText, removeItems, sellLinks, shopLinks } from './shopping.js';
 import { OFFER_ALLOWED, STATUSES, findCustomer, summarize, upsertCustomer } from './customers.js';
-import { getNews, getWeather, getWeatherAt, lookupWikipedia } from './knowledge.js';
-import { geocodePlace } from './places.js';
+import { getNews, getWeather, lookupWikipedia } from './knowledge.js';
+import { geocodePlace, placeDetails } from './places.js';
 import { addMemory, forgetMemory } from './memories.js';
 import { sendTelegram, telegramConfigured } from './telegram.js';
 import { sendVoiceNote } from './voice-message.js';
@@ -855,17 +855,18 @@ export const cloudTools = [
   },
   {
     name: 'globe',
-    description: 'Steuert Jarvis\' eigene interaktive 3D-Erdkugel mit echten Satellitenbildern (öffnet sich direkt in der App). Aktionen: ort = zu einem Ort fliegen und heranzoomen (Stadt, Stadtteil, Straße, Sehenswürdigkeit, Land), z. B. „Zeig mir Paris“, „Wie sieht es gerade in Berlin Neukölln aus?“, „Zoom auf Neukölln“ (bei Stadtteilen die Stadt mit angeben, z. B. "Neukölln, Berlin"); ganze_erde; drehen / stopp (Erde rotieren lassen); nacht / tag (Erde bei Nacht mit NASA-Nachtlichtern bzw. normale Satellitenansicht); standort („Wo bin ich?“ – nutzt den Standort des Geräts); schliessen.',
+    description: 'Steuert Jarvis\' eigene interaktive 3D-Erdkugel („Erdbeobachtung“) mit echten Satellitenbildern – sie öffnet sich automatisch in der App. IMMER verwenden, wenn der Nutzer einen Ort sehen will („Zeig mir Frankreich“, „Zeig mir Paris“, „Zeig mir den Eiffelturm“, „Wie sieht es in Berlin Neukölln aus?“), ohne nachzufragen. Will er wissen, was an einem Ort los ist („Zeig mir die Proteste in Paris“, „Wie ist die Lage in Kiew?“, „Unwetter in Spanien“), zusätzlich topic setzen: Dann erscheinen links die Lage vor Ort (Wetter, Uhrzeit, Ortsinfo) und rechts aktuelle Meldungen zum Thema. Aktionen: ort (fliegen und zoomen), ganze_erde, drehen, stopp, nacht, tag, standort („Wo bin ich?“), schliessen.',
     parameters: {
       type: 'object',
       properties: {
         action: { type: 'string', enum: ['ort', 'ganze_erde', 'drehen', 'stopp', 'nacht', 'tag', 'standort', 'schliessen'] },
-        place: { type: 'string', description: 'Nur bei ort: der Ort, möglichst eindeutig, z. B. "Neukölln, Berlin", "Eiffelturm, Paris", "New York"' }
+        place: { type: 'string', description: 'Bei ort: der Ort, möglichst eindeutig, z. B. "Paris", "Frankreich", "Neukölln, Berlin", "Eiffelturm, Paris". Leer lassen, wenn sich die Frage auf den zuletzt gezeigten Ort bezieht.' },
+        topic: { type: 'string', description: 'Optional: worüber er aktuelle Meldungen will, z. B. "Proteste", "Streik", "Unwetter", "Wahl", "Verkehr". Ohne topic werden allgemeine Meldungen zum Ort angezeigt.' }
       },
       required: ['action']
     },
-    label: (a) => (a.action === 'ort' ? `Erdkugel: ${a.place || ''}` : `Erdkugel: ${a.action.replace('_', ' ')}`),
-    run: async ({ action, place }, context) => {
+    label: (a) => (a.action === 'ort' ? `Erdkugel: ${[a.place, a.topic].filter(Boolean).join(' – ')}` : `Erdkugel: ${a.action.replace('_', ' ')}`),
+    run: async ({ action, place, topic }, context) => {
       if (action !== 'ort') {
         context.showGlobe({ action });
         const notes = {
@@ -879,19 +880,27 @@ export const cloudTools = [
         };
         return { ok: true, hinweis: notes[action] };
       }
-      const target = await geocodePlace(place);
-      context.showGlobe({ action: 'fly', place: target });
-      const [weather, wiki] = await Promise.allSettled([
-        getWeatherAt(target.lat, target.lon),
-        lookupWikipedia(target.city && target.city !== target.name ? `${target.name} ${target.city}` : target.name)
-      ]);
+      const memory = context.globeMemory || {};
+      const wanted = String(place ?? '').trim();
+      if (!wanted && !memory.place) throw new Error('Welchen Ort soll ich zeigen?');
+      const target = wanted ? await geocodePlace(wanted) : memory.place;
+      memory.place = target;
+      const subject = String(topic ?? '').trim().slice(0, 60);
+      context.showGlobe({ action: 'fly', place: target, topic: subject || null });
+      const details = await placeDetails(target, subject);
+      const { weather: now, summary, items } = details;
+      context.showGlobe({ action: 'panels', place: target, left: details.left, right: details.right });
       return {
         ort: target.label,
         art: target.kind || undefined,
         koordinaten: `${target.lat}, ${target.lon}`,
-        aktuell: weather.status === 'fulfilled' ? weather.value : 'Wetterdaten gerade nicht verfügbar',
-        info: wiki.status === 'fulfilled' && !wiki.value.mehrdeutig ? wiki.value.zusammenfassung.slice(0, 500) : undefined,
-        satellitenbild: 'Esri World Imagery – ein Archivbild (je nach Ort Monate bis wenige Jahre alt), KEINE Live-Aufnahme. Sag das so, wenn er fragt, wie es „gerade“ aussieht: aktuell sind nur Wetter, Uhrzeit und Tag/Nacht.'
+        aktuell: now || 'Wetterdaten gerade nicht verfügbar',
+        info: summary ? summary.zusammenfassung.slice(0, 500) : undefined,
+        meldungen: items.length ? items.slice(0, 6).map((m) => `${m.titel} (${m.quelle}${m.zeit ? `, ${new Date(m.zeit).toLocaleString('de-DE', { timeZone, day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}` : ''})`) : (subject ? `Keine aktuellen Meldungen zu „${subject}“ gefunden.` : undefined),
+        anzeige: 'Der Nutzer sieht jetzt die Erdkugel: links Lage vor Ort (Wetter, Uhrzeit, Ortsinfo), rechts die Meldungen.',
+        hinweis: subject
+          ? 'Beschreibe kurz und sachlich die Lage zum Thema anhand der Meldungen (was, wo, wann, wer berichtet) – nichts dazuerfinden, Widersprüche erwähnen. Die Satellitenbilder sind Archivbilder und zeigen das Ereignis nicht; sag das kurz.'
+          : 'Satellitenbild: Esri World Imagery – ein Archivbild (Monate bis wenige Jahre alt), KEINE Live-Aufnahme. Aktuell sind nur Wetter, Uhrzeit, Tag/Nacht und die Meldungen.'
       };
     }
   },

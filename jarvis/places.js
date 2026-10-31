@@ -2,6 +2,8 @@
 // OpenStreetMap's Nominatim service – free, no key. Its usage policy asks for
 // at most one request per second and a real User-Agent, so requests are
 // queued and results cached.
+import { getWeatherAt, lookupWikipedia, searchNews } from './knowledge.js';
+
 const API = 'https://nominatim.openstreetmap.org';
 const USER_AGENT = 'Jarvis-Assistant/1.0 (private voice assistant)';
 const cache = new Map();
@@ -70,4 +72,29 @@ export async function reversePlace(lat, lon, { fetchImpl = fetch } = {}) {
   // "Neukölln, Berlin" reads better than the house number.
   const area = [a.suburb || a.quarter || a.neighbourhood || a.city_district, a.city || a.town || a.village].filter(Boolean);
   return { ...place, lat: la, lon: lo, name: area.join(', ') || place.name };
+}
+
+// Everything current about a place for the globe's side panels: weather and
+// local time (left), a short description, and news (right) – optionally about
+// a topic such as "Proteste".
+export async function placeDetails(target, topic = '', { fetchImpl = fetch } = {}) {
+  const subject = String(topic ?? '').trim().slice(0, 60);
+  const city = target.city && target.city !== target.name ? `${target.name} ${target.city}` : target.name;
+  const [weather, wiki, news] = await Promise.allSettled([
+    getWeatherAt(target.lat, target.lon, { fetchImpl }),
+    lookupWikipedia(city, { fetchImpl }),
+    searchNews(subject ? `${subject} ${target.name}` : city, { limit: 8, days: subject ? 7 : 3, fetchImpl })
+      .then((result) => (result.meldungen.length || !subject || !target.country ? result : searchNews(`${subject} ${target.country}`, { limit: 8, fetchImpl })))
+  ]);
+  const now = weather.status === 'fulfilled' ? weather.value : null;
+  const summary = wiki.status === 'fulfilled' && !wiki.value.mehrdeutig ? wiki.value : null;
+  const items = news.status === 'fulfilled' ? news.value.meldungen : [];
+  return {
+    topic: subject || null,
+    weather: now,
+    summary,
+    items,
+    left: { weather: now, info: summary ? { title: summary.titel, text: summary.zusammenfassung.slice(0, 600), link: summary.link } : null },
+    right: { topic: subject || null, query: news.status === 'fulfilled' ? news.value.suche : null, items, error: news.status === 'rejected' ? news.reason.message : null }
+  };
 }
