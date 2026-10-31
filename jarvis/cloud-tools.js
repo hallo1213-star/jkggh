@@ -2,6 +2,7 @@
 import { normalizeUrl, searchUrls } from './laptop/tools.js';
 import { DIFFICULTIES, GAME_TYPES, encodeGame, sanitizeGame } from './public/game-config.js';
 import { describeEmail, listEmails, readEmail, sendEmail } from './gmail.js';
+import { FONTS, MODES, SECTION_TYPES, encodeSite, sanitizeSite } from './public/site-config.js';
 
 const timeZone = process.env.TZ || 'Europe/Berlin';
 
@@ -102,6 +103,76 @@ export const cloudTools = [
       const url = `${context.origin}/play.html#${encodeGame(game)}`;
       context.showGame({ title: game.title, type: game.type, emoji: game.player, url });
       return { erstellt: true, titel: game.title, typ: game.type, fragen: game.questions?.length, hinweis: 'Der Nutzer sieht jetzt eine Spielkarte mit Spielen-Knopf und kann das Spiel auch mit Freunden teilen.' };
+    }
+  },
+  {
+    name: 'create_website',
+    description: 'Erstellt sofort eine schöne, fertige Website nach der Beschreibung des Nutzers und zeigt sie ihm an (zum Öffnen, Teilen und Herunterladen). Schreibe alle Texte selbst auf Deutsch, passend und überzeugend. Baue die Seite aus Abschnitten zusammen. Abschnitttypen: hero (großer Startbereich, immer zuerst), text (Fließtext), features (Vorteile/Leistungen mit Emoji-Symbol), gallery (Emoji-Kacheln mit Beschriftung), list (Aufzählung, z. B. Speisekarte, Trainingszeiten), pricing (Preise/Pakete), faq (Fragen und Antworten), quote (Zitat/Bewertung), event (Termin mit Datum, Uhrzeit, Ort), contact (Kontakt). Für Änderungswünsche die komplette Website mit den Änderungen neu erstellen.',
+    parameters: {
+      type: 'object',
+      properties: {
+        title: { type: 'string', description: 'Name der Website / des Projekts' },
+        logo: { type: 'string', description: 'Ein passendes Emoji als Logo' },
+        font: { type: 'string', enum: FONTS, description: 'Schriftstil' },
+        mode: { type: 'string', enum: MODES, description: 'Helle oder dunkle Seite' },
+        colors: {
+          type: 'object',
+          properties: {
+            primary: { type: 'string', description: 'Hauptfarbe als Hex, z. B. #1d4ed8' },
+            accent: { type: 'string', description: 'Akzentfarbe für Knöpfe als Hex, z. B. #f59e0b' }
+          }
+        },
+        sections: {
+          type: 'array',
+          description: '3 bis 8 Abschnitte, der erste vom Typ hero',
+          items: {
+            type: 'object',
+            properties: {
+              type: { type: 'string', enum: SECTION_TYPES },
+              heading: { type: 'string', description: 'Überschrift des Abschnitts' },
+              text: { type: 'string', description: 'Text (hero, text, quote, event, contact); Absätze mit Zeilenumbruch' },
+              button_text: { type: 'string', description: 'Nur hero: Knopftext' },
+              button_link: { type: 'string', description: 'Nur hero: #section-N (Abschnitt N, ab 0 gezählt), https-, mailto:- oder tel:-Link' },
+              items: {
+                type: 'array',
+                description: 'Einträge je nach Typ – features: icon, title, text; gallery: emoji, caption; list: text; pricing: name, price, text; faq: q, a',
+                items: {
+                  type: 'object',
+                  properties: {
+                    icon: { type: 'string' },
+                    title: { type: 'string' },
+                    text: { type: 'string' },
+                    emoji: { type: 'string' },
+                    caption: { type: 'string' },
+                    name: { type: 'string' },
+                    price: { type: 'string' },
+                    q: { type: 'string' },
+                    a: { type: 'string' }
+                  }
+                }
+              },
+              author: { type: 'string', description: 'Nur quote' },
+              date: { type: 'string', description: 'Nur event' },
+              time: { type: 'string', description: 'Nur event' },
+              place: { type: 'string', description: 'Nur event' },
+              email: { type: 'string', description: 'Nur contact' },
+              phone: { type: 'string', description: 'Nur contact' },
+              address: { type: 'string', description: 'Nur contact' }
+            },
+            required: ['type']
+          }
+        },
+        footer: { type: 'string', description: 'Kurzer Text für die Fußzeile' }
+      },
+      required: ['title', 'sections']
+    },
+    label: (a) => `Website erstellen: ${a.title || 'ohne Titel'}`,
+    run: async (args, context) => {
+      const site = sanitizeSite(args);
+      if (site.sections.length < 2) throw new Error('Die Website braucht mindestens zwei Abschnitte mit Inhalt (z. B. hero und text). Bitte erneut mit vollständigen Abschnitten aufrufen.');
+      const url = `${context.origin}/site.html#${encodeSite(site)}`;
+      context.showSite({ title: site.title, emoji: site.logo, url });
+      return { erstellt: true, titel: site.title, abschnitte: site.sections.map((section) => section.type), hinweis: 'Der Nutzer sieht jetzt die Website und kann sie öffnen, teilen oder als Datei herunterladen.' };
     }
   },
   {

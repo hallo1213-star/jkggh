@@ -63,6 +63,7 @@ Tipp: Lege eine Verknüpfung zu `Laptop-verbinden.bat` in den Autostart-Ordner (
 |---|---|---|
 | Gespräch | Fragen, Erklärungen, Ideen, Texte formulieren | nein |
 | **E-Mails** | „Hab ich neue Mails?“, „Was schreibt Amazon?“, „Lies mir die Mail von Oma vor“, „Antworte ihr, dass ich Sonntag komme“* | nein |
+| **Websites** | „Erstelle eine Website für meinen Fußballverein“, „Eine Seite für meine Geburtstagsparty am Samstag“, „Mach sie dunkler und füg Preise hinzu“ | nein |
 | **Spiele** | „Mach mir ein Weltraum-Spiel“, „Ein Quiz über Fußball“, „Ein Memory mit Tieren“, „Mach es schwerer“ | nein |
 | Zeit | „Wie spät ist es?“, „Erinnere mich in 20 Minuten an die Wäsche“ | nein |
 | Web | „Wie wird das Wetter morgen?“, „Zeig mir Pizzerien in der Nähe“, „Öffne YouTube“ | nein (Link in der App) |
@@ -94,6 +95,17 @@ So geht Jarvis mit deinen Mails um:
 
 Falls Google kein App-Passwort anbietet (z. B. bei Schul-/Firmenkonten oder „Erweitertem Schutz“), funktioniert diese Methode nicht.
 
+## Websites
+
+Beschreib Jarvis einfach, was du brauchst – er schreibt die Texte, wählt Farben, Schrift und Logo und baut die Seite aus fertigen Bausteinen: Startbereich, Text, Vorteile, Galerie, Listen (z. B. Speisekarte, Trainingszeiten), Preise, Fragen & Antworten, Zitat, Termin und Kontakt.
+
+- **↗ Öffnen** zeigt die Website direkt in der App. Während sie offen ist, kannst du Änderungen sagen („mach die Überschrift größer“, „andere Farben“) – die Seite aktualisiert sich von selbst.
+- **Teilen:** Die ganze Website steckt im Link; jeder kann sie ohne dein Passwort ansehen.
+- **Herunterladen:** speichert die Website als fertige HTML-Datei (ohne Skripte), die du überall hochladen oder per Mail verschicken kannst.
+- **Meine Projekte** listet alle Spiele und Websites.
+- Jarvis erfindet keine Kontaktdaten, Preise oder Termine – die übernimmt er nur von dir.
+- Bilder hochladen geht (noch) nicht; die Seiten nutzen Emojis und Farbverläufe.
+
 ## Spiele
 
 Jarvis baut auf Zuruf eigene Handy-Spiele und gestaltet Titel, Figuren, Farben und Schwierigkeit passend zu deinem Wunsch. Sechs Spieltypen:
@@ -107,7 +119,7 @@ Jarvis baut auf Zuruf eigene Handy-Spiele und gestaltet Titel, Figuren, Farben u
 | Memory | Kartenpaare finden |
 | Quiz | Jarvis denkt sich die Fragen selbst aus |
 
-- **▶ Spielen** öffnet das Spiel direkt in der App; **Meine Spiele** listet alle bisherigen Spiele.
+- **▶ Spielen** öffnet das Spiel direkt in der App; **Meine Projekte** listet alle bisherigen Spiele und Websites.
 - Steuerung: Finger ziehen/tippen am iPhone, Pfeiltasten/Leertaste am PC. Bestwerte werden gespeichert.
 - **Teilen:** Das ganze Spiel steckt im Link – Freunde können es ohne dein Passwort spielen, und es geht auch nach Render-Neustarts nicht verloren.
 - Während du spielst, ist Jarvis' Mikrofon stumm.

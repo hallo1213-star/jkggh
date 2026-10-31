@@ -782,6 +782,10 @@ document.addEventListener('visibilitychange', () => {
   if (document.hidden && state === 'playing') togglePause();
 });
 
+// A new version (e.g. Jarvis applied a change) only changes the #fragment, which
+// browsers don't reload on their own.
+window.addEventListener('hashchange', () => location.reload());
+
 resize();
 showScreen({ kicker: 'Ein Jarvis-Spiel', title: game.title, text: current.help, button: 'Spielen' });
 requestAnimationFrame((now) => {

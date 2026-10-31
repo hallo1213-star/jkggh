@@ -176,7 +176,7 @@ function addLink(url, title) {
 // --- Games ---------------------------------------------------------------
 
 const GAMES_KEY = 'jarvis.games';
-const gameTypeNames = { fangen: 'Fangen', ausweichen: 'Ausweichen', springen: 'Springen', reaktion: 'Reaktion', memory: 'Memory', quiz: 'Quiz' };
+const gameTypeNames = { fangen: 'Fangen', ausweichen: 'Ausweichen', springen: 'Springen', reaktion: 'Reaktion', memory: 'Memory', quiz: 'Quiz', website: 'Website' };
 let micMutedBeforeGame = false;
 
 function loadGames() {
@@ -197,14 +197,22 @@ function saveGame({ title, type, emoji, url }) {
   }
 }
 
-// Only links to this server's game page are opened in the app.
-function isGameUrl(url) {
+// Only links to this server's game and website pages are opened in the app.
+function projectPath(url) {
   try {
     const parsed = new URL(url, location.href);
-    return parsed.origin === location.origin && parsed.pathname === '/play.html';
+    return parsed.origin === location.origin ? parsed.pathname : '';
   } catch {
-    return false;
+    return '';
   }
+}
+
+function isGameUrl(url) {
+  return projectPath(url) === '/play.html';
+}
+
+function isSiteUrl(url) {
+  return projectPath(url) === '/site.html';
 }
 
 function gameCard({ title, type, emoji, url }) {
@@ -225,7 +233,7 @@ function gameCard({ title, type, emoji, url }) {
   const play = document.createElement('button');
   play.type = 'button';
   play.className = 'btn btn-primary';
-  play.textContent = '▶ Spielen';
+  play.textContent = isSiteUrl(url) ? '↗ Öffnen' : '▶ Spielen';
   play.addEventListener('click', () => openGame(url, title));
   card.append(icon, text, play);
   return card;
@@ -237,7 +245,7 @@ function addGameCard(game) {
   item.className = 'msg assistant';
   const label = document.createElement('span');
   label.className = 'msg-role';
-  label.textContent = 'Neues Spiel';
+  label.textContent = isSiteUrl(game.url) ? 'Neue Website' : 'Neues Spiel';
   item.append(label, gameCard(game));
   els.transcript.append(item);
   els.transcript.scrollTop = els.transcript.scrollHeight;
@@ -245,12 +253,17 @@ function addGameCard(game) {
 }
 
 function openGame(url, title) {
-  if (!isGameUrl(url)) return;
+  if (!isGameUrl(url) && !isSiteUrl(url)) return;
   els.gamesModal.hidden = true;
-  // Mute Jarvis while playing so game sounds don't reach the microphone.
-  micMutedBeforeGame = state.micMuted;
-  state.micMuted = true;
-  stopPlayback();
+  if (els.gameOverlay.hidden) {
+    micMutedBeforeGame = state.micMuted;
+    // Mute Jarvis while playing so game sounds don't reach the microphone.
+    // Websites keep listening, so changes can be requested while looking at them.
+    if (isGameUrl(url)) {
+      state.micMuted = true;
+      stopPlayback();
+    }
+  }
   els.gameFrame.src = url;
   els.gameOverlay.dataset.url = url;
   els.gameOverlay.dataset.title = title || 'Jarvis-Spiel';
@@ -288,7 +301,7 @@ els.gameClose.addEventListener('click', closeGame);
 els.gameShare.addEventListener('click', async () => {
   const url = els.gameOverlay.dataset.url;
   try {
-    if (navigator.share) await navigator.share({ title: els.gameOverlay.dataset.title, text: 'Ein Spiel, gebaut von Jarvis', url });
+    if (navigator.share) await navigator.share({ title: els.gameOverlay.dataset.title, text: isSiteUrl(url) ? 'Eine Website, gebaut von Jarvis' : 'Ein Spiel, gebaut von Jarvis', url });
     else {
       await navigator.clipboard.writeText(url);
       toast('Link kopiert – schick ihn deinen Freunden!');
@@ -496,6 +509,14 @@ function handleMessage(message) {
       const created = { title: message.title, type: message.gameType, emoji: message.emoji, url: message.url };
       saveGame(created);
       addGameCard(created);
+      break;
+    }
+    case 'site': {
+      const created = { title: message.title, type: 'website', emoji: message.emoji, url: message.url };
+      saveGame(created);
+      addGameCard(created);
+      // A website that is open right now shows the new version immediately.
+      if (!els.gameOverlay.hidden && isSiteUrl(els.gameOverlay.dataset.url)) openGame(created.url, created.title);
       break;
     }
     case 'laptop':

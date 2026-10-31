@@ -26,8 +26,8 @@ const host = process.env.HOST || (process.env.RENDER ? '0.0.0.0' : '127.0.0.1');
 const publicDir = join(root, 'public');
 const CONFIRM_TIMEOUT_MS = 90_000;
 const LAPTOP_CALL_TIMEOUT_MS = 16 * 60 * 1000;
-// Game pages are public so games can be shared; they hold no secrets.
-const publicFiles = new Set(['/login.html', '/login.js', '/style.css', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/play.html', '/game.js', '/game.css', '/game-config.js']);
+// Game and website pages are public so they can be shared; they hold no secrets.
+const publicFiles = new Set(['/login.html', '/login.js', '/style.css', '/manifest.webmanifest', '/icon.svg', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/play.html', '/game.js', '/game.css', '/game-config.js', '/site.html', '/site.js', '/site.css', '/site-config.js', '/link-codec.js']);
 const contentTypes = {
   '.html': 'text/html; charset=utf-8',
   '.css': 'text/css; charset=utf-8',
@@ -297,6 +297,9 @@ browserWss.on('connection', (browser, request) => {
     },
     showGame({ title, type, emoji, url }) {
       toBrowser({ type: 'game', gameType: type, title, emoji, url });
+    },
+    showSite({ title, emoji, url }) {
+      toBrowser({ type: 'site', title, emoji, url });
     },
     origin,
     laptopConnected

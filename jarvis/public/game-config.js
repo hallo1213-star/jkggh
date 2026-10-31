@@ -2,6 +2,8 @@
 // (to read them). A whole game lives in the link's #fragment, so nothing has to
 // be stored and games survive server restarts. Everything is validated here
 // because anyone can edit a link.
+import { decodeJson, encodeJson } from './link-codec.js';
+
 export const GAME_TYPES = ['fangen', 'ausweichen', 'springen', 'reaktion', 'memory', 'quiz'];
 export const DIFFICULTIES = ['leicht', 'mittel', 'schwer'];
 
@@ -67,23 +69,11 @@ export function sanitizeGame(input = {}) {
   return game;
 }
 
-function toBase64Url(bytes) {
-  let binary = '';
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-}
-
 export function encodeGame(game) {
-  return toBase64Url(new TextEncoder().encode(JSON.stringify(sanitizeGame(game))));
+  return encodeJson(sanitizeGame(game));
 }
 
 export function decodeGame(fragment) {
-  try {
-    const base64 = String(fragment).replace(/^#/, '').replace(/-/g, '+').replace(/_/g, '/');
-    const binary = atob(base64 + '='.repeat((4 - (base64.length % 4)) % 4));
-    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-    return sanitizeGame(JSON.parse(new TextDecoder().decode(bytes)));
-  } catch {
-    return null;
-  }
+  const value = decodeJson(fragment);
+  return value ? sanitizeGame(value) : null;
 }
