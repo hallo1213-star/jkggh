@@ -159,11 +159,16 @@ Jedes fertige Produkt kommt zusätzlich als **Datei per Telegram** – so geht n
 
 | Variable | Pflicht? | Woher |
 |---|---|---|
-| `GEMINI_API_KEY` | ja (oder Claude) | kostenlos: [aistudio.google.com](https://aistudio.google.com) → „Get API key“ → „Create API key“ |
+| `GROQ_API_KEY` | ja (eine KI reicht) | **kostenlos:** [console.groq.com](https://console.groq.com) → mit Google, GitHub oder E-Mail anmelden → links „API Keys“ → „Create API Key“ → Schlüssel (beginnt mit `gsk_`) kopieren |
+| `OPENROUTER_API_KEY` | Alternative, kostenlos | [openrouter.ai](https://openrouter.ai) → anmelden → „Keys“ → „Create Key“ (nutzt kostenlose Modelle) |
+| `GEMINI_API_KEY` | Alternative, kostenlos | [aistudio.google.com](https://aistudio.google.com) → „Get API key“ (nicht mit jedem Google-Konto möglich) |
 | `ANTHROPIC_API_KEY` | Alternative, kostenpflichtig | [console.anthropic.com](https://console.anthropic.com) → API Keys (wird bevorzugt, wenn gesetzt) |
+| `GROQ_MODEL` / `OPENROUTER_MODEL` | optional | anderes Modell, falls das Standardmodell abgeschaltet wird (Liste auf der Seite des Anbieters) |
 | `GUMROAD_ACCESS_TOKEN` | optional, für echte Verkaufszahlen | gumroad.com → Settings → Advanced → Applications → App anlegen → „Generate access token“ |
 | `MONEY_INTERVAL_MINUTES` | optional (Standard 2) | Abstand zwischen zwei Arbeitsschritten |
 | `MONEY_MAX_TASKS_PER_DAY` | optional (Standard 25) | Obergrenze pro Tag (schont das kostenlose KI-Kontingent) |
+
+Ist das kostenlose Kontingent kurz aufgebraucht, macht Jarvis einfach ein paar Minuten später weiter.
 
 Telegram sollte eingerichtet sein (Berichte, Dateien, „Wartet auf dich“), und der cron-job.org-Ping auf `/health` muss laufen, sonst schläft der kostenlose Server ein und Jarvis arbeitet nicht weiter.
 

@@ -18,7 +18,8 @@ services:
         generateValue: true
       - key: SESSION_SECRET
         generateValue: true
-      - key: GEMINI_API_KEY
+      - key: GROQ_API_KEY
+        sync: false
         sync: false
       - key: GUMROAD_ACCESS_TOKEN
         sync: false

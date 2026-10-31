@@ -165,7 +165,7 @@ export function relinkPages(state, projectId, buyLink) {
 
 export function moneyToolStatus({ telegram, gmail, laptop }) {
   return [
-    { name: 'KI (Produkte & Planung)', ok: Boolean(llmProvider()), detail: llmLabel() || 'GEMINI_API_KEY oder ANTHROPIC_API_KEY fehlt' },
+    { name: 'KI (Produkte & Planung)', ok: Boolean(llmProvider()), detail: llmLabel() || 'GROQ_API_KEY fehlt (kostenlos bei console.groq.com)' },
     { name: 'Gumroad (echte Verkäufe)', ok: gumroadConfigured(), detail: gumroadConfigured() ? 'verbunden' : 'GUMROAD_ACCESS_TOKEN fehlt (optional)' },
     { name: 'Telegram (Berichte & Dateien)', ok: telegram, detail: telegram ? 'verbunden' : 'nicht eingerichtet' },
     { name: 'Gmail', ok: gmail, detail: gmail ? 'verbunden (Senden nur mit Bestätigung)' : 'nicht eingerichtet' },
@@ -233,6 +233,11 @@ export function startMoneyAgent({ getState, setState, notify, sendFile, getMemor
     } catch (error) {
       log.warn(`Geld-Modus (${task.type}): ${error.message}`);
       const latest = getState();
+      if (/Limit erreicht/.test(error.message)) {
+        // Free tiers allow only so much per minute/day: simply try again later.
+        setState(addLog(updateTask(latest, projectId, taskId, { status: 'offen', attempts: task.attempts, result: 'Wartet auf freies KI-Kontingent' }), `KI-Limit erreicht – „${task.title}“ wird später fortgesetzt`));
+        return;
+      }
       setState(addLog(updateTask(latest, projectId, taskId, { status: 'fehler', result: clip(error.message, 300) }), `Problem bei „${task.title}“: ${error.message}`));
     } finally {
       running = false;

@@ -1,12 +1,18 @@
 // Text generation for the autonomous money mode (the voice conversation keeps
-// using Deepgram). Two providers, chosen by which key is set at Render:
-//   ANTHROPIC_API_KEY  → Claude (paid, best quality)
-//   GEMINI_API_KEY     → Google Gemini (free tier from aistudio.google.com)
+// using Deepgram). The provider is chosen by which key is set at Render:
+//   ANTHROPIC_API_KEY   → Claude (paid, best quality)
+//   GROQ_API_KEY        → Groq (free tier, console.groq.com)
+//   OPENROUTER_API_KEY  → OpenRouter (free models, openrouter.ai)
+//   GEMINI_API_KEY      → Google Gemini (free tier from aistudio.google.com)
 // The key stays on the server.
 const TIMEOUT_MS = 120_000;
 
+export const MISSING_KEY = 'Für den Geld-Modus fehlt noch ein KI-Schlüssel bei Render: GROQ_API_KEY (kostenlos bei console.groq.com) – oder OPENROUTER_API_KEY, GEMINI_API_KEY bzw. ANTHROPIC_API_KEY. Anleitung im README, Abschnitt Geld-Modus.';
+
 export function llmProvider() {
   if (process.env.ANTHROPIC_API_KEY?.trim()) return 'claude';
+  if (process.env.GROQ_API_KEY?.trim()) return 'groq';
+  if (process.env.OPENROUTER_API_KEY?.trim()) return 'openrouter';
   if (process.env.GEMINI_API_KEY?.trim()) return 'gemini';
   return null;
 }
@@ -14,6 +20,7 @@ export function llmProvider() {
 export function llmLabel() {
   const provider = llmProvider();
   if (provider === 'claude') return `Claude (${claudeModel()})`;
+  if (provider === 'groq' || provider === 'openrouter') return `${OPENAI_COMPATIBLE[provider].name} (${OPENAI_COMPATIBLE[provider].model()})`;
   if (provider === 'gemini') return `Gemini (${geminiModel()})`;
   return null;
 }
@@ -21,12 +28,36 @@ export function llmLabel() {
 const claudeModel = () => process.env.ANTHROPIC_MODEL?.trim() || 'claude-sonnet-5-5';
 const geminiModel = () => process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash';
 
+// Groq and OpenRouter speak the OpenAI chat format.
+const OPENAI_COMPATIBLE = {
+  groq: { name: 'Groq', url: 'https://api.groq.com/openai/v1/chat/completions', key: () => process.env.GROQ_API_KEY.trim(), model: () => process.env.GROQ_MODEL?.trim() || 'llama-3.3-70b-versatile', maxTokens: 8000 },
+  openrouter: { name: 'OpenRouter', url: 'https://openrouter.ai/api/v1/chat/completions', key: () => process.env.OPENROUTER_API_KEY.trim(), model: () => process.env.OPENROUTER_MODEL?.trim() || 'meta-llama/llama-3.3-70b-instruct:free', maxTokens: 8000 }
+};
+
+async function openaiCompatible(provider, system, prompt, maxTokens, fetchImpl, json) {
+  const config = OPENAI_COMPATIBLE[provider];
+  const response = await fetchImpl(config.url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${config.key()}`, ...(provider === 'openrouter' ? { 'x-title': 'Jarvis' } : {}) },
+    body: JSON.stringify({
+      model: config.model(),
+      max_tokens: Math.min(maxTokens, config.maxTokens),
+      messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }],
+      ...(json ? { response_format: { type: 'json_object' } } : {})
+    }),
+    signal: AbortSignal.timeout(TIMEOUT_MS)
+  });
+  const data = await readJson(response, config.name);
+  return data.choices?.[0]?.message?.content || '';
+}
+
 async function readJson(response, name) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     const message = data?.error?.message || `HTTP ${response.status}`;
     if (response.status === 401 || response.status === 403) throw new Error(`${name} lehnt den API-Schlüssel ab (${message}).`);
-    if (response.status === 429) throw new Error(`${name}: Limit erreicht, später erneut (${message}).`);
+    if (response.status === 404 || /model.*(not found|decommissioned|does not exist)/i.test(message)) throw new Error(`${name}: Das KI-Modell gibt es nicht (mehr). Bei Render ein aktuelles Modell als ${name === "Claude" ? "ANTHROPIC" : name.toUpperCase()}_MODEL eintragen (${message}).`);
+    if (response.status === 429 || response.status === 413) throw new Error(`${name}: Limit erreicht, später erneut (${message}).`);
     throw new Error(`${name}: ${message}`);
   }
   return data;
@@ -61,8 +92,10 @@ async function gemini(system, prompt, maxTokens, fetchImpl, json) {
 
 export async function generateText({ system, prompt, maxTokens = 4000, json = false, fetchImpl = fetch }) {
   const provider = llmProvider();
-  if (!provider) throw new Error('Für den Geld-Modus fehlt ein KI-Schlüssel: GEMINI_API_KEY (kostenlos) oder ANTHROPIC_API_KEY bei Render eintragen.');
-  const text = provider === 'claude' ? await claude(system, prompt, maxTokens, fetchImpl) : await gemini(system, prompt, maxTokens, fetchImpl, json);
+  if (!provider) throw new Error(MISSING_KEY);
+  const text = provider === 'claude' ? await claude(system, prompt, maxTokens, fetchImpl)
+    : provider === 'gemini' ? await gemini(system, prompt, maxTokens, fetchImpl, json)
+      : await openaiCompatible(provider, system, prompt, maxTokens, fetchImpl, json);
   if (!text.trim()) throw new Error('Die KI hat eine leere Antwort geliefert.');
   return text;
 }

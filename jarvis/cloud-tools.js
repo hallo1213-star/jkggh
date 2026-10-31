@@ -12,7 +12,7 @@ import { getAutobahnWebcams, normalizeRoad, webcamSearchLinks } from './webcams.
 import { REPEATS, addAppointment, addReminder, describeReminder, localNow, normalizeTime, removeEntry, sanitizePlanner, upcomingAppointments } from './planner.js';
 import { addExpense, addNote, addVocab, findNotes, quizPairs, removeLastExpense, removeNote, removeVocabList, summarizeExpenses } from './personal.js';
 import { findTaskByTitle, summarizeMoney } from './money-state.js';
-import { llmProvider } from './llm.js';
+import { MISSING_KEY, llmProvider } from './llm.js';
 import { FONTS, MODES, SECTION_TYPES, encodeSite, sanitizeSite } from './public/site-config.js';
 
 const timeZone = process.env.TZ || 'Europe/Berlin';
@@ -865,7 +865,7 @@ export const cloudTools = [
     },
     label: (a) => (a.action === 'stop' ? 'Geld-Modus aus' : `Geld-Modus an${a.goal ? `: ${a.goal}` : ''}`),
     run: async ({ action, goal }, context) => {
-      if (action === 'start' && !llmProvider()) throw new Error('Für den Geld-Modus fehlt noch ein KI-Schlüssel bei Render: GEMINI_API_KEY (kostenlos bei aistudio.google.com) oder ANTHROPIC_API_KEY. Siehe README, Abschnitt Geld-Modus.');
+      if (action === 'start' && !llmProvider()) throw new Error(MISSING_KEY);
       const result = context.moneyCommand({ action: action === 'stop' ? 'stop' : 'start', goal });
       context.showMoney();
       return { ...result, hinweis: action === 'stop' ? 'Ausgeschaltet. Bisherige Ergebnisse bleiben im Geld-Dashboard.' : 'Läuft jetzt im Hintergrund, auch wenn die App zu ist (solange der Server wach ist). Fortschritt im Geld-Dashboard und per Telegram. Er verspricht keine Einnahmen – echte Zahlen kommen nur aus Gumroad oder seinen Einträgen.' };

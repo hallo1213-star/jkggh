@@ -143,7 +143,7 @@ function render() {
   const body = [];
 
   if (waitingForDevice) body.push(el('p', { class: 'money-note', textContent: 'Der Server wurde neu gestartet. Die Daten werden von diesem Gerät zurückgeholt …' }));
-  if (!tools.find((t) => t.name.startsWith('KI'))?.ok) body.push(el('p', { class: 'money-note', textContent: 'Damit Jarvis selbstständig arbeiten kann, fehlt noch ein KI-Schlüssel: GEMINI_API_KEY (kostenlos bei aistudio.google.com) oder ANTHROPIC_API_KEY bei Render eintragen. Anleitung im README.' }));
+  if (!tools.find((t) => t.name.startsWith('KI'))?.ok) body.push(el('p', { class: 'money-note', textContent: 'Damit Jarvis selbstständig arbeiten kann, fehlt noch ein KI-Schlüssel: GROQ_API_KEY (kostenlos bei console.groq.com) bei Render eintragen. Anleitung im README.' }));
 
   body.push(el('div', { class: 'money-stats' },
     stat('Echte Einnahmen', euro(totals.manualEur), `diesen Monat ${euro(totals.monthEur)} · von dir eingetragen`, true),
