@@ -65,6 +65,7 @@ Tipp: Lege eine Verknüpfung zu `Laptop-verbinden.bat` in den Autostart-Ordner (
 | **Gedächtnis** | „Ich wohne in Köln“, „Merk dir, dass ich Pizza liebe“, „Was weißt du über mich?“, „Vergiss das mit der Pizza“ | nein |
 | **Wetter** | „Wie wird das Wetter?“, „Regnet es morgen in Hamburg?“ | nein |
 | **Nachrichten & Wissen** | „Was gibt es Neues?“, „Wer war Albert Einstein?“, „Wie hoch ist der Eiffelturm?“ | nein |
+| **Telegram** | Automatische Hinweise bei Paketen, Bestellungen und wichtigen Mails · „Schick mir das aufs Handy“ · Erinnerungen auch bei geschlossener App | nein |
 | **Tagesüberblick** | „Guten Morgen!“ – Wetter, ungelesene Mails, Einkaufsliste und Nachrichten | nein |
 | **E-Mails** | „Hab ich neue Mails?“, „Was schreibt Amazon?“, „Lies mir die Mail von Oma vor“, „Antworte ihr, dass ich Sonntag komme“* | nein |
 | **Geld verdienen** | „Mach eine Website-Vorschau für den Friseur Haarscharf in der Bahnhofstraße“, „Der Laden ist interessiert, schick das Angebot“, „Zeig meine Kunden“, „Schreib eine Anzeige für meine PS4“ | nein |
@@ -81,6 +82,27 @@ Tipp: Lege eine Verknüpfung zu `Laptop-verbinden.bat` in den Autostart-Ordner (
 | Alles andere | PowerShell-Befehl, den du siehst und bestätigst* | ja |
 
 \* = erfordert deine Bestätigung in der App.
+
+## Telegram einrichten (einmalig, ca. 3 Minuten)
+
+Jarvis schickt dir dann kostenlos Nachrichten aufs Handy – **nur bei Wichtigem**: Pakete und Bestellungen (Versand, Zustellung, DHL, Hermes, DPD …), Mails, die Gmail als wichtig markiert, und Absender, die du festlegst. Dazu Erinnerungen und Timer, auch wenn die App zu ist.
+
+1. **Telegram** aus dem App Store installieren und anmelden.
+2. In Telegram **@BotFather** suchen und öffnen → **/newbot** schicken → einen Namen (z. B. „Mein Jarvis“) und einen Benutzernamen, der auf `bot` endet (z. B. `maxjarvis_bot`), eingeben. BotFather antwortet mit einem **Token** (sieht aus wie `123456789:AAH…`) – kopieren.
+3. **Bei Render** → dein Dienst → **Environment** → `TELEGRAM_BOT_TOKEN` = das Token → **Save Changes**. Warten, bis Jarvis wieder **Live** ist.
+4. In Telegram deinen neuen Bot öffnen und **/start** schicken. Er antwortet mit deiner **Chat-ID** (eine Zahl).
+5. **Bei Render** `TELEGRAM_CHAT_ID` = diese Zahl eintragen → **Save Changes**.
+6. In Jarvis sagen: „Teste Telegram“ – du bekommst eine Testnachricht. Fertig!
+
+**Optional:**
+- `TELEGRAM_WICHTIG` – Absender, bei denen du immer Bescheid bekommen willst, mit Komma getrennt, z. B. `oma@example.de, Chef, Schule`.
+- `TELEGRAM_MAIL_CHECK_MINUTES` – wie oft Jarvis nachschaut (Standard: alle 5 Minuten).
+
+**Wichtig – Render wach halten:** Der kostenlose Render-Dienst schläft nach 15 Minuten ohne Besuch ein und kann dann keine Mails prüfen. So bleibt er wach:
+1. Kostenloses Konto bei https://cron-job.org anlegen.
+2. **Create cronjob** → URL: `https://jarvis-xxxx.onrender.com/health` (deine Adresse) → **alle 10 Minuten** → speichern.
+
+Das passt in Renders 750 kostenlose Stunden pro Monat. Hinweis: Absender und Betreff der wichtigen Mails laufen dabei über Telegram; der Mail-Text bleibt in Gmail.
 
 ## Gmail einrichten (einmalig, ca. 3 Minuten)
 
@@ -185,7 +207,7 @@ Jarvis baut auf Zuruf eigene Handy-Spiele und gestaltet Titel, Figuren, Farben u
 
 - **Aufwachzeit:** Der kostenlose Render-Dienst schläft nach 15 Minuten ohne Nutzung ein; das erste Öffnen danach dauert etwa eine Minute. Solange der Laptop-Verbinder läuft, bleibt Jarvis wach. Ohne Laptop kannst du ihn mit einem kostenlosen Dienst wie https://cron-job.org alle 10 Minuten `https://jarvis-xxxx.onrender.com/health` aufrufen lassen (das passt in Renders 750 Gratis-Stunden pro Monat).
 - **iPhone gesperrt / App im Hintergrund:** iOS stoppt dann das Mikrofon. Nach dem Zurückkehren auf **Neu verbinden** tippen.
-- **Timer** erinnern dich nur, solange die App geöffnet ist (Benachrichtigungen kommen in einem späteren Schritt).
+- **Timer** erinnern dich in der App – und mit eingerichtetem Telegram auch, wenn die App geschlossen ist.
 - **Mehrere Geräte** können gleichzeitig angemeldet sein; der Laptop ist für alle erreichbar.
 
 ## Fehlerbehebung

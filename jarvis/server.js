@@ -14,6 +14,8 @@ import { cloudTools, findCloudTool } from './cloud-tools.js';
 import { addItems, sanitizeList } from './shopping.js';
 import { sanitizeCustomers } from './customers.js';
 import { sanitizeHistory, sanitizeMemories } from './memories.js';
+import { sendTelegram, startSetupHelper, telegramConfigured } from './telegram.js';
+import { startMailWatcher } from './mail-watch.js';
 import { findTool as findLaptopTool, functionDefinitions as laptopFunctions } from './laptop/tools.js';
 
 if (!process.env.TZ) process.env.TZ = 'Europe/Berlin';
@@ -324,6 +326,10 @@ browserWss.on('connection', (browser, request) => {
 
   const context = {
     schedule(ms, message) {
+      // With Telegram the reminder also arrives when the app is closed by then.
+      if (telegramConfigured()) {
+        setTimeout(() => sendTelegram(`⏰ Erinnerung: ${message}`).catch((error) => console.warn(`Telegram-Erinnerung: ${error.message}`)), ms);
+      }
       const timer = setTimeout(() => {
         timers.delete(timer);
         toBrowser({ type: 'timer', message });
@@ -588,4 +594,10 @@ httpServer.listen(port, host, () => {
   if (missing.length) console.warn(`  Achtung – es fehlt: ${missing.join(', ')}`);
   if (!passwordConfigured()) console.warn('  Achtung – JARVIS_PASSWORD fehlt oder ist kürzer als 8 Zeichen; Anmelden ist nicht möglich.');
   if (!process.env.LAPTOP_TOKEN) console.warn('  Hinweis – LAPTOP_TOKEN fehlt; der Laptop kann sich nicht verbinden.');
+  if (process.env.TELEGRAM_BOT_TOKEN && !process.env.TELEGRAM_CHAT_ID) {
+    console.log('  Telegram: Schick deinem Bot /start, er antwortet mit deiner Chat-ID.');
+    startSetupHelper();
+  }
+  if (telegramConfigured()) console.log('  Telegram: Hinweise bei wichtigen Mails und Erinnerungen sind aktiv.');
+  startMailWatcher();
 });

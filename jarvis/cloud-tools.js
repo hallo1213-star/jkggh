@@ -6,6 +6,7 @@ import { addItems, listAsText, removeItems, sellLinks, shopLinks } from './shopp
 import { OFFER_ALLOWED, STATUSES, findCustomer, summarize, upsertCustomer } from './customers.js';
 import { getNews, getWeather, lookupWikipedia } from './knowledge.js';
 import { addMemory, forgetMemory } from './memories.js';
+import { sendTelegram, telegramConfigured } from './telegram.js';
 import { FONTS, MODES, SECTION_TYPES, encodeSite, sanitizeSite } from './public/site-config.js';
 
 const timeZone = process.env.TZ || 'Europe/Berlin';
@@ -543,8 +544,38 @@ export const cloudTools = [
     }
   },
   {
+    name: 'telegram_send',
+    description: 'Schickt dem Nutzer selbst eine Nachricht per Telegram, z. B. eine Notiz, eine Zusammenfassung oder eine Liste zum Mitnehmen. Nur an ihn selbst.',
+    parameters: {
+      type: 'object',
+      properties: { text: { type: 'string', description: 'Die Nachricht' } },
+      required: ['text']
+    },
+    label: () => 'Telegram-Nachricht an dich',
+    run: async ({ text }) => {
+      if (!String(text ?? '').trim()) throw new Error('Die Nachricht ist leer.');
+      return sendTelegram(String(text).trim());
+    }
+  },
+  {
+    name: 'telegram_status',
+    description: 'Prüft, ob Telegram-Hinweise eingerichtet sind (Hinweise bei wichtigen Mails wie Paketen und Bestellungen, Erinnerungen auch bei geschlossener App) und schickt bei Bedarf eine Testnachricht.',
+    parameters: { type: 'object', properties: { test: { type: 'boolean', description: 'Testnachricht senden' } } },
+    label: () => 'Telegram geprüft',
+    run: async ({ test }) => {
+      const ready = telegramConfigured();
+      if (ready && test) await sendTelegram('✅ Jarvis ist mit Telegram verbunden. Hier bekommst du Hinweise zu wichtigen Mails und Erinnerungen.');
+      return {
+        eingerichtet: ready,
+        mailHinweise: ready && gmailConfigured(),
+        wichtigeAbsender: String(process.env.TELEGRAM_WICHTIG || '').split(/[,;]/).map((entry) => entry.trim()).filter(Boolean),
+        hinweis: ready ? undefined : 'Bei Render fehlen TELEGRAM_BOT_TOKEN und/oder TELEGRAM_CHAT_ID (Anleitung im README).'
+      };
+    }
+  },
+  {
     name: 'set_timer',
-    description: 'Stellt einen Timer oder eine Erinnerung. Jarvis meldet sich nach Ablauf, solange die Jarvis-App geöffnet ist.',
+    description: 'Stellt einen Timer oder eine Erinnerung. Jarvis meldet sich nach Ablauf in der App und – wenn Telegram eingerichtet ist – auch per Telegram, selbst wenn die App dann geschlossen ist.',
     parameters: {
       type: 'object',
       properties: {

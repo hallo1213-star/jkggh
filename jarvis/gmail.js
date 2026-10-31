@@ -107,6 +107,32 @@ export async function listEmails({ folder = 'inbox', unreadOnly = false, query =
   });
 }
 
+// New inbox mail since `sinceUid` (for notifications). Without `sinceUid`
+// only the current newest UID is returned, so old mail is never announced.
+export async function fetchInboxSince(sinceUid) {
+  return withMailbox('inbox', async (client) => {
+    const uids = (await client.search({ all: true }, { uid: true })) || [];
+    const maxUid = uids.length ? Math.max(...uids) : 0;
+    if (sinceUid === null || sinceUid === undefined) return { maxUid, emails: [] };
+    const fresh = uids.filter((uid) => uid > sinceUid).slice(-20);
+    const emails = [];
+    if (fresh.length) {
+      for await (const message of client.fetch(fresh, { envelope: true, flags: true, labels: true }, { uid: true })) {
+        const from = message.envelope?.from?.[0];
+        emails.push({
+          uid: message.uid,
+          von: formatAddress(from),
+          vonAdresse: from?.address || '',
+          betreff: message.envelope?.subject || '(kein Betreff)',
+          ungelesen: !message.flags?.has('\\Seen'),
+          labels: [...(message.labels || [])]
+        });
+      }
+    }
+    return { maxUid: Math.max(maxUid, sinceUid), emails: emails.sort((a, b) => a.uid - b.uid) };
+  });
+}
+
 export async function parseMessage(source) {
   const mail = await simpleParser(source);
   const text = (mail.text || '').replace(/\n{3,}/g, '\n\n').trim();
