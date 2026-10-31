@@ -58,7 +58,16 @@ const els = {
   memoryEmpty: $('memory-empty'),
   memoryClose: $('memory-close'),
   historyClear: $('history-clear'),
-  chips: $('chips')
+  chips: $('chips'),
+  cameraOverlay: $('camera-overlay'),
+  cameraVideo: $('camera-video'),
+  cameraQuestion: $('camera-question'),
+  cameraCount: $('camera-count'),
+  cameraFlash: $('camera-flash'),
+  cameraCancel: $('camera-cancel'),
+  cameraShutter: $('camera-shutter'),
+  cameraFlip: $('camera-flip'),
+  cameraCanvas: $('camera-canvas')
 };
 
 const state = {
@@ -560,9 +569,109 @@ function addNewsCard(news) {
   cardMessage('Nachrichten', card);
 }
 
+// --- Camera (phone only, one photo on request) ------------------------------------
+
+const camera = { id: null, stream: null, facing: 'front', timer: null };
+const isPhone = () => window.matchMedia('(pointer: coarse)').matches && /iPhone|iPad|iPod|Android|Mobile/i.test(navigator.userAgent);
+
+function sendCamera(message) {
+  if (state.ws?.readyState === WebSocket.OPEN) state.ws.send(JSON.stringify(message));
+}
+
+async function startCameraStream() {
+  camera.stream?.getTracks().forEach((track) => track.stop());
+  camera.stream = await navigator.mediaDevices.getUserMedia({
+    audio: false,
+    video: { facingMode: camera.facing === 'back' ? 'environment' : 'user', width: { ideal: 1280 }, height: { ideal: 1280 } }
+  });
+  els.cameraVideo.srcObject = camera.stream;
+  els.cameraOverlay.classList.toggle('front', camera.facing === 'front');
+  await els.cameraVideo.play().catch(() => {});
+}
+
+function startCountdown() {
+  clearInterval(camera.timer);
+  let count = 3;
+  els.cameraCount.textContent = count;
+  camera.timer = setInterval(() => {
+    count -= 1;
+    if (count > 0) {
+      els.cameraCount.textContent = count;
+    } else {
+      clearInterval(camera.timer);
+      takePhoto();
+    }
+  }, 1000);
+}
+
+async function openCamera({ id, question, facing }) {
+  if (!isPhone()) {
+    sendCamera({ type: 'camera_cancel', id, reason: 'kein-handy' });
+    toast('Die Kamera-Funktion gibt es nur auf dem Handy.');
+    return;
+  }
+  camera.id = id;
+  camera.facing = facing === 'back' ? 'back' : 'front';
+  els.cameraQuestion.textContent = question || 'Was siehst du?';
+  els.cameraOverlay.hidden = false;
+  try {
+    await startCameraStream();
+    startCountdown();
+  } catch {
+    sendCamera({ type: 'camera_cancel', id, reason: 'keine-kamera' });
+    closeCamera();
+    toast('Kein Zugriff auf die Kamera. Erlaube ihn in den iPhone-Einstellungen für Safari bzw. die Jarvis-App.', 'error');
+  }
+}
+
+// One JPEG, at most 1024 px on the longest side, sent once and not kept.
+function takePhoto() {
+  const video = els.cameraVideo;
+  if (!camera.id || !video.videoWidth) return;
+  clearInterval(camera.timer);
+  els.cameraCount.textContent = '';
+  const scale = Math.min(1, 1024 / Math.max(video.videoWidth, video.videoHeight));
+  const canvas = els.cameraCanvas;
+  canvas.width = Math.round(video.videoWidth * scale);
+  canvas.height = Math.round(video.videoHeight * scale);
+  canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+  const image = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+  canvas.width = canvas.height = 0;
+  els.cameraFlash.classList.add('on');
+  requestAnimationFrame(() => requestAnimationFrame(() => els.cameraFlash.classList.remove('on')));
+  chime([1200]);
+  sendCamera({ type: 'camera_photo', id: camera.id, image });
+  setTimeout(closeCamera, 350);
+}
+
+function closeCamera() {
+  clearInterval(camera.timer);
+  camera.stream?.getTracks().forEach((track) => track.stop());
+  camera.stream = null;
+  camera.id = null;
+  els.cameraVideo.srcObject = null;
+  els.cameraCount.textContent = '';
+  els.cameraOverlay.hidden = true;
+}
+
+els.cameraShutter.addEventListener('click', takePhoto);
+els.cameraCancel.addEventListener('click', () => {
+  if (camera.id) sendCamera({ type: 'camera_cancel', id: camera.id });
+  closeCamera();
+});
+els.cameraFlip.addEventListener('click', async () => {
+  camera.facing = camera.facing === 'front' ? 'back' : 'front';
+  try {
+    await startCameraStream();
+    startCountdown();
+  } catch {
+    toast('Diese Kamera ist nicht verfügbar.', 'error');
+  }
+});
+
 // --- Suggestions ------------------------------------------------------------------
 
-const SUGGESTIONS = ['Guten Morgen!', 'Wie wird das Wetter?', 'Was gibt es Neues?', 'Hab ich neue Mails?', 'Mach mir ein Spiel', 'Was weißt du über mich?', 'Zeig meine Einkaufsliste', 'Erstelle eine Website'];
+const SUGGESTIONS = ['Guten Morgen!', 'Wie wird das Wetter?', 'Was siehst du?', 'Was gibt es Neues?', 'Hab ich neue Mails?', 'Mach mir ein Spiel', 'Was weißt du über mich?', 'Zeig meine Einkaufsliste', 'Erstelle eine Website'];
 els.chips.replaceChildren(...SUGGESTIONS.map((text) => {
   const chip = document.createElement('button');
   chip.type = 'button';
@@ -979,6 +1088,12 @@ function handleMessage(message) {
     case 'transcript':
       addMessage(message.role === 'user' ? 'user' : 'assistant', message.content);
       rememberTurn(message.role === 'user' ? 'user' : 'assistant', message.content);
+      break;
+    case 'camera_request':
+      openCamera(message);
+      break;
+    case 'camera_close':
+      if (camera.id === message.id) closeCamera();
       break;
     case 'weather':
       addWeatherCard(message.weather);

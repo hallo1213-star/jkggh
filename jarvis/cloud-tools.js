@@ -8,6 +8,7 @@ import { getNews, getWeather, lookupWikipedia } from './knowledge.js';
 import { addMemory, forgetMemory } from './memories.js';
 import { sendTelegram, telegramConfigured } from './telegram.js';
 import { sendVoiceNote } from './voice-message.js';
+import { describeImage, visionConfigured } from './vision.js';
 import { FONTS, MODES, SECTION_TYPES, encodeSite, sanitizeSite } from './public/site-config.js';
 
 const timeZone = process.env.TZ || 'Europe/Berlin';
@@ -576,6 +577,24 @@ export const cloudTools = [
         wichtigeAbsender: String(process.env.TELEGRAM_WICHTIG || '').split(/[,;]/).map((entry) => entry.trim()).filter(Boolean),
         hinweis: ready ? undefined : 'Bei Render fehlen TELEGRAM_BOT_TOKEN und/oder TELEGRAM_CHAT_ID (Anleitung im README).'
       };
+    }
+  },
+  {
+    name: 'look_camera',
+    description: 'Schaut durch die Handykamera des Nutzers: Die Kamera öffnet sich sichtbar in der App, macht nach einem Countdown ein Foto, und du bekommst eine Beschreibung bzw. Einschätzung zurück. Für „Was siehst du?“, „Wie findest du meine Frisur/mein Outfit?“, „Was ist das?“, „Lies das vor“. Nur auf dem Handy.',
+    parameters: {
+      type: 'object',
+      properties: {
+        question: { type: 'string', description: 'Was der Nutzer wissen möchte, z. B. "Wie findest du meine neue Frisur?"' },
+        camera: { type: 'string', enum: ['front', 'back'], description: 'front = Selfie-Kamera (für Frisur, Outfit, Gesicht), back = Rückkamera (für Dinge, Texte, Umgebung)' }
+      },
+      required: ['question']
+    },
+    label: (a) => `Kamera: ${a.question}`,
+    run: async ({ question, camera }, context) => {
+      if (!visionConfigured()) throw new Error('Die Kamera-Funktion ist noch nicht eingerichtet. Bei Render muss GEMINI_API_KEY eingetragen werden (Schlüssel kostenlos bei Google AI Studio).');
+      const photo = await context.requestPhoto({ question: String(question ?? '').slice(0, 200), facing: camera === 'back' ? 'back' : 'front' });
+      return describeImage({ imageBase64: photo, question });
     }
   },
   {
