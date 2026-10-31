@@ -163,7 +163,7 @@ Jedes fertige Produkt kommt zusätzlich als **Datei per Telegram** – so geht n
 | `OPENROUTER_API_KEY` | Alternative, kostenlos | [openrouter.ai](https://openrouter.ai) → anmelden → „Keys“ → „Create Key“ (nutzt kostenlose Modelle) |
 | `GEMINI_API_KEY` | Alternative, kostenlos | [aistudio.google.com](https://aistudio.google.com) → „Get API key“ (nicht mit jedem Google-Konto möglich) |
 | `ANTHROPIC_API_KEY` | Alternative, kostenpflichtig | [console.anthropic.com](https://console.anthropic.com) → API Keys (wird bevorzugt, wenn gesetzt) |
-| `GROQ_MODEL` / `OPENROUTER_MODEL` | optional | anderes Modell, falls das Standardmodell abgeschaltet wird (Liste auf der Seite des Anbieters) |
+| `GROQ_MODEL` / `OPENROUTER_MODEL` | optional, meist leer lassen | Jarvis sucht sich automatisch ein verfügbares Modell aus; nur setzen, wenn du ein bestimmtes willst |
 | `GUMROAD_ACCESS_TOKEN` | optional, für echte Verkaufszahlen | gumroad.com → Settings → Advanced → Applications → App anlegen → „Generate access token“ |
 | `MONEY_INTERVAL_MINUTES` | optional (Standard 2) | Abstand zwischen zwei Arbeitsschritten |
 | `MONEY_MAX_TASKS_PER_DAY` | optional (Standard 25) | Obergrenze pro Tag (schont das kostenlose KI-Kontingent) |

@@ -20,7 +20,7 @@ export function llmProvider() {
 export function llmLabel() {
   const provider = llmProvider();
   if (provider === 'claude') return `Claude (${claudeModel()})`;
-  if (provider === 'groq' || provider === 'openrouter') return `${OPENAI_COMPATIBLE[provider].name} (${OPENAI_COMPATIBLE[provider].model()})`;
+  if (provider === 'groq' || provider === 'openrouter') return `${OPENAI_COMPATIBLE[provider].name} (${OPENAI_COMPATIBLE[provider].configured() || chosenModel[provider] || 'Modell wird automatisch gewählt'})`;
   if (provider === 'gemini') return `Gemini (${geminiModel()})`;
   return null;
 }
@@ -28,27 +28,74 @@ export function llmLabel() {
 const claudeModel = () => process.env.ANTHROPIC_MODEL?.trim() || 'claude-sonnet-5-5';
 const geminiModel = () => process.env.GEMINI_MODEL?.trim() || 'gemini-2.5-flash';
 
-// Groq and OpenRouter speak the OpenAI chat format.
+// Groq and OpenRouter speak the OpenAI chat format. Which models an account
+// may use changes over time, so unless GROQ_MODEL/OPENROUTER_MODEL is set,
+// Jarvis asks the provider for its model list and picks the best available one.
 const OPENAI_COMPATIBLE = {
-  groq: { name: 'Groq', url: 'https://api.groq.com/openai/v1/chat/completions', key: () => process.env.GROQ_API_KEY.trim(), model: () => process.env.GROQ_MODEL?.trim() || 'llama-3.3-70b-versatile', maxTokens: 8000 },
-  openrouter: { name: 'OpenRouter', url: 'https://openrouter.ai/api/v1/chat/completions', key: () => process.env.OPENROUTER_API_KEY.trim(), model: () => process.env.OPENROUTER_MODEL?.trim() || 'meta-llama/llama-3.3-70b-instruct:free', maxTokens: 8000 }
+  groq: {
+    name: 'Groq',
+    base: 'https://api.groq.com/openai/v1',
+    key: () => process.env.GROQ_API_KEY.trim(),
+    configured: () => process.env.GROQ_MODEL?.trim(),
+    preferred: ['openai/gpt-oss-120b', 'llama-3.3-70b-versatile', 'moonshotai/kimi-k2-instruct-0905', 'moonshotai/kimi-k2-instruct', 'qwen/qwen3-32b', 'meta-llama/llama-4-maverick-17b-128e-instruct', 'openai/gpt-oss-20b', 'meta-llama/llama-4-scout-17b-16e-instruct', 'llama-3.1-8b-instant'],
+    usable: (m) => m.active !== false && !/whisper|guard|tts|playai|orpheus|prompt-guard|distil|compound|safeguard/i.test(m.id),
+    maxTokens: 8000
+  },
+  openrouter: {
+    name: 'OpenRouter',
+    base: 'https://openrouter.ai/api/v1',
+    key: () => process.env.OPENROUTER_API_KEY.trim(),
+    configured: () => process.env.OPENROUTER_MODEL?.trim(),
+    preferred: ['openai/gpt-oss-120b:free', 'meta-llama/llama-3.3-70b-instruct:free', 'deepseek/deepseek-chat-v3-0324:free', 'qwen/qwen3-235b-a22b:free', 'google/gemma-3-27b-it:free', 'mistralai/mistral-small-3.2-24b-instruct:free'],
+    usable: (m) => m.id.endsWith(':free') && !/vision|vl\b|image|audio/i.test(m.id),
+    maxTokens: 8000
+  }
 };
+const chosenModel = {};
+const badModels = new Set();
 
-async function openaiCompatible(provider, system, prompt, maxTokens, fetchImpl, json) {
+async function pickModel(provider, fetchImpl) {
   const config = OPENAI_COMPATIBLE[provider];
-  const response = await fetchImpl(config.url, {
+  if (config.configured()) return config.configured();
+  if (chosenModel[provider]) return chosenModel[provider];
+  const response = await fetchImpl(`${config.base}/models`, { headers: { authorization: `Bearer ${config.key()}` }, signal: AbortSignal.timeout(20_000) });
+  const data = await readJson(response, config.name);
+  const available = (data.data || []).filter((m) => typeof m?.id === 'string' && config.usable(m) && !badModels.has(m.id));
+  const ids = new Set(available.map((m) => m.id));
+  const model = config.preferred.find((id) => ids.has(id))
+    || available.sort((a, b) => (Number(b.context_window || b.context_length) || 0) - (Number(a.context_window || a.context_length) || 0))[0]?.id;
+  if (!model) throw new Error(`${config.name}: Für deinen Schlüssel ist gerade kein passendes Text-Modell freigeschaltet.`);
+  chosenModel[provider] = model;
+  console.log(`Geld-Modus: nutze ${config.name}-Modell ${model}`);
+  return model;
+}
+
+async function openaiCompatible(provider, system, prompt, maxTokens, fetchImpl, json, retried = false) {
+  const config = OPENAI_COMPATIBLE[provider];
+  const model = await pickModel(provider, fetchImpl);
+  const response = await fetchImpl(`${config.base}/chat/completions`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${config.key()}`, ...(provider === 'openrouter' ? { 'x-title': 'Jarvis' } : {}) },
     body: JSON.stringify({
-      model: config.model(),
+      model,
       max_tokens: Math.min(maxTokens, config.maxTokens),
       messages: [{ role: 'system', content: system }, { role: 'user', content: prompt }],
       ...(json ? { response_format: { type: 'json_object' } } : {})
     }),
     signal: AbortSignal.timeout(TIMEOUT_MS)
   });
-  const data = await readJson(response, config.name);
-  return data.choices?.[0]?.message?.content || '';
+  try {
+    const data = await readJson(response, config.name);
+    return data.choices?.[0]?.message?.content || '';
+  } catch (error) {
+    // The chosen model vanished or is locked: pick another one once.
+    if (/KI-Modell gibt es nicht/.test(error.message) && !config.configured() && !retried) {
+      badModels.add(model);
+      delete chosenModel[provider];
+      return openaiCompatible(provider, system, prompt, maxTokens, fetchImpl, json, true);
+    }
+    throw error;
+  }
 }
 
 async function readJson(response, name) {
@@ -56,7 +103,7 @@ async function readJson(response, name) {
   if (!response.ok) {
     const message = data?.error?.message || `HTTP ${response.status}`;
     if (response.status === 401 || response.status === 403) throw new Error(`${name} lehnt den API-Schlüssel ab (${message}).`);
-    if (response.status === 404 || /model.*(not found|decommissioned|does not exist)/i.test(message)) throw new Error(`${name}: Das KI-Modell gibt es nicht (mehr). Bei Render ein aktuelles Modell als ${name === "Claude" ? "ANTHROPIC" : name.toUpperCase()}_MODEL eintragen (${message}).`);
+    if (response.status === 404 || /model.*(not found|decommissioned|does not exist|not available|no access|do not have access)/i.test(message)) throw new Error(`${name}: Das KI-Modell gibt es nicht (mehr) (${message}). Falls ${name === 'Claude' ? 'ANTHROPIC' : name.toUpperCase()}_MODEL bei Render gesetzt ist, diesen Eintrag löschen oder ändern.`);
     if (response.status === 429 || response.status === 413) throw new Error(`${name}: Limit erreicht, später erneut (${message}).`);
     throw new Error(`${name}: ${message}`);
   }
