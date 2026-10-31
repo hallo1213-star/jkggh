@@ -98,3 +98,25 @@ export async function placeDetails(target, topic = '', { fetchImpl = fetch } = {
     right: { topic: subject || null, query: news.status === 'fulfilled' ? news.value.suche : null, items, error: news.status === 'rejected' ? news.reason.message : null }
   };
 }
+
+// Shops and restaurants with their OpenStreetMap contact data (phone, website,
+// opening hours) – used to find the pizzeria Jarvis should call.
+export async function findBusiness(query, { fetchImpl = fetch, limit = 3 } = {}) {
+  const q = String(query ?? '').trim().slice(0, 120);
+  if (!q) throw new Error('Welches Geschäft?');
+  const hits = await throttled(() => getJson(`${API}/search?q=${encodeURIComponent(q)}&format=jsonv2&limit=${limit}&addressdetails=1&extratags=1`, fetchImpl));
+  return (Array.isArray(hits) ? hits : []).map((hit) => {
+    const tags = hit.extratags || {};
+    const a = hit.address || {};
+    return {
+      name: String(hit.name || hit.display_name?.split(',')[0] || '').slice(0, 80),
+      address: [[a.road, a.house_number].filter(Boolean).join(' '), [a.postcode, a.city || a.town || a.village].filter(Boolean).join(' ')].filter(Boolean).join(', ').slice(0, 140),
+      phone: String(tags.phone || tags['contact:phone'] || '').split(';')[0].trim().slice(0, 30),
+      website: String(tags.website || tags['contact:website'] || '').split(';')[0].trim().slice(0, 200),
+      openingHours: String(tags.opening_hours || '').slice(0, 120),
+      cuisine: String(tags.cuisine || '').slice(0, 60),
+      lat: Number(hit.lat),
+      lon: Number(hit.lon)
+    };
+  }).filter((b) => b.name);
+}

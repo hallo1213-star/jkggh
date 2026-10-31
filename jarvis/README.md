@@ -195,6 +195,28 @@ Alles per Sprache – und zum Nachschauen über den Knopf **Planer** (Tabs Termi
 - Der Planer wird als **angepinnte Nachricht „🗂 Jarvis-Daten – bitte nicht löschen“** in deinem Telegram-Chat gesichert. Der kostenlose Render-Server vergisst beim Neustart alles – aus dieser Nachricht holt Jarvis deine Termine und Erinnerungen zurück. Bitte nicht löschen oder entpinnen.
 - Notizen, Ausgaben und Vokabeln liegen auf deinen Geräten (Browser-Speicher) und werden beim Verbinden abgeglichen.
 
+## Essen bestellen per Telefon 🍕📞
+
+Sag z. B. **„Bestell bei Qusys Pizza etwas für mich und meine Familie.“** Dann läuft es so:
+
+1. Jarvis sucht das Restaurant (in deiner Stadt aus dem Gedächtnis) mit Telefonnummer, Adresse, Öffnungszeiten und Website. Wenn möglich liest er die **Speisekarte** von der Website.
+2. Er fragt, was jeder essen möchte (Gericht, Größe, Extras), ob Lieferung oder Abholung (bei Lieferung die Adresse), auf welchen Namen bestellt wird und nach einer Rückrufnummer.
+3. Er **prüft gegen die Speisekarte**, ob es alles gibt. Fehlt etwas, sagt er es und fragt nach Ersatz.
+4. Er **liest die ganze Bestellung vor** (mit Preisen laut Karte) und fragt: „Stimmt alles so?“ Zusätzlich erscheint ein Bestätigungsfenster.
+5. Nach deinem **Ja ruft er das Restaurant an**. Er stellt sich als KI-Assistent vor, der für dich bestellt, und gibt genau deine Bestellung auf. Er fragt nach Preis und Wartezeit und legt dann auf. Du kannst das Gespräch **live mitlesen** und jederzeit auf **Auflegen** tippen.
+6. Das Ergebnis (z. B. „✅ aufgegeben – 39,50 €, fertig in 45 Minuten“) sagt er dir, und es kommt auch per Telegram.
+
+Jarvis bestellt nur genau das, was du bestätigt hast: keine Extras, keinen Ersatz und keine Bank- oder Kartendaten. Lehnt das Restaurant eine Bestellung von einer KI ab, entschuldigt er sich und legt auf.
+
+**Einrichten (einmalig): Twilio, das Telefon für Jarvis**
+1. Konto anlegen auf [twilio.com](https://www.twilio.com/try-twilio). Mit einem Testkonto darfst du nur deine eigene, bestätigte Nummer anrufen. Für Restaurants musst du das Konto **upgraden**: Guthaben aufladen, z. B. 20 $, denn Anrufe kosten ein paar Cent pro Minute.
+2. Unter **Console → Account Info**: `Account SID` und `Auth Token` kopieren.
+3. Absendernummer: Unter **Phone Numbers → Verified Caller IDs** deine eigene Handynummer bestätigen. Das Restaurant sieht dann deine Nummer und kann dich zurückrufen. Alternativ eine Twilio-Nummer kaufen; deutsche Nummern brauchen dafür einen Adressnachweis.
+4. Unter **Voice → Settings → Geo permissions** das Land **Germany** anhaken.
+5. Bei Render eintragen: `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER` (z. B. `+4917612345678`).
+
+Ohne Twilio stellt Jarvis die Bestellung trotzdem zusammen und zeigt dir einen **„Selbst anrufen“-Knopf** mit Spickzettel. Für das Lesen der Speisekarte braucht er den KI-Schlüssel aus dem Geld-Modus (`GROQ_API_KEY`). Steht die Karte nur als Bild/PDF oder auf Lieferando, kann er sie nicht prüfen und sagt dir das.
+
 ## 3D-Erdkugel 🌍
 
 Über den Knopf **Erde** oder per Sprache öffnet sich Jarvis' eigene interaktive 3D-Erdkugel direkt in der App. Sie zeigt echte Satelliten- und Luftbilder, eine Atmosphäre und den Sternenhimmel. Du kannst sie mit Finger oder Maus drehen und zoomen, von der ganzen Erde bis auf einzelne Straßen.

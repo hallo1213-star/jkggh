@@ -2,6 +2,7 @@
 // voice, shows the conversation and asks for confirmation before important actions.
 import { initMoney, showMoney } from './money.js';
 import { handleGlobeMessage, initGlobe } from './globe.js';
+import { addOrderCard, handleCallEvent, initCall } from './call.js';
 
 const OUTPUT_SAMPLE_RATE = 24000;
 
@@ -1020,6 +1021,7 @@ function toast(message, kind = '') {
 }
 
 initMoney({ toast });
+initCall({ toast });
 initGlobe({
   toast,
   send: (message) => {
@@ -1196,6 +1198,12 @@ function handleMessage(message) {
       break;
     case 'globe':
       handleGlobeMessage(message);
+      break;
+    case 'order':
+      addOrderCard(message);
+      break;
+    case 'call':
+      handleCallEvent(message);
       break;
     case 'money_show':
       showMoney();

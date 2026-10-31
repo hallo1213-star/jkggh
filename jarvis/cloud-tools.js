@@ -6,6 +6,8 @@ import { addItems, listAsText, removeItems, sellLinks, shopLinks } from './shopp
 import { OFFER_ALLOWED, STATUSES, findCustomer, summarize, upsertCustomer } from './customers.js';
 import { getNews, getWeather, lookupWikipedia } from './knowledge.js';
 import { geocodePlace, placeDetails } from './places.js';
+import { MODES as ORDER_MODES, checkOrder, cleanOrderItems, describeItem, findRestaurant, normalizePhone, orderSummary, orderTotal, readMenu, spokenPhone } from './restaurants.js';
+import { twilioConfigured } from './phone-call.js';
 import { addMemory, forgetMemory } from './memories.js';
 import { sendTelegram, telegramConfigured } from './telegram.js';
 import { sendVoiceNote } from './voice-message.js';
@@ -851,6 +853,161 @@ export const cloudTools = [
       context.schedule(ms, String(message || 'Dein Timer ist abgelaufen.'));
       const due = new Date(Date.now() + ms).toLocaleTimeString('de-DE', { timeZone, hour: '2-digit', minute: '2-digit' });
       return { gestellt: true, faelligUm: due };
+    }
+  },
+  {
+    name: 'order_find_restaurant',
+    description: 'Essen bestellen, Schritt 1: Sucht das Restaurant (Telefonnummer, Adresse, Website, Öffnungszeiten) und liest wenn möglich die Speisekarte. Aufrufen, sobald der Nutzer sagt „Bestell bei … etwas für mich/uns“. Danach fragst du, was alle essen möchten.',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Name des Restaurants, z. B. "Qusys Pizza"' },
+        town: { type: 'string', description: 'Stadt/Ort; leer = Wohnort aus dem Gedächtnis' },
+        phone: { type: 'string', description: 'Nur wenn der Nutzer die Nummer selbst nennt' },
+        website: { type: 'string', description: 'Nur wenn der Nutzer die Website/Speisekarte nennt' }
+      },
+      required: ['name']
+    },
+    label: (a) => `Restaurant suchen: ${a.name}`,
+    run: async ({ name, town, phone, website }, context) => {
+      const place = String(town ?? '').trim() || context.homeTown?.() || '';
+      const hits = await findRestaurant(name, place).catch(() => []);
+      const hit = hits[0] || null;
+      const restaurant = {
+        name: hit?.name || String(name).trim().slice(0, 80),
+        phone: normalizePhone(phone) || hit?.phone || '',
+        address: hit?.address || '',
+        website: String(website ?? '').trim() || hit?.website || '',
+        openingHours: hit?.openingHours || ''
+      };
+      const draft = context.orderDraft;
+      for (const key of Object.keys(draft)) delete draft[key];
+      draft.restaurant = restaurant;
+      let menuNote;
+      if (restaurant.website) {
+        try {
+          draft.menu = await readMenu(restaurant.website);
+          menuNote = `Speisekarte gelesen: ${draft.menu.items.length} Gerichte, z. B. ${draft.menu.items.slice(0, 8).map((i) => `${i.name} ${i.price}`).join(', ')}`;
+        } catch (error) {
+          menuNote = `Speisekarte nicht lesbar: ${error.message}`;
+        }
+      } else menuNote = 'Keine Website bekannt – die Speisekarte kann ich nicht prüfen.';
+      return {
+        restaurant: restaurant.name,
+        adresse: restaurant.address || (hit ? undefined : `Nicht in OpenStreetMap gefunden${place ? ` (gesucht in ${place})` : ''}.`),
+        telefon: restaurant.phone ? spokenPhone(restaurant.phone) : 'unbekannt – frag den Nutzer nach der Telefonnummer und rufe order_find_restaurant mit phone erneut auf',
+        oeffnungszeiten: restaurant.openingHours || undefined,
+        speisekarte: menuNote,
+        weitereTreffer: hits.slice(1).map((h) => `${h.name}, ${h.address}`),
+        naechsterSchritt: 'Frag jetzt, was er und seine Familie essen möchten (Gericht, Größe, Extras, für wen), ob Lieferung oder Abholung (bei Lieferung die Adresse), den Namen für die Bestellung und eine Rückrufnummer. Dann order_prepare.',
+        anrufMoeglich: twilioConfigured() ? 'ja' : 'Twilio ist noch nicht eingerichtet – Jarvis kann dann nicht selbst anrufen, aber einen Spickzettel und einen Anrufen-Knopf zeigen.'
+      };
+    }
+  },
+  {
+    name: 'order_prepare',
+    description: 'Essen bestellen, Schritt 2: Prüft die Wünsche gegen die Speisekarte und stellt die Bestellung zusammen. Danach liest du die Zusammenfassung vollständig vor und fragst „Stimmt alles so?“. Bei Änderungswünschen erneut aufrufen.',
+    parameters: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Gericht, z. B. "Pizza Salami"' },
+              quantity: { type: 'number' },
+              size: { type: 'string', description: 'z. B. "groß", "30 cm"' },
+              extras: { type: 'string', description: 'z. B. "ohne Zwiebeln, extra Käse"' },
+              for: { type: 'string', description: 'Für wen, z. B. "Mama"' }
+            },
+            required: ['name']
+          }
+        },
+        mode: { type: 'string', enum: ORDER_MODES },
+        address: { type: 'string', description: 'Lieferadresse (nur bei Lieferung)' },
+        customer_name: { type: 'string', description: 'Name für die Bestellung' },
+        callback_phone: { type: 'string', description: 'Rückrufnummer des Nutzers' },
+        payment: { type: 'string', description: 'z. B. "bar", "Karte"' },
+        time: { type: 'string', description: 'z. B. "so schnell wie möglich", "19 Uhr"' },
+        notes: { type: 'string' }
+      },
+      required: ['items', 'mode', 'customer_name']
+    },
+    label: (a) => `Bestellung zusammenstellen (${(a.items || []).length} Positionen)`,
+    run: async (args, context) => {
+      const draft = context.orderDraft;
+      if (!draft.restaurant) throw new Error('Zuerst das Restaurant mit order_find_restaurant suchen.');
+      const items = cleanOrderItems(args.items);
+      if (!items.length) throw new Error('Was soll bestellt werden?');
+      const mode = ORDER_MODES.includes(args.mode) ? args.mode : 'abholung';
+      const address = String(args.address ?? '').trim().slice(0, 160);
+      if (mode === 'lieferung' && address.length < 6) throw new Error('Für die Lieferung brauche ich die Adresse (Straße, Hausnummer, Ort).');
+      const customerName = String(args.customer_name ?? '').trim().slice(0, 60);
+      if (!customerName) throw new Error('Auf welchen Namen soll bestellt werden?');
+      const callbackPhone = args.callback_phone ? normalizePhone(args.callback_phone) : null;
+      if (args.callback_phone && !callbackPhone) throw new Error('Die Rückrufnummer sieht nicht gültig aus.');
+      let checked = items.map((item) => ({ ...item, available: null, menuName: '', price: '', note: '' }));
+      let menuChecked = false;
+      if (draft.menu) {
+        try {
+          checked = await checkOrder(draft.menu, items);
+          menuChecked = true;
+        } catch (error) {
+          checked = checked.map((item) => ({ ...item, note: `Nicht geprüft: ${error.message}` }));
+        }
+      }
+      const missing = checked.filter((item) => menuChecked && !item.available);
+      const order = {
+        restaurant: draft.restaurant,
+        items: checked,
+        total: menuChecked && !missing.length ? orderTotal(checked) : null,
+        mode,
+        address,
+        customerName,
+        callbackPhone,
+        payment: String(args.payment ?? '').trim().slice(0, 40),
+        time: String(args.time ?? '').trim().slice(0, 60),
+        notes: String(args.notes ?? '').trim().slice(0, 200)
+      };
+      draft.order = order;
+      draft.ready = missing.length === 0 && Boolean(order.restaurant.phone);
+      context.showOrder?.({ summary: orderSummary(order), phone: order.restaurant.phone, missing: missing.map((i) => `${i.name}${i.note ? ` (${i.note})` : ''}`), checked: menuChecked });
+      return {
+        zusammenfassung: orderSummary(order),
+        speisekarteGeprueft: menuChecked ? 'ja' : 'nein (Speisekarte nicht verfügbar – sag ihm, dass du nicht prüfen konntest, ob es alles gibt)',
+        nichtAufDerKarte: missing.length ? missing.map((i) => `${i.name}${i.note ? `: ${i.note}` : ''}`) : undefined,
+        telefonFehlt: order.restaurant.phone ? undefined : 'Die Telefonnummer des Restaurants fehlt – frag danach.',
+        naechsterSchritt: missing.length
+          ? 'Sag ihm, was es nicht gibt (und ähnliche Gerichte, falls in note), und frag, was stattdessen; dann order_prepare erneut.'
+          : 'Lies die komplette Zusammenfassung vor (Gerichte, Preis, Lieferung/Abholung, Name) und frag: „Stimmt alles so? Soll ich anrufen?“ Erst nach einem klaren Ja order_call.'
+      };
+    }
+  },
+  {
+    name: 'order_call',
+    description: 'Essen bestellen, Schritt 3: Ruft das Restaurant an und gibt die vorgelesene, bestätigte Bestellung auf (Jarvis sagt dabei, dass er ein KI-Assistent ist). Nur nach einem klaren Ja des Nutzers zur vorgelesenen Zusammenfassung.',
+    parameters: { type: 'object', properties: {} },
+    label: () => 'Restaurant anrufen und bestellen',
+    confirm: async (args, context) => {
+      const order = context.orderDraft?.order;
+      if (!order || !context.orderDraft.ready) return null;
+      if (!twilioConfigured()) return null;
+      return { title: `${order.restaurant.name} jetzt anrufen und bestellen?`, detail: `${orderSummary(order)}
+
+Jarvis ruft ${spokenPhone(order.restaurant.phone)} an und sagt, dass er ein KI-Assistent ist, der für dich bestellt. Der Anruf läuft über dein Twilio-Konto (kostet ein paar Cent pro Minute).` };
+    },
+    run: async (args, context) => {
+      const draft = context.orderDraft;
+      if (!draft?.order) throw new Error('Es gibt noch keine Bestellung. Zuerst order_find_restaurant und order_prepare.');
+      if (!draft.ready) throw new Error('Die Bestellung ist noch nicht fertig (Gericht nicht auf der Karte oder Telefonnummer fehlt).');
+      if (!twilioConfigured()) {
+        context.showOrder?.({ summary: orderSummary(draft.order), phone: draft.order.restaurant.phone, manual: true });
+        return { angerufen: false, hinweis: 'Twilio ist nicht eingerichtet, deshalb kann Jarvis nicht selbst anrufen. Der Nutzer sieht jetzt einen Anrufen-Knopf und den Spickzettel. Erkläre kurz, dass er für automatische Anrufe Twilio einrichten kann (README).' };
+      }
+      await context.startPhoneCall(draft.order);
+      draft.ready = false; // never call twice for the same order by accident
+      return { angerufen: true, hinweis: 'Der Anruf läuft. Sag kurz: „Ich rufe jetzt an.“ Das Ergebnis (Preis, Wartezeit) kommt automatisch, sobald das Gespräch vorbei ist – der Nutzer kann live mitlesen.' };
     }
   },
   {

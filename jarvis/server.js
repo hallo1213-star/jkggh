@@ -27,6 +27,8 @@ import { addIncome, completeUserTask, sanitizeMoney, startMoney, stopMoney, addL
 import { moneyToolStatus, relinkPages, startMoneyAgent } from './money-agent.js';
 import { gumroadConfigured, gumroadProducts } from './gumroad.js';
 import { geocodePlace, placeDetails, reversePlace } from './places.js';
+import { getActiveCall, handleStatusCallback, handleTwilioStream, hangup as hangupCall, startCall } from './phone-call.js';
+import { spokenPhone } from './restaurants.js';
 import { findTool as findLaptopTool, functionDefinitions as laptopFunctions } from './laptop/tools.js';
 
 if (!process.env.TZ) process.env.TZ = 'Europe/Berlin';
@@ -184,6 +186,22 @@ async function deliverNotice({ spoken, caption }) {
   }
 }
 
+// Live updates of Jarvis' phone call go to every open app; the result also to
+// Telegram and to the conversation that started the call.
+function callEventHandler(origin) {
+  return (event) => {
+    for (const session of sessions) session.toBrowser({ type: 'call', ...event });
+    if (event.event !== 'ended') return;
+    const r = event.result;
+    const text = r
+      ? { angenommen: `✅ Bestellung bei ${event.restaurant} aufgegeben${r.preis ? ` – ${r.preis}` : ''}${r.fertigUm ? `, fertig: ${r.fertigUm}` : ''}.`, teilweise: `⚠️ Bestellung bei ${event.restaurant} nur teilweise aufgegeben${r.preis ? ` – ${r.preis}` : ''}${r.fertigUm ? `, fertig: ${r.fertigUm}` : ''}.`, abgelehnt: `❌ ${event.restaurant} hat die Bestellung nicht angenommen.`, nicht_erreicht: `📵 ${event.restaurant} nicht erreicht (${r.notiz || event.status}).` }[r.status] || `☎️ Anruf bei ${event.restaurant} beendet – Ergebnis unklar.`
+      : `☎️ Anruf bei ${event.restaurant} beendet (${event.status}) – keine Bestellung bestätigt.`;
+    const full = `${text}${r?.notiz && r.status !== 'nicht_erreicht' ? `\nHinweis: ${r.notiz}` : ''}`;
+    if (telegramConfigured()) sendTelegram(full).catch(() => {});
+    origin?.tell?.(full);
+  };
+}
+
 // "Wohnt in Köln" from the memory, used as the briefing's weather location.
 function homeTown() {
   for (const memory of memoryStore.items) {
@@ -308,6 +326,32 @@ const httpServer = createServer(async (request, response) => {
   if (pathname === '/api/session') {
     if (!isAuthenticated(request)) sendJson(response, 401, { error: 'Nicht angemeldet' });
     else sendJson(response, 200, { ok: true, laptop: laptopConnected() });
+    return;
+  }
+
+  if (pathname === '/twilio/status' && request.method === 'POST') {
+    const token = new URL(request.url, 'http://localhost').searchParams.get('token');
+    let params = new URLSearchParams();
+    try {
+      params = new URLSearchParams(await readBody(request, 16384));
+    } catch {
+      // ignore
+    }
+    response.writeHead(handleStatusCallback(token, params) ? 204 : 404);
+    response.end();
+    return;
+  }
+
+  if (pathname === '/api/call') {
+    if (!isAuthenticated(request)) {
+      sendJson(response, 401, { error: 'Nicht angemeldet' });
+      return;
+    }
+    if (request.method === 'POST' && String(request.headers['content-type'] || '').startsWith('application/json')) {
+      sendJson(response, 200, { ok: await hangupCall() });
+    } else {
+      sendJson(response, 200, { call: getActiveCall() });
+    }
     return;
   }
 
@@ -493,8 +537,14 @@ let moneyAgent = null;
 // Browser connections need a valid login cookie and must come from a page on
 // this same host; the laptop connector authenticates with LAPTOP_TOKEN.
 const browserWss = new WebSocketServer({ noServer: true, maxPayload: 1024 * 1024 });
+const twilioWss = new WebSocketServer({ noServer: true, maxPayload: 256 * 1024 });
 httpServer.on('upgrade', (request, socket, head) => {
   const { pathname } = new URL(request.url, 'http://localhost');
+  if (pathname === '/twilio-stream') {
+    // Twilio's media stream; the call token inside the first message is checked.
+    twilioWss.handleUpgrade(request, socket, head, (ws) => handleTwilioStream(ws));
+    return;
+  }
   if (pathname === '/laptop') {
     if (!tokenMatches(request.headers.authorization, process.env.LAPTOP_TOKEN)) {
       socket.end('HTTP/1.1 401 Unauthorized\r\n\r\n');
@@ -631,6 +681,23 @@ browserWss.on('connection', (browser, request) => {
       toBrowser({ type: 'globe', ...command });
     },
     globeMemory: {},
+    orderDraft: {},
+    homeTown,
+    showOrder(order) {
+      toBrowser({ type: 'order', ...order, phoneLabel: order.phone ? spokenPhone(order.phone) : '' });
+    },
+    async startPhoneCall(order) {
+      await startCall({
+        order,
+        origin,
+        userName: process.env.USER_NAME?.trim() || order.customerName,
+        onEvent: callEventHandler({
+          tell(text) {
+            if (agentOpen) agent.sendInjectAgentMessage({ type: 'InjectAgentMessage', message: `Kurze Info zum Telefonat: ${text}` });
+          }
+        })
+      });
+    },
     showWebcams({ title, cams, links }) {
       toBrowser({ type: 'webcams', title, cams, links });
     },
