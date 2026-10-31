@@ -322,6 +322,15 @@ els.gameShare.addEventListener('click', async () => {
 // --- Shopping ----------------------------------------------------------
 
 const SHOPPING_KEY = 'jarvis.shoppingList';
+const SHOPPING_TIME_KEY = 'jarvis.shoppingListUpdatedAt';
+
+function loadShoppingTime() {
+  try {
+    return Number(localStorage.getItem(SHOPPING_TIME_KEY)) || 0;
+  } catch {
+    return 0;
+  }
+}
 
 function loadShoppingList() {
   try {
@@ -332,15 +341,20 @@ function loadShoppingList() {
   }
 }
 
-// Saves the list on this device; local edits are also sent to Jarvis.
-function storeShoppingList(items, { sync = true } = {}) {
+// Saves the list on this device. Local edits are sent to Jarvis, which shares
+// them with your other devices; `updatedAt` is the server's version stamp.
+function storeShoppingList(items, { sync = true, updatedAt } = {}) {
   const list = (Array.isArray(items) ? items : []).map((item) => ({ text: String(item.text).slice(0, 80), done: item.done === true }));
+  const online = state.ws?.readyState === WebSocket.OPEN;
   try {
     localStorage.setItem(SHOPPING_KEY, JSON.stringify(list));
+    if (updatedAt) localStorage.setItem(SHOPPING_TIME_KEY, String(updatedAt));
+    // Edited while offline: this copy should win the next time we connect.
+    else if (sync && !online) localStorage.setItem(SHOPPING_TIME_KEY, String(Date.now()));
   } catch {
     // storage unavailable; the list still works for this session
   }
-  if (sync && state.ws?.readyState === WebSocket.OPEN) state.ws.send(JSON.stringify({ type: 'shopping_list_update', items: list }));
+  if (sync && online) state.ws.send(JSON.stringify({ type: 'shopping_list_update', items: list }));
   if (!els.shoppingModal.hidden) renderShoppingList();
 }
 
@@ -564,7 +578,7 @@ function connect() {
   setMode('connecting');
   els.reconnect.hidden = true;
 
-  ws.onopen = () => ws.send(JSON.stringify({ type: 'start', sampleRate: state.audio.sampleRate, shoppingList: loadShoppingList() }));
+  ws.onopen = () => ws.send(JSON.stringify({ type: 'start', sampleRate: state.audio.sampleRate, shoppingList: loadShoppingList(), shoppingListUpdatedAt: loadShoppingTime() }));
   ws.onmessage = ({ data }) => {
     if (typeof data !== 'string') {
       playChunk(data);
@@ -629,7 +643,7 @@ function handleMessage(message) {
       addShopCard(message.query, message.links);
       break;
     case 'shopping_list':
-      storeShoppingList(message.items, { sync: false });
+      storeShoppingList(message.items, { sync: false, updatedAt: message.updatedAt });
       if (message.show) showShoppingList();
       break;
     case 'site': {

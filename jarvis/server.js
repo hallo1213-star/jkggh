@@ -11,7 +11,7 @@ import { DeepgramClient } from '@deepgram/sdk';
 import { buildSettings, missingConfig } from './agent-config.js';
 import { attemptLogin, clearedCookie, isAuthenticated, passwordConfigured, sessionCookie, tokenMatches } from './auth.js';
 import { cloudTools, findCloudTool } from './cloud-tools.js';
-import { sanitizeList } from './shopping.js';
+import { addItems, sanitizeList } from './shopping.js';
 import { findTool as findLaptopTool, functionDefinitions as laptopFunctions } from './laptop/tools.js';
 
 if (!process.env.TZ) process.env.TZ = 'Europe/Berlin';
@@ -70,6 +70,29 @@ function readBody(request, limit = 2048) {
 
 const laptop = { ws: null, calls: new Map() };
 const sessions = new Set();
+
+// One shopping list for all devices. The free server forgets it while it
+// sleeps, so every device keeps a copy; the newest copy wins when a device
+// connects, and every change is sent to all open devices.
+const sharedList = { items: [], updatedAt: 0 };
+
+function setSharedList(items) {
+  sharedList.items = sanitizeList(items);
+  sharedList.updatedAt = Date.now();
+  for (const session of sessions) session.toBrowser({ type: 'shopping_list', items: sharedList.items, updatedAt: sharedList.updatedAt });
+}
+
+function adoptDeviceList(items, updatedAt) {
+  const deviceItems = sanitizeList(items);
+  const deviceTime = Math.min(Number(updatedAt) || 0, Date.now());
+  if (deviceTime > sharedList.updatedAt) {
+    sharedList.items = deviceItems;
+    sharedList.updatedAt = deviceTime;
+  } else if (!deviceTime && deviceItems.length) {
+    // Saved by an older app version without a timestamp: merge instead of losing items.
+    setSharedList(addItems(sharedList.items, deviceItems.map((item) => item.text)).list);
+  }
+}
 
 function laptopConnected() {
   return laptop.ws?.readyState === WebSocket.OPEN;
@@ -257,8 +280,6 @@ browserWss.on('connection', (browser, request) => {
   const confirmations = new Map();
   const cancelled = new Set();
   const timers = new Set();
-  // The shopping list lives on the device; this is the copy for this conversation.
-  let shoppingList = [];
 
   const session = {
     toBrowser(message) {
@@ -308,11 +329,11 @@ browserWss.on('connection', (browser, request) => {
       toBrowser({ type: 'shop', query, links });
     },
     getShoppingList() {
-      return shoppingList;
+      return sharedList.items;
     },
     setShoppingList(list, { show = false } = {}) {
-      shoppingList = sanitizeList(list);
-      toBrowser({ type: 'shopping_list', items: shoppingList, show });
+      setSharedList(list);
+      if (show) toBrowser({ type: 'shopping_list', items: sharedList.items, updatedAt: sharedList.updatedAt, show: true });
     },
     origin,
     laptopConnected
@@ -355,6 +376,7 @@ browserWss.on('connection', (browser, request) => {
     }
     agent.sendFunctionCallResponse({ type: 'FunctionCallResponse', id, name, content: JSON.stringify(result) });
     toBrowser({ type: 'action', id, label, state, detail: result.fehler });
+    console.log(`Funktion ${name}: ${state}${result.fehler ? ` – ${result.fehler}` : ''}`);
   }
 
   async function handleAgentMessage(message) {
@@ -459,14 +481,15 @@ browserWss.on('connection', (browser, request) => {
       return;
     }
     if (message.type === 'start') {
-      shoppingList = sanitizeList(message.shoppingList);
+      adoptDeviceList(message.shoppingList, message.shoppingListUpdatedAt);
+      toBrowser({ type: 'shopping_list', items: sharedList.items, updatedAt: sharedList.updatedAt });
       const rate = Number(message.sampleRate);
       startAgent(rate >= 8000 && rate <= 96000 ? rate : 48000).catch((error) => {
         agent = null;
         toBrowser({ type: 'error', message: `Jarvis konnte nicht starten: ${error.message}` });
       });
     } else if (message.type === 'shopping_list_update') {
-      shoppingList = sanitizeList(message.items);
+      setSharedList(message.items);
     } else if (message.type === 'confirm_response') {
       confirmations.get(message.id)?.(message.approved === true);
     } else if (message.type === 'text' && agentOpen && String(message.text || '').trim()) {

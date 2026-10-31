@@ -100,7 +100,7 @@ Falls Google kein App-Passwort anbietet (z. B. bei Schul-/Firmenkonten oder „E
 
 - **Produktsuche:** Jarvis zeigt eine Karte mit Knöpfen zu **Amazon**, **idealo** (Preisvergleich) und **Google Shopping**. Du tippst drauf und bestellst selbst in deinem Konto – Jarvis bestellt und bezahlt bewusst nie selbst (keine gespeicherten Zahlungsdaten, keine versehentlichen Bestellungen durch Verhörer).
 - **Einkaufsliste:** Jarvis fügt hinzu, streicht, liest vor und mailt dir die Liste (mit Bestätigung). Über den Knopf **Einkaufsliste** kannst du selbst abhaken, hinzufügen und Erledigtes entfernen. Die ganze Liste leert Jarvis nur nach deiner Bestätigung.
-- Die Liste wird **auf deinem Gerät** gespeichert (der kostenlose Server vergisst beim Einschlafen alles). iPhone und Laptop haben deshalb je eine eigene Liste – zum Übertragen einfach per Mail schicken lassen.
+- **Eine Liste für alle Geräte:** iPhone und Laptop sehen dieselbe Liste, Änderungen erscheinen sofort auf dem anderen Gerät. Jedes Gerät hebt zusätzlich eine Kopie auf – schläft der kostenlose Server ein, stellt das nächste Gerät die Liste wieder her.
 - **Pakete:** „Wo ist mein Amazon-Paket?“ – Jarvis sucht die Versandmail in deinem Gmail.
 
 ## Websites
