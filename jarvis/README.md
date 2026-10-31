@@ -62,6 +62,10 @@ Tipp: Lege eine Verknüpfung zu `Laptop-verbinden.bat` in den Autostart-Ordner (
 | Bereich | Beispiele | Laptop nötig? |
 |---|---|---|
 | Gespräch | Fragen, Erklärungen, Ideen, Texte formulieren | nein |
+| **Gedächtnis** | „Ich wohne in Köln“, „Merk dir, dass ich Pizza liebe“, „Was weißt du über mich?“, „Vergiss das mit der Pizza“ | nein |
+| **Wetter** | „Wie wird das Wetter?“, „Regnet es morgen in Hamburg?“ | nein |
+| **Nachrichten & Wissen** | „Was gibt es Neues?“, „Wer war Albert Einstein?“, „Wie hoch ist der Eiffelturm?“ | nein |
+| **Tagesüberblick** | „Guten Morgen!“ – Wetter, ungelesene Mails, Einkaufsliste und Nachrichten | nein |
 | **E-Mails** | „Hab ich neue Mails?“, „Was schreibt Amazon?“, „Lies mir die Mail von Oma vor“, „Antworte ihr, dass ich Sonntag komme“* | nein |
 | **Geld verdienen** | „Mach eine Website-Vorschau für den Friseur Haarscharf in der Bahnhofstraße“, „Der Laden ist interessiert, schick das Angebot“, „Zeig meine Kunden“, „Schreib eine Anzeige für meine PS4“ | nein |
 | **Einkaufen** | „Such mir günstige Bluetooth-Kopfhörer“, „Setz Milch und Batterien auf die Einkaufsliste“, „Was steht drauf?“, „Schick mir die Liste per Mail“* | nein |
@@ -96,6 +100,20 @@ So geht Jarvis mit deinen Mails um:
 - **Zugang entziehen:** App-Passwort unter https://myaccount.google.com/apppasswords löschen.
 
 Falls Google kein App-Passwort anbietet (z. B. bei Schul-/Firmenkonten oder „Erweitertem Schutz“), funktioniert diese Methode nicht.
+
+## Gedächtnis & Gesprächsverlauf 🧠
+
+- Erzählst du Jarvis etwas über dich (Wohnort, Hobbys, Lieblingsessen, Familie), merkt er es sich – auf iPhone und Laptop. Er nutzt es ganz natürlich, z. B. deinen Wohnort fürs Wetter.
+- **Ansehen und löschen:** oben rechts auf das Gehirn-Symbol tippen. Passwörter, PINs und Bank- oder Kartendaten merkt sich Jarvis nie.
+- Jarvis **knüpft an euer letztes Gespräch an** – auch nach dem Schließen der App. Der Verlauf bleibt auf deinem Gerät und lässt sich im Gedächtnis-Fenster löschen.
+
+## Wetter, Nachrichten & Wissen
+
+- **Wetter** mit echten Daten von Open-Meteo: aktuelle Temperatur, gefühlte Temperatur, Wind und Vorhersage als Wetterkarte.
+- **Nachrichten:** aktuelle Schlagzeilen von tagesschau.de zum Antippen.
+- **Wissen:** Bei Fragen zu Personen, Orten oder Begriffen schaut Jarvis in der deutschen Wikipedia nach, statt zu raten.
+- **„Guten Morgen!“** – Tagesüberblick mit Wetter, ungelesenen Mails, Einkaufsliste und Nachrichten.
+- Unter dem Gespräch gibt es **Vorschläge zum Antippen**.
 
 ## Geld verdienen 💰
 

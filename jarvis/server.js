@@ -13,6 +13,7 @@ import { attemptLogin, clearedCookie, isAuthenticated, passwordConfigured, sessi
 import { cloudTools, findCloudTool } from './cloud-tools.js';
 import { addItems, sanitizeList } from './shopping.js';
 import { sanitizeCustomers } from './customers.js';
+import { sanitizeHistory, sanitizeMemories } from './memories.js';
 import { findTool as findLaptopTool, functionDefinitions as laptopFunctions } from './laptop/tools.js';
 
 if (!process.env.TZ) process.env.TZ = 'Europe/Berlin';
@@ -106,6 +107,7 @@ function createSharedStore(type, sanitize, mergeUnstamped) {
 
 const shoppingStore = createSharedStore('shopping_list', sanitizeList, (current, device) => addItems(current, device.map((item) => item.text)).list);
 const customerStore = createSharedStore('customers', sanitizeCustomers, null);
+const memoryStore = createSharedStore('memories', sanitizeMemories, (current, device) => [...current, ...device]);
 
 function laptopConnected() {
   return laptop.ws?.readyState === WebSocket.OPEN;
@@ -354,6 +356,19 @@ browserWss.on('connection', (browser, request) => {
     getCustomers() {
       return customerStore.items;
     },
+    getMemories() {
+      return memoryStore.items;
+    },
+    setMemories(list, { show = false } = {}) {
+      memoryStore.set(list);
+      if (show) memoryStore.send(session, { show: true });
+    },
+    showWeather(weather) {
+      toBrowser({ type: 'weather', weather });
+    },
+    showNews(news) {
+      toBrowser({ type: 'news', news });
+    },
     setCustomers(list, { show = false } = {}) {
       customerStore.set(list);
       if (show) customerStore.send(session, { show: true });
@@ -415,6 +430,7 @@ browserWss.on('connection', (browser, request) => {
         console.log(`Deepgram-Sitzung: ${message.request_id}`);
         break;
       case 'SettingsApplied':
+        settingsApplied = true;
         toBrowser({ type: 'status', state: 'listening' });
         break;
       case 'ConversationText':
@@ -444,6 +460,11 @@ browserWss.on('connection', (browser, request) => {
         break;
       case 'Error':
         console.error(`Deepgram-Fehler ${message.code}: ${message.description}`);
+        if (!settingsApplied && startedWith.history.length && !retriedWithoutHistory) {
+          console.warn('Starte ohne Gesprächsverlauf neu.');
+          restartWithoutHistory();
+          break;
+        }
         toBrowser({ type: 'error', message: `${message.description} (${message.code})` });
         break;
       case 'Warning':
@@ -454,8 +475,16 @@ browserWss.on('connection', (browser, request) => {
     }
   }
 
-  async function startAgent(inputSampleRate) {
+  // `history` = recent turns of the previous conversation. If Deepgram rejects
+  // the settings before applying them, Jarvis starts once more without it.
+  let settingsApplied = false;
+  let retriedWithoutHistory = false;
+  let startedWith = { inputSampleRate: 48000, history: [] };
+
+  async function startAgent(inputSampleRate, history = []) {
     if (agent) return;
+    startedWith = { inputSampleRate, history };
+    settingsApplied = false;
     const missing = missingConfig();
     if (missing.length) {
       toBrowser({ type: 'error', message: `Bei Render bzw. in der .env fehlt: ${missing.join(', ')}` });
@@ -464,29 +493,43 @@ browserWss.on('connection', (browser, request) => {
     toBrowser({ type: 'status', state: 'connecting' });
     const client = new DeepgramClient({ apiKey: process.env.DEEPGRAM_API_KEY.trim() });
     // No automatic reconnect: a new conversation starts from the interface instead.
-    agent = await client.agent.v1.connect({ reconnectAttempts: 0 });
-    agent.on('open', () => {
+    const current = await client.agent.v1.connect({ reconnectAttempts: 0 });
+    agent = current;
+    current.on('open', () => {
       agentOpen = true;
-      agent.sendSettings(buildSettings({ inputSampleRate, functions: functionDefinitions, laptopConnected: laptopConnected() }));
+      current.sendSettings(buildSettings({ inputSampleRate, functions: functionDefinitions, laptopConnected: laptopConnected(), memories: memoryStore.items, history }));
       keepAlive = setInterval(() => {
         if (agentOpen && Date.now() - lastAudioAt > 5000) agent.sendKeepAlive({ type: 'KeepAlive' });
       }, 5000);
     });
     // Handled in order so audio chunks are never reordered.
-    agent.on('message', (message) => {
+    current.on('message', (message) => {
+      if (current !== agent) return;
       queue = queue.then(() => handleAgentMessage(message)).catch((error) => console.error(error));
     });
-    agent.on('close', (event) => {
+    current.on('close', (event) => {
+      if (current !== agent) return;
       agentOpen = false;
       clearInterval(keepAlive);
       for (const finish of confirmations.values()) finish(false);
       toBrowser({ type: 'closed', code: event?.code, reason: event?.reason || '' });
     });
-    agent.on('error', (error) => {
+    current.on('error', (error) => {
+      if (current !== agent) return;
       console.error('Verbindungsfehler zu Deepgram:', error.message);
       toBrowser({ type: 'error', message: `Verbindung zu Deepgram fehlgeschlagen: ${error.message}` });
     });
-    agent.connect();
+    current.connect();
+  }
+
+  function restartWithoutHistory() {
+    retriedWithoutHistory = true;
+    const old = agent;
+    agent = null;
+    agentOpen = false;
+    clearInterval(keepAlive);
+    old.close();
+    startAgent(startedWith.inputSampleRate, []).catch((error) => toBrowser({ type: 'error', message: `Jarvis konnte nicht starten: ${error.message}` }));
   }
 
   browser.on('message', (data, isBinary) => {
@@ -508,8 +551,10 @@ browserWss.on('connection', (browser, request) => {
       shoppingStore.send(session);
       customerStore.adopt(message.customers, message.customersUpdatedAt);
       customerStore.send(session);
+      memoryStore.adopt(message.memories, message.memoriesUpdatedAt);
+      memoryStore.send(session);
       const rate = Number(message.sampleRate);
-      startAgent(rate >= 8000 && rate <= 96000 ? rate : 48000).catch((error) => {
+      startAgent(rate >= 8000 && rate <= 96000 ? rate : 48000, sanitizeHistory(message.history)).catch((error) => {
         agent = null;
         toBrowser({ type: 'error', message: `Jarvis konnte nicht starten: ${error.message}` });
       });
@@ -517,6 +562,8 @@ browserWss.on('connection', (browser, request) => {
       shoppingStore.set(message.items);
     } else if (message.type === 'customers_update') {
       customerStore.set(message.items);
+    } else if (message.type === 'memories_update') {
+      memoryStore.set(message.items);
     } else if (message.type === 'confirm_response') {
       confirmations.get(message.id)?.(message.approved === true);
     } else if (message.type === 'text' && agentOpen && String(message.text || '').trim()) {

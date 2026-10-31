@@ -30,6 +30,9 @@
       <span class="chip" id="laptop-chip" title="Laptop-Verbindung"><span class="dot"></span><span id="laptop-chip-text">Laptop aus</span></span>
       <span class="chip" id="status-chip"><span class="dot"></span><span id="status-chip-text">Offline</span></span>
       <time class="clock" id="clock">--:--</time>
+      <button class="icon-btn" id="memory-button" type="button" title="Gedächtnis" aria-label="Was Jarvis sich gemerkt hat">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 2A3.5 3.5 0 0 0 6 5.5v.1A3.5 3.5 0 0 0 3.5 9a3.5 3.5 0 0 0 .6 2A3.5 3.5 0 0 0 4 14.5 3.5 3.5 0 0 0 7 18v.5A3.5 3.5 0 0 0 10.5 22H11V2h-1.5Zm5 0H13v20h.5a3.5 3.5 0 0 0 3.5-3.5V18a3.5 3.5 0 0 0 3-3.5 3.5 3.5 0 0 0-.1-3.5 3.5 3.5 0 0 0 .6-2A3.5 3.5 0 0 0 18 5.6v-.1A3.5 3.5 0 0 0 14.5 2Z"/></svg>
+      </button>
       <button class="icon-btn" id="logout" type="button" title="Abmelden" aria-label="Abmelden">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 17v-3H3v-4h7V7l5 5-5 5Zm9-14H12v2h7v14h-7v2h7a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2Z"/></svg>
       </button>
@@ -90,6 +93,7 @@
       <div class="transcript" id="transcript">
         <p class="empty">Sag zum Beispiel: „Wie wird das Wetter morgen?“, „Erinnere mich in 20 Minuten an die Wäsche“ oder – wenn der Laptop an ist – „Öffne Spotify auf dem Laptop“.</p>
       </div>
+      <div class="chips" id="chips" aria-label="Vorschläge"></div>
       <form class="composer" id="composer" autocomplete="off">
         <input id="text-input" type="text" placeholder="Oder hier tippen …" aria-label="Nachricht an Jarvis" disabled>
         <button type="submit" id="send" disabled aria-label="Senden">
@@ -154,6 +158,19 @@
       <ul class="customer-list" id="customer-list"></ul>
       <p class="hint" id="customers-empty">Noch keine Kunden. Sag zum Beispiel: „Mach eine Website-Vorschau für den Friseur Haarscharf in der Bahnhofstraße.“</p>
       <p class="hint">Tipp: Besuch den Laden und zeig die Vorschau auf dem Handy. Angebots-Mails gehen erst raus, wenn der Laden zugestimmt hat (Status „Interessiert“).</p>
+    </div>
+  </div>
+
+  <div class="modal" id="memory-modal" hidden>
+    <div class="modal-card games-card" role="dialog" aria-modal="true" aria-labelledby="memory-title">
+      <div class="games-head">
+        <h3 id="memory-title">Jarvis' Gedächtnis</h3>
+        <button class="icon-btn" id="memory-close" type="button" aria-label="Schließen">✕</button>
+      </div>
+      <ul class="shopping-list" id="memory-list"></ul>
+      <p class="hint" id="memory-empty">Jarvis hat sich noch nichts gemerkt. Erzähl ihm zum Beispiel: „Ich wohne in Köln“ oder „Merk dir, dass ich Pizza liebe.“</p>
+      <p class="hint">Jarvis merkt sich nie Passwörter, PINs oder Bankdaten. Du kannst hier alles löschen.</p>
+      <button class="ctrl shopping-clear" id="history-clear" type="button">Gesprächsverlauf löschen</button>
     </div>
   </div>
 

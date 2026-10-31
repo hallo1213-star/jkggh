@@ -4,6 +4,8 @@ import { DIFFICULTIES, GAME_TYPES, encodeGame, sanitizeGame } from './public/gam
 import { describeEmail, gmailConfigured, listEmails, readEmail, sendEmail } from './gmail.js';
 import { addItems, listAsText, removeItems, sellLinks, shopLinks } from './shopping.js';
 import { OFFER_ALLOWED, STATUSES, findCustomer, summarize, upsertCustomer } from './customers.js';
+import { getNews, getWeather, lookupWikipedia } from './knowledge.js';
+import { addMemory, forgetMemory } from './memories.js';
 import { FONTS, MODES, SECTION_TYPES, encodeSite, sanitizeSite } from './public/site-config.js';
 
 const timeZone = process.env.TZ || 'Europe/Berlin';
@@ -57,6 +59,128 @@ export const cloudTools = [
       const href = normalizeUrl(url);
       context.showLink(href, title || new URL(href).hostname);
       return { angezeigt: true };
+    }
+  },
+  {
+    name: 'memory_save',
+    description: 'Merkt sich dauerhaft etwas über den Nutzer (Name, Wohnort, Vorlieben, Familie, Hobbys, wichtige Termine) als kurzen Satz, z. B. "Wohnt in Köln". Niemals Passwörter, PINs oder Bankdaten.',
+    parameters: {
+      type: 'object',
+      properties: { fact: { type: 'string', description: 'Kurzer Satz in der dritten Person' } },
+      required: ['fact']
+    },
+    label: (a) => `Gemerkt: ${a.fact}`,
+    run: async ({ fact }, context) => {
+      const { list, added } = addMemory(context.getMemories(), fact);
+      context.setMemories(list);
+      return { gemerkt: added, bereitsBekannt: !added, anzahl: list.length };
+    }
+  },
+  {
+    name: 'memory_forget',
+    description: 'Vergisst eine gespeicherte Erinnerung über den Nutzer.',
+    parameters: {
+      type: 'object',
+      properties: { fact: { type: 'string', description: 'Die Erinnerung oder ein eindeutiges Stichwort daraus' } },
+      required: ['fact']
+    },
+    label: (a) => `Vergessen: ${a.fact}`,
+    run: async ({ fact }, context) => {
+      const { list, removed } = forgetMemory(context.getMemories(), fact);
+      context.setMemories(list);
+      return removed ? { vergessen: removed } : { nichtGefunden: true };
+    }
+  },
+  {
+    name: 'memory_list',
+    description: 'Zählt auf, was du dir über den Nutzer gemerkt hast, und zeigt es auf dem Bildschirm an.',
+    parameters: { type: 'object', properties: {} },
+    label: () => 'Gedächtnis angezeigt',
+    run: async (args, context) => {
+      const list = context.getMemories();
+      context.setMemories(list, { show: true });
+      return { erinnerungen: list.map((item) => item.text) };
+    }
+  },
+  {
+    name: 'get_weather',
+    description: 'Echtes aktuelles Wetter und Vorhersage für einen Ort (Temperatur, Wetterlage, Regenwahrscheinlichkeit, Wind) und zeigt eine Wetterkarte an.',
+    parameters: {
+      type: 'object',
+      properties: {
+        place: { type: 'string', description: 'Stadt, z. B. "Köln"' },
+        days: { type: 'integer', description: 'Vorhersagetage 1 bis 7, Standard 3' }
+      },
+      required: ['place']
+    },
+    label: (a) => `Wetter: ${a.place}`,
+    run: async ({ place, days }, context) => {
+      const weather = await getWeather(place, { days });
+      context.showWeather(weather);
+      return weather;
+    }
+  },
+  {
+    name: 'get_news',
+    description: 'Holt die aktuellen Schlagzeilen (tagesschau.de) und zeigt sie an.',
+    parameters: { type: 'object', properties: { limit: { type: 'integer', description: 'Anzahl 1 bis 10, Standard 6' } } },
+    label: () => 'Nachrichten abgerufen',
+    run: async ({ limit }, context) => {
+      const news = await getNews({ limit });
+      context.showNews(news);
+      return news;
+    }
+  },
+  {
+    name: 'wiki_lookup',
+    description: 'Schlägt eine Person, einen Ort, ein Ereignis oder einen Begriff in der deutschen Wikipedia nach und liefert eine Zusammenfassung.',
+    parameters: {
+      type: 'object',
+      properties: { query: { type: 'string', description: 'Suchbegriff, z. B. "Eiffelturm" oder "Albert Einstein"' } },
+      required: ['query']
+    },
+    label: (a) => `Wikipedia: ${a.query}`,
+    run: async ({ query }, context) => {
+      const article = await lookupWikipedia(query);
+      context.showLink(article.link, `Wikipedia: ${article.titel}`);
+      return article;
+    }
+  },
+  {
+    name: 'daily_briefing',
+    description: 'Tagesüberblick: Datum und Uhrzeit, Wetter am Wohnort, ungelesene E-Mails, offene Punkte der Einkaufsliste und die wichtigsten Nachrichten.',
+    parameters: {
+      type: 'object',
+      properties: { place: { type: 'string', description: 'Wohnort für das Wetter (aus dem Gedächtnis), falls bekannt' } }
+    },
+    label: () => 'Tagesüberblick',
+    run: async ({ place }, context) => {
+      const now = new Date();
+      const briefing = {
+        datum: now.toLocaleDateString('de-DE', { timeZone, weekday: 'long', day: 'numeric', month: 'long' }),
+        uhrzeit: now.toLocaleTimeString('de-DE', { timeZone, hour: '2-digit', minute: '2-digit' })
+      };
+      // Each part is optional: one failing source must not spoil the briefing.
+      const parts = await Promise.allSettled([
+        place ? getWeather(place, { days: 1 }) : Promise.reject(new Error('Kein Wohnort bekannt')),
+        gmailConfigured() ? listEmails({ unreadOnly: true, limit: 5 }) : Promise.reject(new Error('Gmail nicht eingerichtet')),
+        getNews({ limit: 3 })
+      ]);
+      const [weather, mail, news] = parts;
+      if (weather.status === 'fulfilled') {
+        briefing.wetter = weather.value;
+        context.showWeather(weather.value);
+      } else briefing.wetter = { nichtVerfuegbar: weather.reason.message };
+      briefing.emails = mail.status === 'fulfilled'
+        ? { ungelesen: mail.value.treffer, neueste: mail.value.emails.map((email) => `${email.von}: ${email.betreff}`) }
+        : { nichtVerfuegbar: mail.reason.message };
+      const open = context.getShoppingList().filter((item) => !item.done).map((item) => item.text);
+      briefing.einkaufsliste = { offen: open.length, artikel: open.slice(0, 8) };
+      if (news.status === 'fulfilled') {
+        briefing.nachrichten = news.value.meldungen.map((item) => item.titel);
+        context.showNews(news.value);
+      } else briefing.nachrichten = { nichtVerfuegbar: news.reason.message };
+      return briefing;
     }
   },
   {

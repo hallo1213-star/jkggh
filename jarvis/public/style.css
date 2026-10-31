@@ -575,6 +575,33 @@ body {
 .listing-buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
 .listing-buttons .ctrl { padding: 8px 12px; font-size: 14px; }
 
+/* --- Suggestions --- */
+.chips { display: flex; gap: 8px; min-width: 0; max-width: 100%; margin-top: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+/* Grid and flex children may shrink below their content width (keeps wide rows from widening the page). */
+.panel, .core { min-width: 0; }
+.chips::-webkit-scrollbar { display: none; }
+.chip-btn { flex: none; padding: 7px 12px; border: 1px solid var(--panel-edge); border-radius: 999px; background: rgba(56, 225, 255, 0.06); color: var(--cyan-soft); font-family: var(--font-body); font-size: 14px; font-weight: 600; white-space: nowrap; cursor: pointer; transition: background 0.2s, border-color 0.2s; }
+.chip-btn:hover:not(:disabled) { border-color: var(--cyan); background: rgba(56, 225, 255, 0.16); }
+.chip-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.history-divider { align-self: center; padding: 2px 12px; color: var(--muted); font-size: 12px; letter-spacing: 0.16em; text-transform: uppercase; border-bottom: 1px solid var(--panel-edge); }
+.msg.past { opacity: 0.6; }
+
+/* --- Weather & news cards --- */
+.info-card { padding: 14px; border: 1px solid var(--cyan); background: linear-gradient(135deg, rgba(56, 225, 255, 0.14), rgba(56, 225, 255, 0.02)); }
+.weather-now { display: flex; align-items: center; gap: 14px; }
+.weather-icon { font-size: 46px; line-height: 1; }
+.weather-temp { font-family: var(--font-display); font-size: 34px; color: var(--cyan-soft); line-height: 1; }
+.weather-desc { display: block; color: var(--text); font-size: 16px; }
+.weather-place { display: block; color: var(--muted); font-size: 13px; }
+.weather-days { display: grid; grid-template-columns: repeat(auto-fit, minmax(84px, 1fr)); gap: 8px; margin-top: 12px; }
+.weather-day { padding: 8px; border: 1px solid var(--panel-edge); background: rgba(2, 12, 20, 0.5); text-align: center; font-size: 14px; }
+.weather-day b { display: block; font-weight: 600; color: var(--muted); }
+.weather-day span { display: block; font-size: 24px; }
+.weather-source { display: block; margin-top: 8px; color: var(--muted); font-size: 11px; text-align: right; }
+.news-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.news-list a, .news-list span { display: block; padding: 8px 10px; border-left: 2px solid var(--cyan); background: rgba(2, 12, 20, 0.5); color: var(--text); text-decoration: none; font-size: 15px; line-height: 1.35; }
+.news-list a:hover { background: rgba(56, 225, 255, 0.12); }
+
 /* --- Login --- */
 .login-page { display: grid; place-items: center; min-height: 100vh; padding: 16px; }
 .login-card {

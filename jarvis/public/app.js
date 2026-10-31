@@ -51,7 +51,14 @@ const els = {
   customersClose: $('customers-close'),
   customersSummary: $('customers-summary'),
   customerList: $('customer-list'),
-  customersEmpty: $('customers-empty')
+  customersEmpty: $('customers-empty'),
+  memoryButton: $('memory-button'),
+  memoryModal: $('memory-modal'),
+  memoryList: $('memory-list'),
+  memoryEmpty: $('memory-empty'),
+  memoryClose: $('memory-close'),
+  historyClear: $('history-clear'),
+  chips: $('chips')
 };
 
 const state = {
@@ -124,6 +131,14 @@ function setControlsEnabled(enabled) {
   els.micToggle.disabled = !enabled;
   els.textInput.disabled = !enabled;
   els.send.disabled = !enabled;
+  for (const chip of els.chips.children) chip.disabled = !enabled;
+}
+
+// Sends typed (or suggested) text to Jarvis as if it was spoken.
+function sendText(text) {
+  if (!text || !state.connected) return;
+  stopPlayback();
+  state.ws.send(JSON.stringify({ type: 'text', text }));
 }
 
 // --- Transcript & log ------------------------------------------------------
@@ -364,6 +379,199 @@ function syncedList({ key, timeKey, updateType, clean, onChange }) {
     }
   };
 }
+
+// --- Memory & conversation history ---------------------------------------
+
+const memories = syncedList({
+  key: 'jarvis.memories',
+  timeKey: 'jarvis.memoriesUpdatedAt',
+  updateType: 'memories_update',
+  clean: (list) => list.filter((item) => typeof item?.text === 'string').slice(0, 60).map((item) => ({ text: item.text.slice(0, 200) })),
+  onChange: () => {
+    if (!els.memoryModal.hidden) renderMemories();
+  }
+});
+
+function renderMemories() {
+  const list = memories.load();
+  els.memoryList.replaceChildren(...list.map((item, index) => {
+    const row = document.createElement('li');
+    const text = document.createElement('label');
+    const span = document.createElement('span');
+    span.textContent = `🧠 ${item.text}`;
+    text.append(span);
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.className = 'icon-btn';
+    remove.textContent = '✕';
+    remove.setAttribute('aria-label', `„${item.text}“ vergessen`);
+    remove.addEventListener('click', () => memories.store(list.filter((_, i) => i !== index)));
+    row.append(text, remove);
+    return row;
+  }));
+  els.memoryEmpty.hidden = list.length > 0;
+}
+
+function showMemories() {
+  renderMemories();
+  els.memoryModal.hidden = false;
+}
+
+els.memoryButton.addEventListener('click', showMemories);
+els.memoryClose.addEventListener('click', () => {
+  els.memoryModal.hidden = true;
+});
+els.memoryModal.addEventListener('click', (event) => {
+  if (event.target === els.memoryModal) els.memoryModal.hidden = true;
+});
+
+// The last turns stay on this device so Jarvis can pick up the previous conversation.
+const HISTORY_KEY = 'jarvis.history';
+
+function loadHistory() {
+  try {
+    const list = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    return Array.isArray(list) ? list.filter((item) => (item?.role === 'user' || item?.role === 'assistant') && typeof item.content === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+function rememberTurn(role, content) {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify([...loadHistory(), { role, content: String(content).slice(0, 400), at: Date.now() }].slice(-40)));
+  } catch {
+    // storage unavailable; Jarvis just starts fresh next time
+  }
+}
+
+function restoreHistory() {
+  const recent = loadHistory().slice(-10);
+  if (!recent.length) return;
+  clearEmpty(els.transcript);
+  const divider = document.createElement('div');
+  divider.className = 'history-divider';
+  divider.textContent = 'Letztes Gespräch';
+  els.transcript.append(divider);
+  for (const turn of recent) {
+    addMessage(turn.role, turn.content);
+    els.transcript.lastElementChild.classList.add('past');
+  }
+}
+
+els.historyClear.addEventListener('click', () => {
+  if (!confirm('Gesprächsverlauf auf diesem Gerät löschen? Jarvis knüpft dann nicht mehr an das letzte Gespräch an.')) return;
+  try {
+    localStorage.removeItem(HISTORY_KEY);
+  } catch {
+    // nothing to remove
+  }
+  for (const node of els.transcript.querySelectorAll('.past, .history-divider')) node.remove();
+  els.historyClear.textContent = 'Verlauf gelöscht ✓';
+});
+
+// --- Weather & news cards ------------------------------------------------------
+
+function cardMessage(label, card) {
+  clearEmpty(els.transcript);
+  const item = document.createElement('div');
+  item.className = 'msg assistant';
+  const role = document.createElement('span');
+  role.className = 'msg-role';
+  role.textContent = label;
+  item.append(role, card);
+  els.transcript.append(item);
+  els.transcript.scrollTop = els.transcript.scrollHeight;
+}
+
+function addWeatherCard(weather) {
+  if (!weather?.jetzt) return;
+  const card = document.createElement('div');
+  card.className = 'info-card';
+  const now = document.createElement('div');
+  now.className = 'weather-now';
+  const icon = document.createElement('span');
+  icon.className = 'weather-icon';
+  icon.textContent = weather.jetzt.symbol || '🌡️';
+  const temp = document.createElement('span');
+  temp.className = 'weather-temp';
+  temp.textContent = weather.jetzt.temperatur === null ? '–' : `${weather.jetzt.temperatur}°`;
+  const text = document.createElement('div');
+  const desc = document.createElement('span');
+  desc.className = 'weather-desc';
+  desc.textContent = `${weather.jetzt.wetter}${weather.jetzt.gefuehlt !== null ? `, gefühlt ${weather.jetzt.gefuehlt}°` : ''}${weather.jetzt.windKmh !== null ? `, Wind ${weather.jetzt.windKmh} km/h` : ''}`;
+  const place = document.createElement('span');
+  place.className = 'weather-place';
+  place.textContent = `📍 ${weather.ort}`;
+  text.append(desc, place);
+  now.append(icon, temp, text);
+  card.append(now);
+  if (Array.isArray(weather.tage) && weather.tage.length > 1) {
+    const days = document.createElement('div');
+    days.className = 'weather-days';
+    for (const day of weather.tage) {
+      const box = document.createElement('div');
+      box.className = 'weather-day';
+      const name = document.createElement('b');
+      name.textContent = String(day.tag || '').slice(0, 2);
+      const symbol = document.createElement('span');
+      symbol.textContent = day.symbol || '🌡️';
+      const range = document.createElement('div');
+      range.textContent = `${day.max ?? '–'}° / ${day.min ?? '–'}°`;
+      const rain = document.createElement('div');
+      rain.textContent = day.regenWahrscheinlichkeit !== null && day.regenWahrscheinlichkeit !== undefined ? `💧 ${day.regenWahrscheinlichkeit} %` : '';
+      box.append(name, symbol, range, rain);
+      days.append(box);
+    }
+    card.append(days);
+  }
+  const source = document.createElement('span');
+  source.className = 'weather-source';
+  source.textContent = 'Wetterdaten: Open-Meteo';
+  card.append(source);
+  cardMessage('Wetter', card);
+}
+
+function addNewsCard(news) {
+  if (!Array.isArray(news?.meldungen) || !news.meldungen.length) return;
+  const card = document.createElement('div');
+  card.className = 'info-card';
+  const title = document.createElement('span');
+  title.className = 'shop-card-title';
+  title.textContent = `📰 Nachrichten (${news.quelle})`;
+  const list = document.createElement('ul');
+  list.className = 'news-list';
+  for (const item of news.meldungen) {
+    const row = document.createElement('li');
+    let entry;
+    if (/^https:\/\//.test(item.link || '')) {
+      entry = document.createElement('a');
+      entry.href = item.link;
+      entry.target = '_blank';
+      entry.rel = 'noopener noreferrer';
+    } else {
+      entry = document.createElement('span');
+    }
+    entry.textContent = item.titel;
+    row.append(entry);
+    list.append(row);
+  }
+  card.append(title, list);
+  cardMessage('Nachrichten', card);
+}
+
+// --- Suggestions ------------------------------------------------------------------
+
+const SUGGESTIONS = ['Guten Morgen!', 'Wie wird das Wetter?', 'Was gibt es Neues?', 'Hab ich neue Mails?', 'Mach mir ein Spiel', 'Was weißt du über mich?', 'Zeig meine Einkaufsliste', 'Erstelle eine Website'];
+els.chips.replaceChildren(...SUGGESTIONS.map((text) => {
+  const chip = document.createElement('button');
+  chip.type = 'button';
+  chip.className = 'chip-btn';
+  chip.textContent = text;
+  chip.disabled = true;
+  chip.addEventListener('click', () => sendText(text));
+  return chip;
+}));
 
 // --- Customers (website business) ----------------------------------------
 
@@ -734,7 +942,7 @@ function connect() {
   setMode('connecting');
   els.reconnect.hidden = true;
 
-  ws.onopen = () => ws.send(JSON.stringify({ type: 'start', sampleRate: state.audio.sampleRate, shoppingList: shopping.load(), shoppingListUpdatedAt: shopping.loadTime(), customers: customers.load(), customersUpdatedAt: customers.loadTime() }));
+  ws.onopen = () => ws.send(JSON.stringify({ type: 'start', sampleRate: state.audio.sampleRate, shoppingList: shopping.load(), shoppingListUpdatedAt: shopping.loadTime(), customers: customers.load(), customersUpdatedAt: customers.loadTime(), memories: memories.load(), memoriesUpdatedAt: memories.loadTime(), history: loadHistory().slice(-16) }));
   ws.onmessage = ({ data }) => {
     if (typeof data !== 'string') {
       playChunk(data);
@@ -770,6 +978,17 @@ function handleMessage(message) {
       break;
     case 'transcript':
       addMessage(message.role === 'user' ? 'user' : 'assistant', message.content);
+      rememberTurn(message.role === 'user' ? 'user' : 'assistant', message.content);
+      break;
+    case 'weather':
+      addWeatherCard(message.weather);
+      break;
+    case 'news':
+      addNewsCard(message.news);
+      break;
+    case 'memories':
+      memories.store(message.items, { sync: false, updatedAt: message.updatedAt });
+      if (message.show) showMemories();
       break;
     case 'user_speaking':
       stopPlayback();
@@ -952,8 +1171,7 @@ els.composer.addEventListener('submit', (event) => {
   event.preventDefault();
   const text = els.textInput.value.trim();
   if (!text || !state.connected) return;
-  stopPlayback();
-  state.ws.send(JSON.stringify({ type: 'text', text }));
+  sendText(text);
   els.textInput.value = '';
 });
 
@@ -1093,5 +1311,6 @@ function draw() {
 }
 
 setMode('offline');
+restoreHistory();
 checkSession();
 requestAnimationFrame(draw);
