@@ -1,6 +1,7 @@
 // Functions that run in the cloud and work even when the laptop is off.
 import { normalizeUrl, searchUrls } from './laptop/tools.js';
 import { DIFFICULTIES, GAME_TYPES, encodeGame, sanitizeGame } from './public/game-config.js';
+import { describeEmail, listEmails, readEmail, sendEmail } from './gmail.js';
 
 const timeZone = process.env.TZ || 'Europe/Berlin';
 
@@ -102,6 +103,49 @@ export const cloudTools = [
       context.showGame({ title: game.title, type: game.type, emoji: game.player, url });
       return { erstellt: true, titel: game.title, typ: game.type, fragen: game.questions?.length, hinweis: 'Der Nutzer sieht jetzt eine Spielkarte mit Spielen-Knopf und kann das Spiel auch mit Freunden teilen.' };
     }
+  },
+  {
+    name: 'email_list',
+    description: 'Listet E-Mails aus dem Gmail-Postfach des Nutzers (neueste zuerst) mit Absender, Betreff, Datum und ungelesen-Status. Für gezielte Suchen query mit Gmail-Suchsyntax verwenden, z. B. "from:amazon", "newer_than:2d", "subject:rechnung", "has:attachment".',
+    parameters: {
+      type: 'object',
+      properties: {
+        folder: { type: 'string', enum: ['inbox', 'all', 'sent'], description: 'inbox = Posteingang (Standard), all = alle Mails, sent = gesendete' },
+        unread_only: { type: 'boolean', description: 'Nur ungelesene' },
+        query: { type: 'string', description: 'Optionale Gmail-Suche' },
+        limit: { type: 'integer', description: 'Anzahl (1 bis 15, Standard 8)' }
+      }
+    },
+    label: (a) => `E-Mails ${a.query ? `suchen: ${a.query}` : a.unread_only ? 'ungelesene abrufen' : 'abrufen'}`,
+    run: async ({ folder, unread_only: unreadOnly, query, limit }) => listEmails({ folder, unreadOnly, query, limit })
+  },
+  {
+    name: 'email_read',
+    description: 'Liest eine E-Mail vollständig (Absender, Empfänger, Betreff, Text, Anhangnamen). Die ID stammt aus email_list. Die Mail bleibt dabei ungelesen markiert.',
+    parameters: {
+      type: 'object',
+      properties: { id: { type: 'string', description: 'ID aus email_list, z. B. "inbox:1234"' } },
+      required: ['id']
+    },
+    label: () => 'E-Mail gelesen',
+    run: async ({ id }) => readEmail({ id })
+  },
+  {
+    name: 'email_send',
+    description: 'Sendet eine E-Mail vom Gmail-Konto des Nutzers oder antwortet auf eine E-Mail (reply_to_id aus email_list). Nur senden, wenn der Nutzer es ausdrücklich möchte. Der Nutzer sieht Empfänger, Betreff und Text und muss auf dem Bildschirm bestätigen.',
+    parameters: {
+      type: 'object',
+      properties: {
+        to: { type: 'string', description: 'Empfänger-Adresse(n), mehrere mit Komma getrennt' },
+        subject: { type: 'string', description: 'Betreff (bei Antworten optional)' },
+        body: { type: 'string', description: 'Text der E-Mail' },
+        reply_to_id: { type: 'string', description: 'Optional: ID der E-Mail, auf die geantwortet wird' }
+      },
+      required: ['to', 'body']
+    },
+    label: (a) => `E-Mail senden an ${a.to}`,
+    confirm: async ({ to, subject, body, reply_to_id: replyToId }) => describeEmail({ to, subject, body, replyToId }),
+    run: async ({ to, subject, body, reply_to_id: replyToId }) => sendEmail({ to, subject, body, replyToId })
   },
   {
     name: 'set_timer',

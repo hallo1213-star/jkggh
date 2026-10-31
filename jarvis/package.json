@@ -12,6 +12,9 @@
   },
   "dependencies": {
     "@deepgram/sdk": "^5.17.0",
+    "imapflow": "2.5.2",
+    "mailparser": "3.9.47",
+    "nodemailer": "10.1.7",
     "ws": "^8.20.0"
   }
 }

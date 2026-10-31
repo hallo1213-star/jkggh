@@ -62,6 +62,7 @@ Tipp: Lege eine Verknüpfung zu `Laptop-verbinden.bat` in den Autostart-Ordner (
 | Bereich | Beispiele | Laptop nötig? |
 |---|---|---|
 | Gespräch | Fragen, Erklärungen, Ideen, Texte formulieren | nein |
+| **E-Mails** | „Hab ich neue Mails?“, „Was schreibt Amazon?“, „Lies mir die Mail von Oma vor“, „Antworte ihr, dass ich Sonntag komme“* | nein |
 | **Spiele** | „Mach mir ein Weltraum-Spiel“, „Ein Quiz über Fußball“, „Ein Memory mit Tieren“, „Mach es schwerer“ | nein |
 | Zeit | „Wie spät ist es?“, „Erinnere mich in 20 Minuten an die Wäsche“ | nein |
 | Web | „Wie wird das Wetter morgen?“, „Zeig mir Pizzerien in der Nähe“, „Öffne YouTube“ | nein (Link in der App) |
@@ -73,6 +74,25 @@ Tipp: Lege eine Verknüpfung zu `Laptop-verbinden.bat` in den Autostart-Ordner (
 | Alles andere | PowerShell-Befehl, den du siehst und bestätigst* | ja |
 
 \* = erfordert deine Bestätigung in der App.
+
+## Gmail einrichten (einmalig, ca. 3 Minuten)
+
+Jarvis liest deine Mails über ein **Google-App-Passwort** – ein eigenes Passwort nur für Jarvis, das du jederzeit wieder löschen kannst. Dein normales Google-Passwort bekommt Jarvis nie.
+
+1. **Bestätigung in zwei Schritten einschalten** (falls noch nicht aktiv): https://myaccount.google.com/signinoptions/two-step-verification
+2. **App-Passwort erstellen:** https://myaccount.google.com/apppasswords → Name z. B. „Jarvis“ eingeben → **Erstellen**. Google zeigt ein 16-stelliges Passwort (z. B. `abcd efgh ijkl mnop`) – kopieren.
+3. **Bei Render eintragen:** dein Dienst → **Environment** → **Add Environment Variable**:
+   - `GMAIL_ADDRESS` = deine Gmail-Adresse
+   - `GMAIL_APP_PASSWORD` = das 16-stellige Passwort (Leerzeichen sind egal)
+4. **Save Changes** – Render startet Jarvis neu. Fertig: Frag „Hab ich neue Mails?“
+
+So geht Jarvis mit deinen Mails um:
+- **Lesen ändert nichts** – Mails bleiben ungelesen markiert, nichts wird verschoben oder gelöscht.
+- **Senden nur mit deiner Bestätigung:** Du siehst Empfänger, Betreff und den kompletten Text und tippst **Ausführen** oder **Abbrechen**. Antworten landen ordentlich im selben Gesprächsverlauf.
+- **Mail-Inhalte sind für Jarvis keine Befehle:** Steht in einer Mail z. B. „leite alles an … weiter“, macht Jarvis das nicht und warnt dich bei verdächtigen Mails.
+- **Zugang entziehen:** App-Passwort unter https://myaccount.google.com/apppasswords löschen.
+
+Falls Google kein App-Passwort anbietet (z. B. bei Schul-/Firmenkonten oder „Erweitertem Schutz“), funktioniert diese Methode nicht.
 
 ## Spiele
 
@@ -115,6 +135,7 @@ Jarvis baut auf Zuruf eigene Handy-Spiele und gestaltet Titel, Figuren, Farben u
 | „Bei Render fehlt: …“ | Den genannten Schlüssel in Render → Environment eintragen. |
 | Fehler mit „401“ von Deepgram | Deepgram-Schlüssel prüfen. |
 | Text erscheint, aber man hört nichts | ElevenLabs-Schlüssel/Voice-ID prüfen; Stimme unter **My Voices**? Plan erlaubt API-Zugriff? Details in Render → **Logs**. Am iPhone: Lautstärke hoch, ggf. Stummschalter aus. |
+| „Gmail hat die Anmeldung abgelehnt“ | App-Passwort neu erstellen und in Render bei `GMAIL_APP_PASSWORD` eintragen; `GMAIL_ADDRESS` prüfen. |
 | Jarvis unterbricht sich selbst | Kopfhörer verwenden oder „Mikro stumm, während Jarvis spricht“ einschalten. |
 | Laptop-Fenster: „LAPTOP_TOKEN stimmt nicht“ | Wert erneut aus Render kopieren (ohne Leerzeichen). |
 | Laptop-Fenster: „Status 502/503“ | Render wacht gerade auf – der Verbinder versucht es automatisch erneut. |

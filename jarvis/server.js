@@ -37,7 +37,7 @@ const contentTypes = {
   '.webmanifest': 'application/manifest+json; charset=utf-8'
 };
 const functionDefinitions = [
-  ...cloudTools.map(({ name, description, parameters }) => ({ name, description, parameters })),
+  ...cloudTools.map(({ name, description, parameters, confirm }) => ({ name, description, parameters, ...(confirm ? { defer_until_eot: true } : {}) })),
   ...laptopFunctions
 ];
 
@@ -306,6 +306,10 @@ browserWss.on('connection', (browser, request) => {
     const cloudTool = findCloudTool(name);
     if (cloudTool) {
       try {
+        const request = cloudTool.confirm ? await cloudTool.confirm(args) : null;
+        if (request && !(await session.askConfirmation(id, request))) {
+          return { state: 'denied', result: { ok: false, abgelehnt: true, hinweis: 'Der Nutzer hat die Aktion nicht bestätigt. Sie wurde nicht ausgeführt.' } };
+        }
         return { state: 'done', result: { ok: true, ergebnis: await cloudTool.run(args, context) } };
       } catch (error) {
         return { state: 'failed', result: { ok: false, fehler: error.message } };
