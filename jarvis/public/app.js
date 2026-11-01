@@ -128,6 +128,7 @@ els.halfDuplex.addEventListener('change', () => saveSetting('jarvis.halfDuplex',
 
 function setMode(mode) {
   state.mode = mode;
+  document.body.dataset.mode = mode;
   const shown = state.micMuted && (mode === 'listening') ? 'muted' : mode;
   els.statusLine.textContent = statusText[shown] || mode;
   const chipState = mode === 'error' ? 'error' : mode === 'offline' ? '' : mode === 'connecting' || mode === 'thinking' ? 'busy' : 'online';
@@ -1179,6 +1180,12 @@ function toast(message, kind = '') {
 
 initMoney({ toast });
 initCall({ toast });
+// Design: bright "Orb" look (default) or the dark Iron-Man HUD.
+document.getElementById('theme-button').addEventListener('click', () => {
+  const orb = document.body.classList.toggle('theme-orb');
+  try { localStorage.setItem('jarvis.theme', orb ? 'orb' : 'hud'); } catch { /* ignore */ }
+  toast(orb ? 'Design: Orb (hell)' : 'Design: Iron-Man (dunkel)');
+});
 initTasks({ toast });
 document.getElementById('image-input').addEventListener('change', (event) => {
   sendImage(event.target.files[0]).catch((error) => toast(error.message, 'error'));

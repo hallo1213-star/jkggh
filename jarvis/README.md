@@ -201,6 +201,10 @@ Solange Impressum oder Links fehlen, ist die Seite als **Entwurf** markiert und 
 - Die Widerrufsbelehrung auf der Seite ist ein Muster. Lass sie am besten mit einem Rechtstext-Generator prüfen.
 - Gumroad wickelt Zahlung und Umsatzsteuer ab.
 
+## Design: Orb oder Iron-Man 🎨
+
+Standard ist jetzt das helle **Orb-Design**: schlicht, eine leuchtende orange Kugel, die beim Zuhören, Denken und Sprechen pulsiert, deine Nachrichten als orange Sprechblasen und Jarvis' Antworten als ruhiger Text. Mit dem **Paletten-Knopf** oben rechts wechselst du jederzeit zurück zum dunklen **Iron-Man-Design**. Deine Wahl wird gespeichert.
+
 ## Film-Modus: „Alle Systeme online, Master“ 🎬
 
 So wie der JARVIS aus den Filmen:
