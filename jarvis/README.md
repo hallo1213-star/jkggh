@@ -192,7 +192,7 @@ Sag **„Jarvis, schau mal“** oder tippe auf das Auge neben der Büroklammer. 
 - *„Wie sieht mein Outfit aus?“* (dann nimmt er die Frontkamera)
 - *„Wechsel die Kamera“*, *„Kamera aus“*
 
-Während die Kamera offen ist, kannst du einfach weiterfragen. Du kannst auch tippen und auf den runden Auslöser drücken. Jarvis schaut nur, wenn du fragst: Es wird jeweils ein einzelnes Bild analysiert und nicht gespeichert. Menschen beschreibt er nur allgemein, er erkennt niemanden. Die Kamera geht automatisch aus, wenn du die App verlässt. Beim ersten Mal fragt der Browser nach der Erlaubnis für die Kamera. Braucht den KI-Schlüssel (`GROQ_API_KEY`).
+Während die Kamera offen ist, kannst du einfach weiterfragen. Du kannst auch tippen und auf den runden Auslöser drücken. Jarvis schaut nur, wenn du fragst: Es wird jeweils ein einzelnes Bild analysiert und nicht gespeichert. Menschen beschreibt er nur allgemein, er erkennt niemanden. Die Kamera geht automatisch aus, wenn du die App verlässt. Beim ersten Mal fragt der Browser nach der Erlaubnis für die Kamera. Braucht den KI-Schlüssel (`GROQ_API_KEY`). Jarvis sucht sich das Bild-Modell selbst. Groq benennt seine Modelle öfter um, deshalb probiert er bei Bedarf aus, welches Bilder versteht. Wenn du willst, kannst du ein bestimmtes Modell als `GROQ_VISION_MODEL` bei Render festlegen. Hast du zusätzlich einen anderen Schlüssel eingetragen (z. B. `GEMINI_API_KEY`), nimmt Jarvis notfalls diesen.
 
 ## Alltagshelfer 🧰
 

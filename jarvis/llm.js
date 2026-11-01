@@ -169,34 +169,93 @@ export async function generateJson(options) {
 // --- Understanding images (photos and screenshots the user sends) ----------------
 
 const VISION_PREFERRED = {
-  groq: ['meta-llama/llama-4-scout-17b-16e-instruct', 'meta-llama/llama-4-maverick-17b-128e-instruct'],
-  openrouter: ['meta-llama/llama-4-scout:free', 'meta-llama/llama-4-maverick:free', 'google/gemma-3-27b-it:free', 'qwen/qwen2.5-vl-72b-instruct:free']
+  groq: ['qwen/qwen3.8-27b', 'qwen/qwen3.6-27b', 'meta-llama/llama-4-maverick-17b-128e-instruct', 'meta-llama/llama-4-scout-17b-16e-instruct'],
+  openrouter: ['qwen/qwen3.6-27b:free', 'google/gemma-3-27b-it:free', 'meta-llama/llama-4-maverick:free', 'meta-llama/llama-4-scout:free', 'qwen/qwen2.5-vl-72b-instruct:free']
 };
+// Names that usually mean "understands pictures"; providers rename models often.
+const VISION_HINT = /qwen-?3\.\d|qwen.*vl|-vl\b|vl-|vision|llama-4|gemma-?[34]|pixtral|llava|kimi-k2\.[5-9]|omni|multimodal|image/i;
 const visionChoice = {};
+const noVision = new Set();
 
-async function pickVisionModel(provider, fetchImpl) {
-  const configured = process.env[`${provider.toUpperCase()}_VISION_MODEL`]?.trim();
-  if (configured) return configured;
-  if (visionChoice[provider]) return visionChoice[provider];
+// Candidates in order: known vision models, likely ones by name, then the
+// remaining chat models (Groq lists no "vision" flag, so we simply try).
+async function visionCandidates(provider, fetchImpl) {
   const config = OPENAI_COMPATIBLE[provider];
   const response = await fetchImpl(`${config.base}/models`, { headers: { authorization: `Bearer ${config.key()}` }, signal: AbortSignal.timeout(20_000) });
   const data = await readJson(response, config.name);
-  const ids = new Set((data.data || []).filter((m) => m?.active !== false).map((m) => m.id));
-  const model = VISION_PREFERRED[provider].find((id) => ids.has(id))
-    || [...ids].find((id) => /llama-4|vision|-vl|gemma-3/i.test(id) && (provider !== 'openrouter' || id.endsWith(':free')));
-  if (!model) throw new Error(`${config.name}: Für deinen Schlüssel ist gerade kein Bild-Modell freigeschaltet.`);
-  visionChoice[provider] = model;
-  return model;
+  const ids = (data.data || [])
+    .filter((m) => typeof m?.id === 'string' && m.active !== false && !/whisper|guard|tts|playai|orpheus|distil|compound|safeguard|embed/i.test(m.id))
+    .filter((m) => provider !== 'openrouter' || m.id.endsWith(':free'))
+    .map((m) => m.id)
+    .filter((id) => !noVision.has(`${provider}:${id}`));
+  const set = new Set(ids);
+  const ordered = [...VISION_PREFERRED[provider].filter((id) => set.has(id)), ...ids.filter((id) => VISION_HINT.test(id)), ...(provider === 'groq' ? ids : [])];
+  return [...new Set(ordered)].slice(0, 8);
+}
+
+const stripThinking = (text) => String(text || '').replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+
+async function openaiVision(provider, system, ask, dataUrl, fetchImpl) {
+  const config = OPENAI_COMPATIBLE[provider];
+  const configured = process.env[`${provider.toUpperCase()}_VISION_MODEL`]?.trim();
+  const candidates = configured ? [configured] : visionChoice[provider] ? [visionChoice[provider]] : await visionCandidates(provider, fetchImpl);
+  let lastError = null;
+  for (const model of candidates) {
+    const response = await fetchImpl(`${config.base}/chat/completions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${config.key()}` },
+      body: JSON.stringify({ model, max_tokens: 1500, messages: [{ role: 'system', content: system }, { role: 'user', content: [{ type: 'text', text: ask }, { type: 'image_url', image_url: { url: dataUrl } }] }] }),
+      signal: AbortSignal.timeout(TIMEOUT_MS)
+    });
+    if (response.status === 429 || response.status === 401 || response.status === 403) await readJson(response, config.name); // throws: limit / key
+    if (!response.ok) {
+      // This model cannot see pictures (or is gone): remember and try the next.
+      const data = await response.json().catch(() => ({}));
+      lastError = data?.error?.message || `HTTP ${response.status}`;
+      noVision.add(`${provider}:${model}`);
+      if (visionChoice[provider] === model) delete visionChoice[provider];
+      continue;
+    }
+    const data = await response.json();
+    const answer = stripThinking(data.choices?.[0]?.message?.content);
+    if (!answer) throw new Error('Die Bildanalyse hat keine Antwort geliefert.');
+    if (visionChoice[provider] !== model) console.log(`Bildanalyse: nutze ${config.name}-Modell ${model}`);
+    visionChoice[provider] = model;
+    return answer;
+  }
+  throw new Error(`${config.name}: Für deinen Schlüssel ist gerade kein Bild-Modell freigeschaltet${lastError ? ` (${lastError.slice(0, 120)})` : ''}.`);
 }
 
 export async function describeImage({ dataUrl, question, fetchImpl = fetch }) {
   const match = /^data:(image\/(?:jpeg|png|webp|gif));base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl || ''));
   if (!match) throw new Error('Das Bild konnte nicht gelesen werden (nur JPG, PNG, WebP).');
   if (match[2].length > 6_000_000) throw new Error('Das Bild ist zu groß.');
-  const provider = llmProvider();
-  if (!provider) throw new Error(MISSING_KEY);
+  const providers = visionProviders();
+  if (!providers.length) throw new Error(MISSING_KEY);
   const system = 'Du bist die Bildanalyse von Jarvis. Antworte auf Deutsch, klar und gut verständlich. Beschreibe, was zu sehen ist: Objekte und wo sie sich befinden, die Szene, Farben, Stimmung, und lies sichtbaren Text vor. Bei Screenshots mit Fehlermeldungen: Erkläre den Fehler und den wahrscheinlichsten Lösungsweg in einfachen Schritten. Identifiziere keine echten Personen anhand ihres Gesichts – beschreibe Menschen nur allgemein. Erfinde nichts, was nicht zu sehen ist.';
   const ask = String(question || '').trim().slice(0, 500) || 'Beschreibe mir alles, was du auf diesem Bild erkennst.';
+  const errors = [];
+  for (const provider of providers) {
+    try {
+      return await visionWith(provider, { system, ask, match, dataUrl, fetchImpl });
+    } catch (error) {
+      // A rate limit or missing vision model at one provider: try the next key, if any.
+      errors.push(error.message);
+    }
+  }
+  throw new Error(errors.join(' · '));
+}
+
+// Every configured provider, the main one first (Claude, Gemini and most
+// Groq/OpenRouter accounts can read pictures).
+function visionProviders() {
+  const main = llmProvider();
+  const all = [['claude', 'ANTHROPIC_API_KEY'], ['groq', 'GROQ_API_KEY'], ['gemini', 'GEMINI_API_KEY'], ['openrouter', 'OPENROUTER_API_KEY']]
+    .filter(([, key]) => process.env[key]?.trim()).map(([name]) => name);
+  return main ? [main, ...all.filter((p) => p !== main)] : all;
+}
+
+async function visionWith(provider, { system, ask, match, dataUrl, fetchImpl }) {
   if (provider === 'claude') {
     const response = await fetchImpl('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -217,18 +276,7 @@ export async function describeImage({ dataUrl, question, fetchImpl = fetch }) {
     const data = await readJson(response, 'Gemini');
     return (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('').trim();
   }
-  const config = OPENAI_COMPATIBLE[provider];
-  const model = await pickVisionModel(provider, fetchImpl);
-  const response = await fetchImpl(`${config.base}/chat/completions`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: `Bearer ${config.key()}` },
-    body: JSON.stringify({ model, max_tokens: 1500, messages: [{ role: 'system', content: system }, { role: 'user', content: [{ type: 'text', text: ask }, { type: 'image_url', image_url: { url: dataUrl } }] }] }),
-    signal: AbortSignal.timeout(TIMEOUT_MS)
-  });
-  const data = await readJson(response, config.name);
-  const answer = String(data.choices?.[0]?.message?.content || '').trim();
-  if (!answer) throw new Error('Die Bildanalyse hat keine Antwort geliefert.');
-  return answer;
+  return openaiVision(provider, system, ask, dataUrl, fetchImpl);
 }
 
 // --- Conversations with tools (Telegram assistant) ------------------------------
