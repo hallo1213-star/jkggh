@@ -1,0 +1,35 @@
+process.env.TELEGRAM_BOT_TOKEN = '123:ABC'; process.env.TELEGRAM_CHAT_ID = '987654321';
+const { sendVoiceNote, synthesize, voiceMessagesEnabled } = await import('../../voice-message.js');
+const { spokenNotice } = await import('../../mail-watch.js');
+const assert = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) process.exitCode = 1; };
+const requests = [];
+const fakeClient = { speak: { v1: { audio: { generate: async (req) => { requests.push(req); return { arrayBuffer: async () => new Uint8Array([0x4f, 0x67, 0x67, 0x53, 1, 2, 3]).buffer }; } } } } };
+const audio = await synthesize('Hallo Welt', { client: fakeClient });
+assert(requests[0].encoding === 'opus' && requests[0].container === 'ogg' && requests[0].model === 'aura-2-julius-de' && requests[0].text === 'Hallo Welt', 'Deepgram request: Opus in OGG, built-in voice');
+assert(audio[0] === 0x4f && audio.length === 7, 'audio bytes returned');
+process.env.DEEPGRAM_VOICE = 'aura-2-fabian-de';
+await synthesize('x', { client: fakeClient });
+assert(requests[1].model === 'aura-2-fabian-de', 'DEEPGRAM_VOICE respected');
+delete process.env.DEEPGRAM_VOICE;
+process.env.ELEVENLABS_VOICE_ID = 'robert'; process.env.ELEVENLABS_API_KEY = 'k';
+await synthesize('x', { client: fakeClient });
+assert(requests[2].model === 'aura-2-julius-de', 'ElevenLabs settings are ignored for voice messages (always standard voice)');
+const posted = [];
+const fakeFetch = async (url, init) => {
+  const entry = { url };
+  if (init.body instanceof FormData) { entry.chat = init.body.get('chat_id'); entry.caption = init.body.get('caption'); const v = init.body.get('voice'); entry.voice = { name: v.name, type: v.type, size: v.size }; }
+  else entry.json = JSON.parse(init.body);
+  posted.push(entry);
+  return { ok: true, status: 200, json: async () => ({ ok: true, result: {} }) };
+};
+const r = await sendVoiceNote('Erinnerung: Pizza aus dem Ofen.', '⏰ Erinnerung: Pizza aus dem Ofen', { client: fakeClient, fetchImpl: fakeFetch });
+const v = posted[0];
+assert(v.url === 'https://api.telegram.org/bot123:ABC/sendVoice' && v.chat === '987654321' && v.voice.name === 'jarvis.ogg' && v.voice.type === 'audio/ogg' && v.voice.size === 7, 'sendVoice multipart: own chat, OGG file');
+assert(v.caption === '⏰ Erinnerung: Pizza aus dem Ofen' && r.sprachnachricht === true, 'caption under the voice message');
+const broken = { speak: { v1: { audio: { generate: async () => { throw new Error('Deepgram down'); } } } } };
+const fb = await sendVoiceNote('Hallo', 'Hallo (Text)', { client: broken, fetchImpl: fakeFetch, log: { warn() {} } });
+assert(posted[1].url.endsWith('/sendMessage') && posted[1].json.text === 'Hallo (Text)' && fb.sprachnachricht === false, 'TTS failure → falls back to a text message');
+assert(voiceMessagesEnabled(), 'voice messages on by default');
+process.env.TELEGRAM_VOICE = 'false'; assert(!voiceMessagesEnabled(), 'TELEGRAM_VOICE=false turns them off'); delete process.env.TELEGRAM_VOICE;
+assert(spokenNotice({ von: 'DHL <noreply@dhl.de>', vonAdresse: 'noreply@dhl.de', betreff: 'Ihr Paket kommt heute' }, 'Paket/Bestellung') === 'Hey, Neuigkeiten zu deiner Bestellung: Ihr Paket kommt heute. Von DHL.', 'spoken parcel notice (no e-mail address read out)');
+assert(spokenNotice({ von: '"Oma Inge" <oma@example.de>', vonAdresse: 'oma@example.de', betreff: 'Kuchen?' }, 'wichtiger Absender') === 'Du hast eine neue Nachricht von Oma Inge: Kuchen?', 'spoken VIP notice');
