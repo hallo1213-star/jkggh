@@ -40,6 +40,13 @@ Diese Datei hält fest, was analysiert, gebaut und getestet wurde und was noch o
   - Status aller Dienste und Modelle.
   - Schlüssel werden bewusst nur bei Render eingetragen.
 
+## Erledigt: Jarvis-Augen + Webcams auf der Erde
+
+- [x] **Jarvis-Augen** (`public/camera.js`, Werkzeug `camera_look`): Vollbild-Kamera mit HUD und Scan-Effekt. Auf Sprachbefehl fordert der Server ein Einzelbild an (`camera`/`camera_frame` über die WebSocket-Verbindung, Zeitlimit 30 s). Das Bild wird analysiert (`describeImage`), nicht gespeichert, und die Antwort kommt direkt als Werkzeug-Ergebnis. Dazu Front/Rück-Wechsel, Auslöser mit Frage, Schließen beim Verlassen der App. Personen werden nie identifiziert.
+- [x] **Webcams auf der 3D-Erde** (`webcams.js` `nearbyWebcams`, Globus-Aktion `webcams`): Kamera-Symbole im Umkreis, Liste mit Vorschau, Großansicht mit Aktualisierung jede Minute. Quellen: Autobahn GmbH (Index aller Autobahnen, 6 h zwischengespeichert) und optional Windy (`WINDY_WEBCAMS_KEY`).
+- Tests: Unit-Test `webcams-near` 7/7. Browser-Test mit simulierter Kamera (Chromium-Testkamera) und 3D-Erde: Sprach-Schauen, Antwort im Bild, Kamera-Wechsel, Schließen (Kamera wirklich aus), Auslöser-Knopf, Webcams Hamburg mit Liste und Großansicht, ohne Fehler. Nicht getestet: echte Handykamera, echte Autobahn- und Windy-Daten.
+- Bewusst nicht: fremde/ungesicherte Kameras, Personenerkennung. Eigene Überwachungskameras sind möglich (über den Laptop-Verbinder), aber noch nicht gebaut.
+
 ## Erledigt: Routenplaner „pünktlich da sein“
 
 - [x] `route.js`, Werkzeug `route_plan`, Karte in `public/cards.js`.
@@ -121,6 +128,7 @@ Diese Datei hält fest, was analysiert, gebaut und getestet wurde und was noch o
 | `LAPTOP_TOKEN` | optional | Laptop-Verbinder |
 | `TWILIO_*` | optional, kostenpflichtig | echte Anrufe |
 | `GUMROAD_ACCESS_TOKEN`, `CESIUM_ION_TOKEN`, `ELEVENLABS_*` | optional | Verkaufszahlen, schärfere Erde, andere Stimme |
+| `WINDY_WEBCAMS_KEY` | optional, kostenlos | weltweite Webcams auf der 3D-Erde |
 
 ## Testergebnisse (Memory Palace + Studio)
 

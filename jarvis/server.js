@@ -855,6 +855,9 @@ browserWss.on('connection', (browser, request) => {
   let keepAlive = null;
   let queue = Promise.resolve();
   const confirmations = new Map();
+  // "Jarvis-Augen": frames the device sends back on request (never stored).
+  const cameraRequests = new Map();
+  let cameraRequestId = 0;
   const cancelled = new Set();
   const timers = new Set();
 
@@ -894,6 +897,22 @@ browserWss.on('connection', (browser, request) => {
   toBrowser({ type: 'laptop', connected: laptopConnected() });
 
   const context = {
+    captureCamera({ question = '', facing } = {}) {
+      return new Promise((resolve, reject) => {
+        const id = `cam${(cameraRequestId += 1)}`;
+        const timer = setTimeout(() => {
+          cameraRequests.delete(id);
+          reject(new Error('Die Kamera hat nicht geantwortet. Ist sie erlaubt? (Browser-Einstellungen → Kamera für Jarvis zulassen)'));
+        }, 30_000);
+        cameraRequests.set(id, (reply) => {
+          clearTimeout(timer);
+          cameraRequests.delete(id);
+          if (reply.error) reject(new Error(String(reply.error).slice(0, 200)));
+          else resolve(reply.image);
+        });
+        toBrowser({ type: 'camera', action: 'capture', id, question: String(question).slice(0, 200), facing });
+      });
+    },
     schedule(ms, message) {
       // With Telegram the reminder also arrives when the app is closed by then.
       if (telegramConfigured()) {
@@ -1192,6 +1211,7 @@ browserWss.on('connection', (browser, request) => {
       agentOpen = false;
       clearInterval(keepAlive);
       for (const finish of confirmations.values()) finish(false);
+    for (const finish of cameraRequests.values()) finish({ error: 'Die App wurde geschlossen.' });
       toBrowser({ type: 'closed', code: event?.code, reason: event?.reason || '' });
     });
     current.on('error', (error) => {
@@ -1270,6 +1290,8 @@ browserWss.on('connection', (browser, request) => {
         .catch((error) => toBrowser({ type: 'globe', action: 'error', message: `Ort nicht erkannt: ${error.message}` }));
     } else if (message.type === 'globe_location_error') {
       if (agentOpen) agent.sendInjectAgentMessage({ type: 'InjectAgentMessage', message: `Ich konnte deinen Standort nicht abfragen: ${String(message.message || 'keine Erlaubnis').slice(0, 120)}. Erlaube den Standortzugriff für Jarvis im Browser.` });
+    } else if (message.type === 'camera_frame') {
+      cameraRequests.get(String(message.id))?.({ image: typeof message.image === 'string' ? message.image : '', error: message.error });
     } else if (message.type === 'confirm_response') {
       confirmations.get(message.id)?.(message.approved === true);
     } else if (message.type === 'text' && agentOpen && String(message.text || '').trim()) {

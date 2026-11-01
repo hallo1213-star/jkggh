@@ -10,6 +10,7 @@ import { followJob, initStudio } from './studio.js';
 import { initPalace, openPalace } from './palace.js';
 import { chartCard, initVisuals, showWeather as showWeatherShow, startFocus } from './visuals.js';
 import { initCards, isEverydayCard, showEverydayCard } from './cards.js';
+import { handleCameraMessage, initCamera } from './camera.js';
 
 const OUTPUT_SAMPLE_RATE = 24000;
 
@@ -1292,6 +1293,19 @@ initModels({
     return true;
   }
 });
+initCamera({
+  toast,
+  send: (message) => {
+    if (state.ws?.readyState !== WebSocket.OPEN) return false;
+    state.ws.send(JSON.stringify(message));
+    return true;
+  },
+  addAnswer: (question, answer) => {
+    const card = el('div', 'info-card');
+    card.append(el('p', '', answer));
+    cardMessage(question ? `Du: ${question}` : 'Jarvis-Augen', card);
+  }
+});
 initGlobe({
   toast,
   send: (message) => {
@@ -1508,6 +1522,9 @@ function handleMessage(message) {
     case 'vocab':
       personalStores[message.type].store(message.items, { sync: false, updatedAt: message.updatedAt });
       if (message.show) showPlanner({ planner: 'termine', notes: 'notizen', expenses: 'ausgaben', vocab: 'vokabeln' }[message.type]);
+      break;
+    case 'camera':
+      handleCameraMessage(message);
       break;
     case 'globe':
       handleGlobeMessage(message);

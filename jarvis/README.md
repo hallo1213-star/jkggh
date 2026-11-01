@@ -182,6 +182,18 @@ Dinge, die sich ändern können (Preise, Versionen), kennzeichnet Jarvis ehrlich
 - **Live-Charts:** *„Zeig mir den Bitcoin-Chart“*, *„Wie lief Tesla dieses Jahr?“*, *„DAX der letzten 6 Monate“* liefert einen animierten Neon-Kursverlauf mit echten Daten. Zeiträume 1 Tag bis 5 Jahre, mit Finger oder Maus über den Chart fahren für Datum und Kurs. Keine Anlageberatung.
 - **Stimme sichtbar:** Im Orb-Design atmet die Kugel im Takt der Stimme, und ein Ring aus Frequenzbalken zeigt Jarvis' Stimme live (orange) bzw. deine (grau).
 
+## Jarvis-Augen: Jarvis sieht durch deine Kamera 👁️
+
+Sag **„Jarvis, schau mal“** oder tippe auf das Auge neben der Büroklammer. Die Kamera deines Handys oder Laptops öffnet sich im Vollbild, und Jarvis schaut sich das Bild an, sobald du fragst:
+
+- *„Was ist das?“*, *„Welche Pflanze ist das?“*, *„Lies mir das vor“*
+- *„Erklär mir diese Matheaufgabe“*, *„Übersetz mir dieses Schild“*
+- *„Was kann ich daraus kochen?“* (in den Kühlschrank halten)
+- *„Wie sieht mein Outfit aus?“* (dann nimmt er die Frontkamera)
+- *„Wechsel die Kamera“*, *„Kamera aus“*
+
+Während die Kamera offen ist, kannst du einfach weiterfragen. Du kannst auch tippen und auf den runden Auslöser drücken. Jarvis schaut nur, wenn du fragst: Es wird jeweils ein einzelnes Bild analysiert und nicht gespeichert. Menschen beschreibt er nur allgemein, er erkennt niemanden. Die Kamera geht automatisch aus, wenn du die App verlässt. Beim ersten Mal fragt der Browser nach der Erlaubnis für die Kamera. Braucht den KI-Schlüssel (`GROQ_API_KEY`).
+
 ## Alltagshelfer 🧰
 
 Zehn praktische Helfer, alle per Sprache und mit eigener Karte in der App. Die meisten funktionieren auch im Telegram-Chat.
@@ -405,9 +417,10 @@ Dann nutzt die Erde Bing-Maps-Luftbilder und Cesium World Terrain.
 
 ## Webcams
 
-- **Autobahn:** Verkehrskameras mit aktuellen Bildern aus den offenen Daten der Autobahn GmbH, z. B. „A1 bei Köln“.
-- **Orte:** Suche nach öffentlichen Live-Webcams (Stadt, Strand, Berge, Skigebiet).
-- Nur **offiziell öffentliche** Kameras – private oder ungesicherte Kameras sucht oder öffnet Jarvis nie.
+- *„Zeig mir Webcams in Hamburg“*, *„Webcams an der Ostsee“*, *„Wie sieht es auf der A7 bei Kassel aus?“* → Die 3D-Erde fliegt hin und zeigt alle öffentlichen Webcams in der Umgebung als Kamera-Symbole. Rechts steht die Liste mit Vorschaubildern. Antippen öffnet das aktuelle Bild in groß, es aktualisiert sich jede Minute.
+- *„Zeig mir alle Kameras der A1“* → Verkehrskameras einer Autobahn als Karte im Chat.
+- Quellen: die Verkehrskameras der **Autobahn GmbH** (Deutschland, ohne Schlüssel) und optional **Windy Webcams** (weltweit Städte, Strände, Berge, Skigebiete). Die Windy-Kameras werden von ihren Betreibern selbst dort veröffentlicht. Für Windy brauchst du einen kostenlosen Schlüssel: auf api.windy.com/webcams registrieren und bei Render als `WINDY_WEBCAMS_KEY` eintragen.
+- Nur offiziell öffentliche Kameras, niemals private oder ungesicherte. Personen werden nicht beobachtet oder erkannt.
 
 ## Wetter, Nachrichten & Wissen
 

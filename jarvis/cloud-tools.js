@@ -20,11 +20,11 @@ import { twilioConfigured } from './phone-call.js';
 import { addMemory, forgetMemory, sanitizeMemories } from './memories.js';
 import { sendTelegram, telegramConfigured } from './telegram.js';
 import { sendVoiceNote } from './voice-message.js';
-import { getAutobahnWebcams, normalizeRoad, webcamSearchLinks } from './webcams.js';
+import { getAutobahnWebcams, nearbyWebcams, normalizeRoad, webcamSearchLinks } from './webcams.js';
 import { REPEATS, addAppointment, addReminder, describeReminder, localNow, normalizeTime, removeEntry, sanitizePlanner, upcomingAppointments } from './planner.js';
 import { addExpense, addNote, addVocab, findNotes, quizPairs, removeLastExpense, removeNote, removeVocabList, summarizeExpenses } from './personal.js';
 import { findTaskByTitle, summarizeMoney } from './money-state.js';
-import { MISSING_KEY, llmProvider } from './llm.js';
+import { MISSING_KEY, describeImage, llmProvider } from './llm.js';
 import { FONTS, MODES, SECTION_TYPES, encodeSite, sanitizeSite } from './public/site-config.js';
 
 const timeZone = process.env.TZ || 'Europe/Berlin';
@@ -601,24 +601,66 @@ export const cloudTools = [
   },
   {
     name: 'find_webcams',
-    description: 'Zeigt offiziell öffentliche Webcams: Verkehrskameras einer deutschen Autobahn (Autobahn GmbH, mit aktuellen Bildern, optional in der Nähe eines Ortes) oder eine Suche nach öffentlichen Live-Webcams eines Ortes (Stadt, Strand, Berge, Skigebiet). Niemals private oder ungesicherte Kameras.',
+    description: 'Zeigt offiziell öffentliche Webcams. Mit place: Jarvis fliegt auf der 3D-Erde dorthin und zeigt alle Webcams in der Umgebung als Kamera-Symbole mit aktuellem Bild (antippen = groß). Für „Zeig mir Webcams in Hamburg“, „Gibt es Kameras an der Ostsee?“, „Wie sieht es gerade auf der A7 bei Kassel aus?“. Mit road (z. B. "A1"): Verkehrskameras dieser Autobahn als Karte im Chat. Niemals private oder ungesicherte Kameras, keine Personen erkennen.',
     parameters: {
       type: 'object',
       properties: {
-        road: { type: 'string', description: 'Autobahn für Verkehrskameras, z. B. "A1"' },
-        place: { type: 'string', description: 'Ort, z. B. "Köln" (bei Autobahnen: Kameras in der Nähe dieses Ortes)' }
+        place: { type: 'string', description: 'Ort, z. B. "Hamburg", "Sylt", "Zugspitze"' },
+        road: { type: 'string', description: 'Optional: Autobahn, z. B. "A1"' },
+        radius_km: { type: 'number', description: 'Suchradius um den Ort (Standard 40 km)' }
       }
     },
     label: (a) => `Webcams: ${[a.road, a.place].filter(Boolean).join(' bei ') || '?'}`,
-    run: async ({ road, place }, context) => {
-      if (normalizeRoad(road)) {
-        const result = await getAutobahnWebcams(road, { near: place });
-        context.showWebcams({ title: `Verkehrskameras ${result.autobahn}${result.nurInDerNaehe ? ` bei ${place}` : ''}`, cams: result.kameras, links: [] });
+    run: async ({ road, place, radius_km: radiusKm }, context) => {
+      if (normalizeRoad(road) && !String(place ?? '').trim()) {
+        const result = await getAutobahnWebcams(road);
+        context.showWebcams({ title: `Verkehrskameras ${result.autobahn}`, cams: result.kameras, links: [] });
         return { ...result, kameras: result.kameras.map(({ titel, ort }) => ({ titel, ort })), hinweis: 'Die Kamerabilder werden dem Nutzer angezeigt.' };
       }
-      if (!String(place ?? '').trim()) throw new Error('Für welchen Ort oder welche Autobahn soll ich Webcams suchen?');
-      context.showWebcams({ title: `Webcams ${String(place).trim()}`, cams: [], links: webcamSearchLinks(place) });
-      return { angezeigt: true, hinweis: 'Der Nutzer bekommt eine Suche nach öffentlichen Live-Webcams. Was darauf zu sehen ist, weißt du nicht.' };
+      const wanted = String(place ?? '').trim();
+      if (!wanted) throw new Error('Für welchen Ort soll ich Webcams suchen?');
+      const target = await geocodePlace(wanted);
+      const radius = Math.min(Math.max(Number(radiusKm) || 40, 5), 200);
+      const found = await nearbyWebcams(target, { radiusKm: radius });
+      const roadId = normalizeRoad(road);
+      const cams = roadId ? found.cams.filter((cam) => cam.title.toUpperCase().includes(roadId) || cam.subtitle.toUpperCase().includes(roadId)) : found.cams;
+      context.showGlobe?.({ action: 'webcams', place: target, cams, links: webcamSearchLinks(wanted), radiusKm: radius, windy: found.windy });
+      return {
+        ort: target.label,
+        anzahl: cams.length,
+        kameras: cams.slice(0, 8).map((cam) => `${cam.title}${cam.subtitle ? ` (${cam.subtitle})` : ''}, ${String(cam.km).replace('.', ',')} km entfernt`),
+        quellen: found.sources,
+        hinweis: cams.length
+          ? 'Die Erde fliegt dorthin, die Webcams sind als Kamera-Symbole zu sehen, rechts die Liste mit aktuellen Bildern. Was auf den Bildern zu sehen ist, weißt du nicht – beschreib nur, wo die Kameras sind.'
+          : `Im Umkreis von ${radius} km sind keine Webcams verzeichnet${found.windy ? '' : ' (weltweite Webcams gibt es mit einem kostenlosen Windy-Schlüssel, siehe README)'}. Rechts ist ein Link zur Webcam-Suche.`
+      };
+    }
+  },
+  {
+    name: 'camera_look',
+    description: 'Jarvis-Augen: Jarvis schaut durch die Kamera des Geräts, das der Nutzer gerade benutzt (Handy oder Laptop) – nur wenn ER es will, sichtbar im Vollbild. schauen = ein Bild aufnehmen und analysieren (öffnet die Kamera bei Bedarf). Für „Schau mal“, „Was ist das?“, „Was siehst du?“, „Lies mir das vor“, „Erklär mir diese Aufgabe“, „Was kann ich daraus kochen?“, „Welche Pflanze ist das?“, „Wie sieht mein Outfit aus?“. Ist die Kamera schon offen, bezieht sich jede neue Frage zum Bild wieder auf schauen. wechseln = Front-/Rückkamera, schliessen = Kamera aus. Erkennt oder benennt nie Personen anhand ihres Gesichts.',
+    parameters: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['schauen', 'oeffnen', 'wechseln', 'schliessen'] },
+        question: { type: 'string', description: 'Seine Frage zum Bild in seinen Worten, z. B. "Was ist das für eine Pflanze?"' },
+        camera: { type: 'string', enum: ['hinten', 'vorne'], description: 'Optional: hinten (Standard am Handy) oder vorne (Selfie, z. B. fürs Outfit)' }
+      },
+      required: ['action']
+    },
+    label: (a) => (a.action === 'schauen' ? `Jarvis-Augen: ${a.question || 'schauen'}` : `Kamera: ${a.action}`),
+    run: async ({ action, question, camera }, context) => {
+      const facing = camera === 'vorne' ? 'user' : camera === 'hinten' ? 'environment' : undefined;
+      if (action !== 'schauen') {
+        context.showVisual?.({ type: 'camera', action: action === 'oeffnen' ? 'open' : action === 'wechseln' ? 'switch' : 'close', facing });
+        return { ok: true, hinweis: action === 'schliessen' ? 'Die Kamera ist aus.' : 'Die Kamera ist offen. Sag ihm, er soll draufhalten und fragen, was er wissen will.' };
+      }
+      if (!llmProvider()) throw new Error(MISSING_KEY);
+      if (!context.captureCamera) throw new Error('Die Kamera geht nur in der Jarvis-App, nicht über Telegram. Dort kannst du mir einfach ein Foto schicken.');
+      const image = await context.captureCamera({ question, facing });
+      const answer = await describeImage({ dataUrl: image, question: String(question ?? '').trim() || 'Was siehst du? Beschreib kurz das Wichtigste.' });
+      context.showVisual?.({ type: 'camera', action: 'answer', text: answer.slice(0, 1500) });
+      return { gesehen: answer.slice(0, 2500), hinweis: 'Das ist deine Bildanalyse von gerade eben. Antworte natürlich und kurz, als hättest du selbst hingeschaut („Ich sehe …“). Menschen nur allgemein beschreiben, nie identifizieren. Die Kamera bleibt offen für weitere Fragen.' };
     }
   },
   {

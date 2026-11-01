@@ -126,6 +126,12 @@ async function createViewer() {
   if (scene.skyBox) scene.skyBox.show = true;
   scene.screenSpaceCameraController.minimumZoomDistance = 150;
   scene.screenSpaceCameraController.maximumZoomDistance = 40_000_000;
+  // Tapping a webcam symbol opens its current picture.
+  new Cesium.ScreenSpaceEventHandler(scene.canvas).setInputAction((click) => {
+    const picked = scene.pick(click.position);
+    const cam = picked?.id?.properties?.webcam?.getValue?.();
+    if (cam) openCamView(cam);
+  }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
 
   layers.night = viewer.imageryLayers.addImageryProvider(new Cesium.UrlTemplateImageryProvider({
     url: NASA_NIGHT,
@@ -195,6 +201,7 @@ export async function openGlobe() {
 
 export function closeGlobe() {
   stopIss();
+  closeCamView();
   els.overlay.hidden = true;
   document.body.classList.remove('globe-open');
   spinning = false;
@@ -493,11 +500,103 @@ async function showIss() {
   }
 }
 
+
+// --- Public webcams around a place --------------------------------------------------
+const CAM_ICON = `data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="44" height="52" viewBox="0 0 44 52"><path d="M22 51 9 36a18 18 0 1 1 26 0Z" fill="#0b1b26" stroke="#38e1ff" stroke-width="2.5"/><rect x="10" y="15" width="17" height="13" rx="3" fill="#38e1ff"/><path d="m27 19 7-4v13l-7-4Z" fill="#38e1ff"/><circle cx="18.5" cy="21.5" r="3.2" fill="#0b1b26"/></svg>')}`;
+let webcamEntities = [];
+let camViewer = null;
+let camRefresh = null;
+
+function clearWebcams() {
+  for (const entity of webcamEntities) viewer?.entities.remove(entity);
+  webcamEntities = [];
+  closeCamView();
+}
+
+const freshUrl = (url) => {
+  try {
+    const u = new URL(url);
+    if (u.hostname.endsWith('autobahn.de')) u.searchParams.set('t', String(Date.now()));
+    return u.href;
+  } catch {
+    return url;
+  }
+};
+
+function closeCamView() {
+  clearInterval(camRefresh);
+  camRefresh = null;
+  camViewer?.remove();
+  camViewer = null;
+}
+
+function openCamView(cam) {
+  closeCamView();
+  const img = el('img', { src: freshUrl(cam.image), alt: cam.title, referrerPolicy: 'no-referrer' });
+  const stamp = el('small', { class: 'cam-stamp', textContent: `Bild geladen ${new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}` });
+  img.addEventListener('error', () => { stamp.textContent = 'Bild gerade nicht verfügbar'; });
+  const close = el('button', { type: 'button', class: 'icon-btn', textContent: '✕', ariaLabel: 'Schließen' });
+  close.addEventListener('click', closeCamView);
+  camViewer = el('div', { class: 'globe-camview' },
+    el('div', { class: 'globe-camview-head' }, el('div', {}, el('b', { textContent: cam.title }), el('small', { textContent: [cam.subtitle, `${String(cam.km).replace('.', ',')} km`].filter(Boolean).join(' · ') })), close),
+    img,
+    el('div', { class: 'globe-camview-foot' }, stamp,
+      cam.player ? el('a', { href: cam.player, target: '_blank', rel: 'noopener noreferrer', textContent: '▶ Live-Player' }) : null,
+      cam.link ? el('a', { href: cam.link, target: '_blank', rel: 'noopener noreferrer', textContent: 'Quelle ↗' }) : null),
+    el('p', { class: 'globe-note', textContent: `${cam.source} · öffentliche Webcam` }));
+  els.overlay.append(camViewer);
+  // Traffic cameras refresh their picture every minute or so.
+  camRefresh = setInterval(() => {
+    img.src = freshUrl(cam.image);
+    stamp.textContent = `Bild geladen ${new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })}`;
+  }, 60_000);
+  viewer?.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(cam.lon, cam.lat, 6000), duration: 1.8 });
+}
+
+async function showWebcams({ place, cams = [], links = [], radiusKm, windy }) {
+  await openGlobe();
+  if (!viewer) return;
+  stopIss();
+  clearWebcams();
+  setNight(false);
+  await flyToPlace(place);
+  setHeading(`Webcams · ${place.name}`, `${cams.length} öffentliche Kameras im Umkreis von ${radiusKm} km`);
+  for (const cam of cams) {
+    webcamEntities.push(viewer.entities.add({
+      position: Cesium.Cartesian3.fromDegrees(cam.lon, cam.lat),
+      billboard: { image: CAM_ICON, scale: 0.75, verticalOrigin: Cesium.VerticalOrigin.BOTTOM, heightReference: Cesium.HeightReference.CLAMP_TO_GROUND, disableDepthTestDistance: Number.POSITIVE_INFINITY },
+      properties: { webcam: cam }
+    }));
+  }
+  if (cams.length > 1) {
+    const lats = cams.map((c) => c.lat).concat(place.lat);
+    const lons = cams.map((c) => c.lon).concat(place.lon);
+    const pad = 0.05;
+    setTimeout(() => viewer.camera.flyTo({ destination: Cesium.Rectangle.fromDegrees(Math.min(...lons) - pad, Math.min(...lats) - pad, Math.max(...lons) + pad, Math.max(...lats) + pad), duration: 2.5 }), 4800);
+  }
+  els.rightTitle.textContent = `Webcams (${cams.length})`;
+  els.rightBody.replaceChildren(
+    ...(cams.length ? cams.map((cam) => {
+      const row = el('button', { type: 'button', class: 'globe-cam' },
+        el('img', { src: cam.image, alt: '', loading: 'lazy', referrerPolicy: 'no-referrer' }),
+        el('span', {}, el('b', { textContent: cam.title }), el('small', { textContent: [cam.subtitle, `${String(cam.km).replace('.', ',')} km`].filter(Boolean).join(' · ') })));
+      row.querySelector('img').addEventListener('error', (event) => { event.target.style.visibility = 'hidden'; });
+      row.addEventListener('click', () => openCamView(cam));
+      return row;
+    }) : [el('p', { class: 'muted', textContent: 'Hier sind keine öffentlichen Webcams verzeichnet.' })]),
+    ...links.map((link) => el('a', { class: 'more', href: link.url, target: '_blank', rel: 'noopener noreferrer', textContent: `🔎 ${link.name} suchen ↗` })),
+    el('p', { class: 'globe-note', textContent: `Nur offiziell öffentliche Kameras: Autobahn GmbH${windy ? ' und Windy Webcams (webcams provided by windy.com)' : ''}. Antippen zeigt das aktuelle Bild.` })
+  );
+  els.left.hidden = true;
+  showPanel('right');
+}
+
 // Commands from the voice assistant (see the "globe" cloud tool).
 export async function handleGlobeMessage(message) {
   switch (message.action) {
     case 'fly':
       stopIss();
+      clearWebcams();
       panelsLoading(message.place, message.topic);
       return flyToPlace(message.place);
     case 'panels':
@@ -506,6 +605,8 @@ export async function handleGlobeMessage(message) {
       return worldNews(message);
     case 'iss':
       return showIss();
+    case 'webcams':
+      return showWebcams(message);
     case 'located':
       return located(message.place);
     case 'error':
