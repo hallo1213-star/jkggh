@@ -34,7 +34,7 @@ export function parseProject(textValue) {
   while ((match = re.exec(raw)) && files.length < MAX_FILES) {
     const path = match[1].trim().toLowerCase();
     if (!FILE.test(path) || files.some((f) => f.path === path)) continue;
-    files.push({ path, content: match[2].replace(/^```[a-z]*\n|```\s*$/g, '') });
+    files.push({ path, content: match[2].replace(/^```[a-z]*\n/, '').replace(/\n?```\s*$/, '') });
   }
   return { title: field('TITEL'), kind: field('ART').toLowerCase(), description: field('BESCHREIBUNG'), files };
 }

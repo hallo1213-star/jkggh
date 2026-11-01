@@ -135,6 +135,16 @@ Falls Google kein App-Passwort anbietet (z. B. bei Schul-/Firmenkonten oder „E
 - **Ansehen und löschen:** oben rechts auf das Gehirn-Symbol tippen. Passwörter, PINs und Bank- oder Kartendaten merkt sich Jarvis nie.
 - Jarvis **knüpft an euer letztes Gespräch an** – auch nach dem Schließen der App. Der Verlauf bleibt auf deinem Gerät und lässt sich im Gedächtnis-Fenster löschen.
 
+## Projekt-Werkstatt: Jarvis programmiert selbst 🧑‍💻
+
+Sag z. B. **„Programmier mir ein eigenes 3D-Spiel“**, **„Programmier mir einen Taschenrechner“** oder **„Erstelle mir einen modernen Online-Shop für Kleidung mit Warenkorb“**.
+
+- Jarvis schreibt den **kompletten Code selbst** (HTML, CSS, JavaScript, für 3D mit three.js) und startet das Projekt sofort in der **Werkstatt** (Knopf **Werkstatt**). Er sucht keine fertigen Vorlagen im Internet.
+- **Ändern:** „Mach das Spiel schwerer“ oder „Füg eine Produktsuche hinzu“, per Sprache oder im Textfeld.
+- **Code ansehen** und **Als ZIP speichern**: entpacken, `index.html` öffnen, fertig. Die letzten 12 Projekte stehen unter „Meine Projekte“.
+- **Sicher:** Die Vorschau läuft abgeschottet. Sie hat keinen Zugriff auf Jarvis, deine Daten oder das Internet (außer der 3D-Bibliothek). Zahlungen in Shops sind nur eine markierte Demo.
+- Braucht den KI-Schlüssel `GROQ_API_KEY`. Sehr große Projekte schafft das kostenlose Kontingent nicht auf einmal. Dann besser in Schritten bauen lassen: erst das Grundspiel, dann „füg Level 2 hinzu“.
+
 ## 3D-Studio: Jarvis erschafft 3D-Modelle 🏗️
 
 Sag z. B. **„Erstelle mir ein futuristisches Haus mit Fenstern, Garten und Swimmingpool“** oder **„Bau eine futuristische Stadt mit fliegenden Autos bei Nacht“**.
