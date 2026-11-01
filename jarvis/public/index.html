@@ -31,6 +31,9 @@
       <span class="chip" id="laptop-chip" title="Laptop-Verbindung"><span class="dot"></span><span id="laptop-chip-text">Laptop aus</span></span>
       <span class="chip" id="status-chip"><span class="dot"></span><span id="status-chip-text">Offline</span></span>
       <time class="clock" id="clock">--:--</time>
+      <button class="icon-btn" id="settings-button" type="button" title="Einstellungen" aria-label="Einstellungen">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.4 7.4 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.2 1.6 2 3.5 2.5-1c.5.4 1.1.7 1.7 1l.4 2.6h4l.4-2.6c.6-.3 1.2-.6 1.7-1l2.5 1 2-3.5-2.2-1.6ZM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7Z"/></svg>
+      </button>
       <button class="icon-btn" id="theme-button" type="button" title="Design wechseln" aria-label="Design wechseln">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 0 0 0 18c.8 0 1.5-.7 1.5-1.5 0-.4-.1-.7-.4-1-.2-.3-.4-.6-.4-1 0-.8.7-1.5 1.5-1.5H16a5 5 0 0 0 5-5c0-4.4-4-8-9-8Zm-5.5 9a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm3-4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm3 4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Z"/></svg>
       </button>
@@ -240,6 +243,13 @@
         <button class="ctrl" id="money-new" type="button" title="Neues Projekt mit diesem Auftrag starten">Neu starten</button>
       </div>
       <div class="money-body" id="money-body"><p class="empty">Lädt …</p></div>
+    </div>
+  </div>
+
+  <div class="modal" id="settings-modal" hidden>
+    <div class="modal-card games-card planner-card" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <div class="games-head"><h3 id="settings-title">Einstellungen</h3><button class="icon-btn" id="settings-close" type="button" aria-label="Schließen">✕</button></div>
+      <div class="planner-body" id="settings-body"><p class="empty">Lädt …</p></div>
     </div>
   </div>
 

@@ -683,6 +683,8 @@ body {
 .image-card p { margin: 8px 0 0; font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .image-card .order-actions a.ctrl { text-decoration: none; }
 
+.settings-input { width: 100%; padding: 9px 12px; background: transparent; border: 1px solid var(--panel-edge); color: var(--text); font: inherit; border-radius: 8px; }
+
 /* --- Tasks & documents --- */
 .tasks-badge { min-width: 20px; padding: 0 6px; border-radius: 10px; background: var(--amber); color: #1b1200; font-size: 12px; font-weight: 700; line-height: 20px; text-align: center; }
 .tasks-badge[hidden] { display: none; }

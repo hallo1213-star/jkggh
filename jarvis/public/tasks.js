@@ -91,7 +91,7 @@ function saveDone(task) {
   }
 }
 
-const ICON = { offen: '○', läuft: '⏳', erledigt: '✅', fehler: '⚠️' };
+const ICON = { offen: '○', läuft: '⏳', erledigt: '✅', fehler: '⚠️', abgebrochen: '⏹️' };
 
 function renderTasks() {
   const running = [...live.values()].filter((t) => t.status === 'läuft');

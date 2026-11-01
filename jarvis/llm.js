@@ -230,3 +230,26 @@ export async function describeImage({ dataUrl, question, fetchImpl = fetch }) {
   if (!answer) throw new Error('Die Bildanalyse hat keine Antwort geliefert.');
   return answer;
 }
+
+// --- Conversations with tools (Telegram assistant) ------------------------------
+// OpenAI-style function calling for Groq/OpenRouter. Returns the assistant
+// message ({ content, tool_calls }). Other providers answer without tools.
+export async function chatWithTools({ messages, tools = [], maxTokens = 1500, fetchImpl = fetch }) {
+  const provider = llmProvider();
+  if (!provider) throw new Error(MISSING_KEY);
+  if (provider !== 'groq' && provider !== 'openrouter') {
+    const system = messages.find((m) => m.role === 'system')?.content || '';
+    const convo = messages.filter((m) => m.role !== 'system' && typeof m.content === 'string').map((m) => `${m.role === 'user' ? 'Nutzer' : 'Jarvis'}: ${m.content}`).join('\n');
+    return { role: 'assistant', content: await generateText({ system, prompt: convo, maxTokens, fetchImpl }) };
+  }
+  const config = OPENAI_COMPATIBLE[provider];
+  const model = await pickModel(provider, fetchImpl);
+  const response = await fetchImpl(`${config.base}/chat/completions`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${config.key()}` },
+    body: JSON.stringify({ model, max_tokens: Math.min(maxTokens, config.maxTokens), messages, ...(tools.length ? { tools, tool_choice: 'auto' } : {}) }),
+    signal: AbortSignal.timeout(TIMEOUT_MS)
+  });
+  const data = await readJson(response, config.name);
+  return data.choices?.[0]?.message || { role: 'assistant', content: '' };
+}

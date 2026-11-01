@@ -46,6 +46,7 @@ export function startTask(goal, { onEvent, generate = generateJson, write = gene
       emit();
       const notes = [];
       for (const step of task.steps) {
+        if (task.cancelled) throw new Error('Abgebrochen.');
         step.status = 'läuft';
         emit();
         try {
@@ -77,11 +78,23 @@ export function startTask(goal, { onEvent, generate = generateJson, write = gene
       task.status = 'fertig';
       emit({ document: task.document });
     } catch (error) {
-      task.status = 'fehler';
+      task.status = task.cancelled ? 'abgebrochen' : 'fehler';
+      for (const step of task.steps) if (step.status === 'offen' || step.status === 'läuft') step.status = task.cancelled ? 'abgebrochen' : step.status;
       emit({ error: error.message });
     } finally {
       setTimeout(() => running.delete(task.id), 60 * 60 * 1000).unref?.();
     }
   })();
   return task;
+}
+
+// "Jarvis, stopp die Aufgabe": running tasks stop before their next step.
+export function cancelTasks() {
+  const stopped = [];
+  for (const task of running.values()) {
+    if (task.status !== 'läuft') continue;
+    task.cancelled = true;
+    stopped.push(task.title);
+  }
+  return stopped;
 }

@@ -135,6 +135,27 @@ Falls Google kein App-Passwort anbietet (z. B. bei Schul-/Firmenkonten oder „E
 - **Ansehen und löschen:** oben rechts auf das Gehirn-Symbol tippen. Passwörter, PINs und Bank- oder Kartendaten merkt sich Jarvis nie.
 - Jarvis **knüpft an euer letztes Gespräch an** – auch nach dem Schließen der App. Der Verlauf bleibt auf deinem Gerät und lässt sich im Gedächtnis-Fenster löschen.
 
+## Jarvis auf Telegram (Chat-Assistent) 💬
+
+Wenn Telegram eingerichtet ist, kannst du Jarvis auch **direkt in Telegram schreiben**:
+
+- **Text:** „Wie wird das Wetter morgen?“, „Erinner mich Freitag um 9 an den Zahnarzt“, „Was hab ich diesen Monat ausgegeben?“, „Öffne Spotify auf dem Laptop“.
+- **Sprachnachricht:** Jarvis versteht sie (Deepgram) und erledigt die Aufgabe.
+- **Foto:** Jarvis beschreibt es oder beantwortet deine Frage in der Bildunterschrift.
+- **Textdatei oder Code:** Jarvis fasst sie zusammen oder erklärt den Code.
+- **Bilder malen** („Mal mir eine Stadt bei Nacht“) und **Aufgaben** („Recherchiere … und mach eine Tabelle“): Das Ergebnis kommt als Bild bzw. Datei zurück.
+
+Jarvis antwortet **nur in deinem eigenen Chat** (`TELEGRAM_CHAT_ID`). Aktionen, die eine Bestätigung brauchen (Mails senden, Löschen, Anrufe, Installationen), gehen nur in der App. Der Chat-Assistent braucht `GROQ_API_KEY`. Ausschalten lässt er sich mit `TELEGRAM_ASSISTANT=false`.
+
+## Einstellungen ⚙️
+
+Über das **Zahnrad** oben:
+- Persönlichkeit (locker oder Butler) und Anrede einstellen.
+- Design wechseln.
+- Sehen, welche Dienste und Modelle aktiv sind.
+
+Schlüssel trägst du weiterhin nur bei Render ein.
+
 ## Aufgabenmodus 📋
 
 Für größere Aufträge, z. B. **„Recherchiere die besten kostenlosen 3D-Programme für Windows und erstelle mir eine Vergleichstabelle“**, **„Schreib mir ein Referat über …“** oder **„Erstelle mir einen Lernplan für …“**:
@@ -144,7 +165,7 @@ Für größere Aufträge, z. B. **„Recherchiere die besten kostenlosen 3D-Prog
 3. Den Fortschritt siehst du unter **Aufgaben**: jeder Schritt mit Status und ein Zähler am Knopf.
 4. Das **fertige Dokument** (mit Tabellen, Listen, Fazit) öffnet sich automatisch. Du kannst es kopieren oder als Datei speichern. Mit Telegram bekommst du es zusätzlich als Datei.
 
-Dinge, die sich ändern können (Preise, Versionen), kennzeichnet Jarvis ehrlich als „bitte prüfen“. Braucht `GROQ_API_KEY`.
+Dinge, die sich ändern können (Preise, Versionen), kennzeichnet Jarvis ehrlich als „bitte prüfen“. **„Stopp die Aufgabe“** bricht ab. Braucht `GROQ_API_KEY`.
 
 ## Bilder erschaffen und verstehen 🎨🔍
 

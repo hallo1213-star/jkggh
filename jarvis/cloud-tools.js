@@ -872,6 +872,16 @@ export const cloudTools = [
     }
   },
   {
+    name: 'cancel_task',
+    description: 'Bricht laufende Aufgaben aus dem Aufgabenmodus ab („Stopp die Aufgabe“, „Brich das ab“).',
+    parameters: { type: 'object', properties: {} },
+    label: () => 'Aufgaben abbrechen',
+    run: async (args, context) => {
+      const stopped = context.cancelTasks?.() || [];
+      return stopped.length ? { abgebrochen: stopped, hinweis: 'Sie stoppt vor dem nächsten Schritt.' } : { abgebrochen: [], hinweis: 'Gerade läuft keine Aufgabe.' };
+    }
+  },
+  {
     name: 'create_image',
     description: 'Erschafft ein neues Bild nach seiner Beschreibung (z. B. „eine futuristische Stadt bei Nacht“) und zeigt es in der App an. Du planst Motiv und Stil selbst. Keine Bildersuche im Internet. Keine echten, namentlich bekannten Personen.',
     parameters: {

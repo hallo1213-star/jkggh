@@ -8,7 +8,7 @@ import { dirname, extname, join, normalize, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocket, WebSocketServer } from 'ws';
 import { DeepgramClient } from '@deepgram/sdk';
-import { buildPrompt, buildSettings, missingConfig } from './agent-config.js';
+import { buildPrompt, buildSettings, elevenLabsConfigured, missingConfig, personaFrom } from './agent-config.js';
 import { attemptLogin, clearedCookie, isAuthenticated, passwordConfigured, sessionCookie, tokenMatches } from './auth.js';
 import { cloudTools, findCloudTool } from './cloud-tools.js';
 import { addItems, sanitizeList } from './shopping.js';
@@ -33,8 +33,11 @@ import { bauplanConfig, missingSettings, renderSalesPage } from './bauplan-page.
 import { productFiles } from './bauplan-content.js';
 import { designScene, sanitizeScene } from './model3d.js';
 import { sanitizeProject, writeProject } from './projects.js';
-import { describeImage } from './llm.js';
-import { startTask } from './tasks.js';
+import { describeImage, llmLabel, llmProvider } from './llm.js';
+import { twilioConfigured } from './phone-call.js';
+import { telegramAssistantEnabled } from './telegram-bot.js';
+import { cancelTasks, startTask } from './tasks.js';
+import { startTelegramAssistant } from './telegram-bot.js';
 import { findTool as findLaptopTool, functionDefinitions as laptopFunctions } from './laptop/tools.js';
 
 if (!process.env.TZ) process.env.TZ = 'Europe/Berlin';
@@ -208,6 +211,75 @@ function callEventHandler(origin) {
   };
 }
 
+// Task progress goes to every open app; the finished document also to Telegram.
+function broadcastTask(event) {
+  for (const session of sessions) session.toBrowser({ type: 'task', ...event });
+  if (event.status === 'fertig' && telegramConfigured() && event.document) {
+    sendTelegramDocument(event.document, `${event.title.replace(/[^\w äöüÄÖÜß-]+/g, '').slice(0, 50) || 'Ergebnis'}.md`, `✅ Aufgabe fertig: ${event.title}`).catch(() => {});
+  }
+  if (event.status === 'fehler' && telegramConfigured()) sendTelegram(`⚠️ Aufgabe „${event.title}“: ${String(event.error || '').slice(0, 200)}`).catch(() => {});
+}
+
+// --- Jarvis on Telegram ----------------------------------------------------------
+// Tools the Telegram assistant may use on its own. Anything that needs an
+// on-screen confirmation (sending mails, deleting, calls, installing) stays in the app.
+const TELEGRAM_CLOUD_TOOLS = ['get_datetime', 'get_weather', 'get_news', 'wiki_lookup', 'daily_briefing', 'memory_save', 'memory_forget', 'memory_list', 'briefing_settings', 'reminder_add', 'reminder_list', 'reminder_remove', 'appointment_add', 'appointment_list', 'appointment_remove', 'note_add', 'note_find', 'note_remove', 'expense_add', 'expense_summary', 'expense_remove_last', 'vocab_lists', 'shopping_list_add', 'shopping_list_remove', 'shopping_list_show', 'email_list', 'email_read', 'money_status', 'money_income_add', 'money_task_done', 'markets', 'weekly_numbers', 'create_image', 'run_task', 'cancel_task', 'laptop_status', 'persona_settings', 'set_timer'];
+const TELEGRAM_LAPTOP_TOOLS = ['pc_open_website', 'open_app', 'close_app', 'media_control', 'set_volume', 'system_info', 'list_files', 'find_files', 'open_path', 'read_text_file', 'search_software'];
+
+function telegramContext({ send, sendPhoto }) {
+  const base = {
+    origin: money.origin || process.env.RENDER_EXTERNAL_URL || '',
+    getShoppingList: () => shoppingStore.items,
+    setShoppingList: (list) => shoppingStore.set(list),
+    getCustomers: () => customerStore.items,
+    setCustomers: (list) => customerStore.set(list),
+    getMemories: () => memoryStore.items,
+    setMemories: (list) => memoryStore.set(list),
+    getStore: (name) => syncedStores[name].items,
+    setStore: (name, value) => syncedStores[name].set(value),
+    getMoney: () => ({ state: money.state, waitingForDevice: Boolean(money.pending) }),
+    moneyCommand: (command) => applyMoneyCommand(command),
+    homeTown,
+    laptopConnected,
+    globeMemory: {},
+    modelMemory: {},
+    projectMemory: {},
+    orderDraft: {},
+    startTask: (goal) => startTask(goal, { onEvent: broadcastTask }),
+    cancelTasks,
+    showImage: ({ url, title }) => sendPhoto(url, title),
+    schedule: (ms, message) => setTimeout(() => send(`⏰ ${message}`), ms),
+    refreshPrompt: () => {
+      for (const session of sessions) session.updatePrompt?.();
+    }
+  };
+  // Screen-only helpers (cards, globe …) have no meaning in a chat.
+  return new Proxy(base, { get: (target, prop) => (prop in target ? target[prop] : typeof prop === 'string' && /^show|Loading$/.test(prop) ? () => {} : undefined) });
+}
+
+const telegramSession = { askConfirmation: async () => false, toBrowser() {} };
+let telegramCallId = 0;
+
+async function runTelegramTool(name, args, context) {
+  if (TELEGRAM_CLOUD_TOOLS.includes(name)) {
+    const tool = findCloudTool(name);
+    if (!tool) return { ok: false, fehler: 'Unbekanntes Werkzeug' };
+    return { ok: true, ergebnis: await tool.run(args, context) };
+  }
+  if (TELEGRAM_LAPTOP_TOOLS.includes(name)) {
+    const reply = await callLaptop(`tg${(telegramCallId += 1)}`, name, args, telegramSession);
+    if (reply.ok) return { ok: true, ergebnis: reply.result };
+    return { ok: false, fehler: reply.denied ? 'Braucht eine Bestätigung – bitte in der Jarvis-App ausführen.' : reply.error };
+  }
+  return { ok: false, fehler: 'Das geht nur in der Jarvis-App.' };
+}
+
+function telegramPersona() {
+  const persona = personaFrom(memoryStore.items);
+  const memories = memoryStore.items.filter((m) => !/^(Stil|Anrede):/i.test(m.text)).map((m) => m.text).slice(0, 40);
+  return `${persona.style === 'butler' ? `Stil: eleganter Butler wie der Film-JARVIS – du siezt ihn, nennst ihn „${persona.address}“, trockener Humor.` : `Stil: locker wie ein guter Freund, du duzt ihn${persona.address ? ` und nennst ihn ${persona.address}` : ''}.`}${memories.length ? `\nWas du über ihn weißt: ${memories.join(' | ')}` : ''}`;
+}
+
 // "Wohnt in Köln" from the memory, used as the briefing's weather location.
 function homeTown() {
   for (const memory of memoryStore.items) {
@@ -340,6 +412,50 @@ const httpServer = createServer(async (request, response) => {
     const config = bauplanConfig();
     response.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache', 'x-content-type-options': 'nosniff', 'referrer-policy': 'strict-origin-when-cross-origin' });
     response.end(renderSalesPage(config));
+    return;
+  }
+
+  if (pathname === '/api/status') {
+    if (!isAuthenticated(request)) {
+      sendJson(response, 401, { error: 'Nicht angemeldet' });
+      return;
+    }
+    if (request.method === 'POST' && String(request.headers['content-type'] || '').startsWith('application/json')) {
+      // Settings that can be changed in the app (stored like everything else in the memory).
+      try {
+        const body = JSON.parse(await readBody(request));
+        let list = memoryStore.items;
+        if (['butler', 'freund'].includes(body.style)) list = [...list.filter((m) => !/^Stil:/i.test(m.text)), { text: `Stil: ${body.style === 'butler' ? 'Butler' : 'Freund'}` }];
+        if (typeof body.address === 'string') {
+          const address = body.address.replace(/[^\p{L}\p{N} .'-]/gu, '').trim().slice(0, 30);
+          list = [...list.filter((m) => !/^Anrede:/i.test(m.text)), ...(address ? [{ text: `Anrede: ${address}` }] : [])];
+        }
+        memoryStore.set(list);
+        for (const session of sessions) session.updatePrompt?.();
+        sendJson(response, 200, { ok: true });
+      } catch (error) {
+        sendJson(response, 400, { error: error.message });
+      }
+      return;
+    }
+    const persona = personaFrom(memoryStore.items);
+    const yes = (ok, detail) => ({ ok: Boolean(ok), detail });
+    sendJson(response, 200, {
+      persona,
+      memories: memoryStore.items.length,
+      services: {
+        'Gespräch (Deepgram Voice Agent)': yes(process.env.DEEPGRAM_API_KEY?.trim(), `Hören: ${process.env.LISTEN_MODEL?.trim() || 'nova-3'} · Denken: ${process.env.THINK_MODEL?.trim() || 'gpt-4o-mini'}`),
+        'Stimme': yes(true, elevenLabsConfigured() ? 'ElevenLabs' : `Deepgram ${process.env.DEEPGRAM_VOICE?.trim() || 'aura-2-julius-de'}`),
+        'KI für Werkzeuge (3D, Code, Aufgaben, Telegram)': yes(llmProvider(), llmLabel() || 'GROQ_API_KEY fehlt'),
+        'Telegram': yes(telegramConfigured(), telegramConfigured() ? (telegramAssistantEnabled() ? 'Benachrichtigungen + Chat-Assistent' : 'nur Benachrichtigungen') : 'nicht eingerichtet'),
+        'Gmail': yes(gmailConfigured(), gmailConfigured() ? process.env.GMAIL_ADDRESS.trim() : 'nicht eingerichtet'),
+        'Laptop': yes(laptopConnected(), laptopConnected() ? 'verbunden' : process.env.LAPTOP_TOKEN ? 'nicht verbunden' : 'LAPTOP_TOKEN fehlt'),
+        'Telefon (Twilio)': yes(twilioConfigured(), twilioConfigured() ? 'bereit' : 'nicht eingerichtet (Testmodus geht trotzdem)'),
+        'Gumroad': yes(gumroadConfigured(), gumroadConfigured() ? 'verbunden' : 'nicht eingerichtet'),
+        '3D-Erde schärfer (Cesium ion)': yes(process.env.CESIUM_ION_TOKEN?.trim(), process.env.CESIUM_ION_TOKEN?.trim() ? 'aktiv' : 'optional – läuft auch ohne'),
+        'Bilder malen (Pollinations)': yes(true, 'ohne Schlüssel')
+      }
+    });
     return;
   }
 
@@ -763,16 +879,13 @@ browserWss.on('connection', (browser, request) => {
     startTask(goal) {
       return startTask(goal, {
         onEvent(event) {
-          for (const other of sessions) other.toBrowser({ type: 'task', ...event });
-          if (event.status === 'fertig') {
-            if (agentOpen) agent.sendInjectAgentMessage({ type: 'InjectAgentMessage', message: `Die Aufgabe „${event.title}“ ist fertig. Das Ergebnis liegt auf deinem Bildschirm.` });
-            if (telegramConfigured() && event.document) sendTelegramDocument(event.document, `${event.title.replace(/[^\w äöüÄÖÜß-]+/g, '').slice(0, 50) || 'Ergebnis'}.md`, `✅ Aufgabe fertig: ${event.title}`).catch(() => {});
-          } else if (event.status === 'fehler' && agentOpen) {
-            agent.sendInjectAgentMessage({ type: 'InjectAgentMessage', message: `Bei der Aufgabe „${event.title}“ gab es ein Problem: ${String(event.error || '').slice(0, 150)}` });
-          }
+          broadcastTask(event);
+          if (event.status === 'fertig' && agentOpen) agent.sendInjectAgentMessage({ type: 'InjectAgentMessage', message: `Die Aufgabe „${event.title}“ ist fertig. Das Ergebnis liegt auf deinem Bildschirm.` });
+          else if (event.status === 'fehler' && agentOpen) agent.sendInjectAgentMessage({ type: 'InjectAgentMessage', message: `Bei der Aufgabe „${event.title}“ gab es ein Problem: ${String(event.error || '').slice(0, 150)}` });
         }
       });
     },
+    cancelTasks,
     showImage(image) {
       toBrowser({ type: 'image', ...image });
     },
@@ -1088,6 +1201,8 @@ httpServer.listen(port, host, () => {
   }
   if (telegramConfigured()) console.log('  Telegram: Hinweise bei wichtigen Mails und Erinnerungen sind aktiv.');
   startMailWatcher();
+  const telegramTools = [...cloudTools.filter((t) => TELEGRAM_CLOUD_TOOLS.includes(t.name)), ...laptopFunctions.filter((t) => TELEGRAM_LAPTOP_TOOLS.includes(t.name))];
+  startTelegramAssistant({ tools: telegramTools, runTool: runTelegramTool, makeContext: telegramContext, persona: telegramPersona });
   if (telegramConfigured()) {
     loadPinnedBackup()
       .then((backup) => {

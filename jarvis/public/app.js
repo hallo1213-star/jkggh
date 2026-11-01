@@ -1180,6 +1180,66 @@ function toast(message, kind = '') {
 
 initMoney({ toast });
 initCall({ toast });
+// Settings: status of all services plus design and style switches.
+async function openSettings() {
+  const modal = document.getElementById('settings-modal');
+  const body = document.getElementById('settings-body');
+  modal.hidden = false;
+  try {
+    const response = await fetch('/api/status', { cache: 'no-store' });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Fehler');
+    const section = (title) => el('h4', 'planner-section', title);
+    const row = (title, detail, ok) => {
+      const r = el('div', 'planner-row');
+      const text = el('div');
+      text.append(el('b', '', `${ok === undefined ? '' : ok ? '🟢 ' : '⚪ '}${title}`), el('small', '', detail));
+      r.append(text);
+      return r;
+    };
+    const pill = (label, active, onClick) => {
+      const b = el('button', 'ctrl', label);
+      b.type = 'button';
+      b.setAttribute('aria-pressed', String(active));
+      if (active) b.style.borderColor = 'var(--cyan)';
+      b.addEventListener('click', onClick);
+      return b;
+    };
+    const saveStyle = async (payload) => {
+      await fetch('/api/status', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(payload) });
+      toast('Gespeichert – gilt sofort.');
+      openSettings();
+    };
+    const styleRow = el('div', 'order-actions');
+    styleRow.append(pill('Locker (duzt)', data.persona.style === 'freund', () => saveStyle({ style: 'freund' })), pill('Butler („Master“)', data.persona.style === 'butler', () => saveStyle({ style: 'butler' })));
+    const address = el('input');
+    address.type = 'text';
+    address.placeholder = 'Anrede, z. B. Master, Sir, dein Name';
+    address.value = data.persona.address || '';
+    address.className = 'settings-input';
+    const addressSave = pill('Anrede speichern', false, () => saveStyle({ address: address.value }));
+    const designRow = el('div', 'order-actions');
+    const orb = document.body.classList.contains('theme-orb');
+    const setDesign = (wantOrb) => {
+      document.body.classList.toggle('theme-orb', wantOrb);
+      try { localStorage.setItem('jarvis.theme', wantOrb ? 'orb' : 'hud'); } catch { /* ignore */ }
+      openSettings();
+    };
+    designRow.append(pill('Orb (hell)', orb, () => setDesign(true)), pill('Iron-Man (dunkel)', !orb, () => setDesign(false)));
+    body.replaceChildren(
+      section('Persönlichkeit'), styleRow, address, addressSave,
+      section('Design'), designRow,
+      section('Gedächtnis'), row(`${data.memories} gespeicherte Erinnerungen`, 'Ansehen und löschen über den Gehirn-Knopf oben. Passwörter und Bankdaten werden nie gespeichert.'),
+      section('Dienste & Modelle'), ...Object.entries(data.services).map(([name, s]) => row(name, s.detail, s.ok)),
+      el('p', 'card-source', 'Schlüssel werden nur bei Render (Environment) eingetragen – nie hier in der App. Anleitung im README.')
+    );
+  } catch (error) {
+    body.replaceChildren(el('p', 'order-missing', `Einstellungen nicht erreichbar: ${error.message}`));
+  }
+}
+document.getElementById('settings-button').addEventListener('click', openSettings);
+document.getElementById('settings-close').addEventListener('click', () => { document.getElementById('settings-modal').hidden = true; });
+
 // Design: bright "Orb" look (default) or the dark Iron-Man HUD.
 document.getElementById('theme-button').addEventListener('click', () => {
   const orb = document.body.classList.toggle('theme-orb');
