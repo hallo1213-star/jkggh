@@ -135,6 +135,13 @@ Falls Google kein App-Passwort anbietet (z. B. bei Schul-/Firmenkonten oder „E
 - **Ansehen und löschen:** oben rechts auf das Gehirn-Symbol tippen. Passwörter, PINs und Bank- oder Kartendaten merkt sich Jarvis nie.
 - Jarvis **knüpft an euer letztes Gespräch an** – auch nach dem Schließen der App. Der Verlauf bleibt auf deinem Gerät und lässt sich im Gedächtnis-Fenster löschen.
 
+## Bilder erschaffen und verstehen 🎨🔍
+
+- **Bilder erschaffen:** „Erstelle mir ein Bild von einer futuristischen Stadt bei Nacht.“ Jarvis plant das Bild selbst (Motiv, Stil, Licht, Perspektive) und lässt es vom kostenlosen Bildgenerator Pollinations malen, ohne Schlüssel. Das Bild erscheint im Gespräch und lässt sich groß öffnen und speichern.
+- **Bilder verstehen:** Tipp auf die **Büroklammer** neben dem Textfeld und wähle ein Foto oder einen Screenshot. Wenn du willst, schreib vorher eine Frage ins Textfeld, z. B. „Warum funktioniert mein Programm nicht?“. Jarvis beschreibt dann alles, was er sieht (Objekte, Positionen, Szene), liest Texte vor und erklärt Fehlermeldungen samt Lösung. Im Gespräch fasst er es dir auch mündlich zusammen.
+- Für die Bildanalyse wählt Jarvis automatisch ein Bild-Modell über `GROQ_API_KEY`. Ein eigenes Modell geht mit `GROQ_VISION_MODEL`.
+- Menschen auf Fotos beschreibt Jarvis nur allgemein. Er erkennt niemanden am Gesicht.
+
 ## Projekt-Werkstatt: Jarvis programmiert selbst 🧑‍💻
 
 Sag z. B. **„Programmier mir ein eigenes 3D-Spiel“**, **„Programmier mir einen Taschenrechner“** oder **„Erstelle mir einen modernen Online-Shop für Kleidung mit Warenkorb“**.

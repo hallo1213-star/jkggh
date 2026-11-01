@@ -674,6 +674,15 @@ body {
 .call-hangup { border-color: var(--red); color: var(--red); }
 .call-hangup[hidden], .call-close[hidden] { display: none; }
 
+.attach-btn { flex: none; display: grid; place-items: center; width: 44px; border: 1px solid var(--panel-edge); color: var(--muted); cursor: pointer; }
+.attach-btn:hover { color: var(--cyan-soft); border-color: var(--cyan); }
+.attach-btn svg { width: 20px; height: 20px; fill: currentColor; }
+.image-card { padding: 10px; border: 1px solid var(--cyan); background: rgba(2, 12, 20, 0.6); }
+.image-card img { display: block; width: 100%; max-height: 420px; object-fit: contain; background: #000; min-height: 160px; }
+.image-card .image-wait { padding: 60px 10px; text-align: center; color: var(--muted); }
+.image-card p { margin: 8px 0 0; font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.image-card .order-actions a.ctrl { text-decoration: none; }
+
 /* --- Project workshop --- */
 .project-overlay { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; background: radial-gradient(ellipse at 50% 0%, #0b2537, #02060b 70%); }
 .project-overlay[hidden] { display: none; }

@@ -33,6 +33,7 @@ import { bauplanConfig, missingSettings, renderSalesPage } from './bauplan-page.
 import { productFiles } from './bauplan-content.js';
 import { designScene, sanitizeScene } from './model3d.js';
 import { sanitizeProject, writeProject } from './projects.js';
+import { describeImage } from './llm.js';
 import { findTool as findLaptopTool, functionDefinitions as laptopFunctions } from './laptop/tools.js';
 
 if (!process.env.TZ) process.env.TZ = 'Europe/Berlin';
@@ -338,6 +339,20 @@ const httpServer = createServer(async (request, response) => {
     const config = bauplanConfig();
     response.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache', 'x-content-type-options': 'nosniff', 'referrer-policy': 'strict-origin-when-cross-origin' });
     response.end(renderSalesPage(config));
+    return;
+  }
+
+  if (pathname === '/api/vision' && request.method === 'POST') {
+    if (!isAuthenticated(request) || !String(request.headers['content-type'] || '').startsWith('application/json')) {
+      sendJson(response, 401, { error: 'Nicht angemeldet' });
+      return;
+    }
+    try {
+      const body = JSON.parse(await readBody(request, 8 * 1024 * 1024));
+      sendJson(response, 200, { answer: await describeImage({ dataUrl: body.image, question: body.question }) });
+    } catch (error) {
+      sendJson(response, 400, { error: error.message });
+    }
     return;
   }
 
@@ -744,6 +759,9 @@ browserWss.on('connection', (browser, request) => {
     globeMemory: {},
     modelMemory: {},
     projectMemory: {},
+    showImage(image) {
+      toBrowser({ type: 'image', ...image });
+    },
     showProject(project) {
       toBrowser({ type: 'project', project });
     },
@@ -1008,6 +1026,10 @@ browserWss.on('connection', (browser, request) => {
       memoryStore.set(message.items);
     } else if (/^(planner|notes|expenses|vocab)_update$/.test(message.type)) {
       syncedStores[message.type.replace('_update', '')].set(message.items);
+    } else if (message.type === 'vision_result' && agentOpen) {
+      // The user sent a picture; Jarvis gets the analysis and answers by voice.
+      const question = String(message.question || '').slice(0, 300);
+      agent.sendInjectUserMessage({ type: 'InjectUserMessage', content: `[Ich habe dir gerade ein Bild geschickt${question ? ` und gefragt: „${question}“` : ''}. Deine Bildanalyse dazu:]\n${String(message.answer || '').slice(0, 3000)}\n[Fasse das kurz und natürlich für mich zusammen.]` });
     } else if (message.type === 'project_current') {
       context.projectMemory.last = sanitizeProject(message.project);
     } else if (message.type === 'model_current') {

@@ -679,6 +679,61 @@ function addWeeklyCard(numbers) {
   cardMessage('Zahlen', card);
 }
 
+// --- Pictures: created by Jarvis, or sent to Jarvis for analysis -------------------
+
+function addImageCard({ url, title, description }) {
+  const card = el('div', 'image-card');
+  const wait = el('p', 'image-wait', '🎨 Jarvis malt …');
+  const img = el('img');
+  img.alt = title || 'Bild von Jarvis';
+  img.hidden = true;
+  img.referrerPolicy = 'no-referrer';
+  img.addEventListener('load', () => { wait.remove(); img.hidden = false; els.transcript.scrollTop = els.transcript.scrollHeight; });
+  img.addEventListener('error', () => { wait.textContent = 'Das Bild konnte nicht geladen werden. Sag „Mal es noch mal“.'; });
+  img.src = url;
+  const actions = el('div', 'order-actions');
+  actions.append(Object.assign(el('a', 'ctrl', 'Groß öffnen / speichern'), { href: url, target: '_blank', rel: 'noopener noreferrer' }));
+  card.append(wait, img, el('p', '', `${title || ''}${description ? ` – ${description}` : ''}`), actions);
+  cardMessage('Bild', card);
+}
+
+async function sendImage(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const dataUrl = await new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => {
+      const scale = Math.min(1, 1280 / Math.max(image.width, image.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(image.width * scale);
+      canvas.height = Math.round(image.height * scale);
+      canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(image.src);
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    image.onerror = () => reject(new Error('Bild konnte nicht gelesen werden.'));
+    image.src = URL.createObjectURL(file);
+  });
+  const question = els.textInput?.value.trim() || '';
+  if (els.textInput) els.textInput.value = '';
+  const card = el('div', 'image-card');
+  const img = el('img');
+  img.src = dataUrl;
+  img.alt = 'Dein Bild';
+  const answer = el('p', '', '🔍 Jarvis schaut sich das Bild an …');
+  card.append(img, answer);
+  cardMessage(question ? `Du: ${question}` : 'Dein Bild', card);
+  try {
+    const response = await fetch('/api/vision', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ image: dataUrl, question }) });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Fehler');
+    answer.textContent = data.answer;
+    if (state.ws?.readyState === WebSocket.OPEN) state.ws.send(JSON.stringify({ type: 'vision_result', answer: data.answer, question }));
+  } catch (error) {
+    answer.textContent = `⚠️ ${error.message}`;
+  }
+  els.transcript.scrollTop = els.transcript.scrollHeight;
+}
+
 // The sales website for the Jarvis-Bauplan: link, downloads and what is missing.
 function addBauplanCard(info) {
   const card = el('div', 'info-card bauplan-card');
@@ -1123,6 +1178,10 @@ function toast(message, kind = '') {
 
 initMoney({ toast });
 initCall({ toast });
+document.getElementById('image-input').addEventListener('change', (event) => {
+  sendImage(event.target.files[0]).catch((error) => toast(error.message, 'error'));
+  event.target.value = '';
+});
 initProjects({
   toast,
   send: (message) => {
@@ -1312,6 +1371,9 @@ function handleMessage(message) {
       break;
     case 'bauplan':
       addBauplanCard(message);
+      break;
+    case 'image':
+      addImageCard(message);
       break;
     case 'weekly':
       addWeeklyCard(message.numbers);

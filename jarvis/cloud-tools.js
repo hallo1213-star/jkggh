@@ -9,6 +9,7 @@ import { getMarkets } from './markets.js';
 import { bauplanConfig, missingSettings } from './bauplan-page.js';
 import { describeScene, designScene } from './model3d.js';
 import { writeProject } from './projects.js';
+import { imageUrl, planImage } from './images.js';
 import { gumroadConfigured, gumroadProducts } from './gumroad.js';
 import { geocodePlace, placeDetails } from './places.js';
 import { MODES as ORDER_MODES, checkOrder, cleanOrderItems, describeItem, findRestaurant, normalizePhone, orderSummary, orderTotal, readMenu, spokenPhone } from './restaurants.js';
@@ -858,6 +859,25 @@ export const cloudTools = [
       context.schedule(ms, String(message || 'Dein Timer ist abgelaufen.'));
       const due = new Date(Date.now() + ms).toLocaleTimeString('de-DE', { timeZone, hour: '2-digit', minute: '2-digit' });
       return { gestellt: true, faelligUm: due };
+    }
+  },
+  {
+    name: 'create_image',
+    description: 'Erschafft ein neues Bild nach seiner Beschreibung (z. B. „eine futuristische Stadt bei Nacht“) und zeigt es in der App an. Du planst Motiv und Stil selbst. Keine Bildersuche im Internet. Keine echten, namentlich bekannten Personen.',
+    parameters: {
+      type: 'object',
+      properties: {
+        description: { type: 'string', description: 'Was auf dem Bild sein soll, in seinen Worten' },
+        format: { type: 'string', enum: ['quadrat', 'hoch', 'quer'], description: 'quer für Landschaften/Hintergründe, hoch für Handy-Hintergründe' }
+      },
+      required: ['description']
+    },
+    label: (a) => `Bild erschaffen: ${a.description}`,
+    run: async ({ description, format }, context) => {
+      const plan = await planImage(description);
+      const url = imageUrl(plan.prompt, { format });
+      context.showImage({ url, title: plan.title, description: String(description).slice(0, 300) });
+      return { erstellt: true, titel: plan.title, hinweis: 'Das Bild wird gerade gemalt und erscheint in ein paar Sekunden in der App. Sag kurz, was du gemalt hast. Er kann es speichern oder eine andere Version wünschen.' };
     }
   },
   {

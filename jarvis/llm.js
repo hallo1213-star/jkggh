@@ -165,3 +165,68 @@ export async function generateJson(options) {
     return parseJsonReply(await generateText({ ...options, json: true, prompt: `${options.prompt}\n\nAntworte AUSSCHLIESSLICH mit gültigem JSON, ohne weiteren Text.` }));
   }
 }
+
+// --- Understanding images (photos and screenshots the user sends) ----------------
+
+const VISION_PREFERRED = {
+  groq: ['meta-llama/llama-4-scout-17b-16e-instruct', 'meta-llama/llama-4-maverick-17b-128e-instruct'],
+  openrouter: ['meta-llama/llama-4-scout:free', 'meta-llama/llama-4-maverick:free', 'google/gemma-3-27b-it:free', 'qwen/qwen2.5-vl-72b-instruct:free']
+};
+const visionChoice = {};
+
+async function pickVisionModel(provider, fetchImpl) {
+  const configured = process.env[`${provider.toUpperCase()}_VISION_MODEL`]?.trim();
+  if (configured) return configured;
+  if (visionChoice[provider]) return visionChoice[provider];
+  const config = OPENAI_COMPATIBLE[provider];
+  const response = await fetchImpl(`${config.base}/models`, { headers: { authorization: `Bearer ${config.key()}` }, signal: AbortSignal.timeout(20_000) });
+  const data = await readJson(response, config.name);
+  const ids = new Set((data.data || []).filter((m) => m?.active !== false).map((m) => m.id));
+  const model = VISION_PREFERRED[provider].find((id) => ids.has(id))
+    || [...ids].find((id) => /llama-4|vision|-vl|gemma-3/i.test(id) && (provider !== 'openrouter' || id.endsWith(':free')));
+  if (!model) throw new Error(`${config.name}: Für deinen Schlüssel ist gerade kein Bild-Modell freigeschaltet.`);
+  visionChoice[provider] = model;
+  return model;
+}
+
+export async function describeImage({ dataUrl, question, fetchImpl = fetch }) {
+  const match = /^data:(image\/(?:jpeg|png|webp|gif));base64,([A-Za-z0-9+/=]+)$/.exec(String(dataUrl || ''));
+  if (!match) throw new Error('Das Bild konnte nicht gelesen werden (nur JPG, PNG, WebP).');
+  if (match[2].length > 6_000_000) throw new Error('Das Bild ist zu groß.');
+  const provider = llmProvider();
+  if (!provider) throw new Error(MISSING_KEY);
+  const system = 'Du bist die Bildanalyse von Jarvis. Antworte auf Deutsch, klar und gut verständlich. Beschreibe, was zu sehen ist: Objekte und wo sie sich befinden, die Szene, Farben, Stimmung, und lies sichtbaren Text vor. Bei Screenshots mit Fehlermeldungen: Erkläre den Fehler und den wahrscheinlichsten Lösungsweg in einfachen Schritten. Identifiziere keine echten Personen anhand ihres Gesichts – beschreibe Menschen nur allgemein. Erfinde nichts, was nicht zu sehen ist.';
+  const ask = String(question || '').trim().slice(0, 500) || 'Beschreibe mir alles, was du auf diesem Bild erkennst.';
+  if (provider === 'claude') {
+    const response = await fetchImpl('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-api-key': process.env.ANTHROPIC_API_KEY.trim(), 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({ model: claudeModel(), max_tokens: 1500, system, messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: match[1], data: match[2] } }, { type: 'text', text: ask }] }] }),
+      signal: AbortSignal.timeout(TIMEOUT_MS)
+    });
+    const data = await readJson(response, 'Claude');
+    return (data.content || []).filter((p) => p.type === 'text').map((p) => p.text).join('').trim();
+  }
+  if (provider === 'gemini') {
+    const response = await fetchImpl(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(geminiModel())}:generateContent`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-goog-api-key': process.env.GEMINI_API_KEY.trim() },
+      body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: [{ role: 'user', parts: [{ inline_data: { mime_type: match[1], data: match[2] } }, { text: ask }] }] }),
+      signal: AbortSignal.timeout(TIMEOUT_MS)
+    });
+    const data = await readJson(response, 'Gemini');
+    return (data.candidates?.[0]?.content?.parts || []).map((p) => p.text || '').join('').trim();
+  }
+  const config = OPENAI_COMPATIBLE[provider];
+  const model = await pickVisionModel(provider, fetchImpl);
+  const response = await fetchImpl(`${config.base}/chat/completions`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: `Bearer ${config.key()}` },
+    body: JSON.stringify({ model, max_tokens: 1500, messages: [{ role: 'system', content: system }, { role: 'user', content: [{ type: 'text', text: ask }, { type: 'image_url', image_url: { url: dataUrl } }] }] }),
+    signal: AbortSignal.timeout(TIMEOUT_MS)
+  });
+  const data = await readJson(response, config.name);
+  const answer = String(data.choices?.[0]?.message?.content || '').trim();
+  if (!answer) throw new Error('Die Bildanalyse hat keine Antwort geliefert.');
+  return answer;
+}
