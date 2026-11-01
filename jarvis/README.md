@@ -191,6 +191,7 @@ Zehn praktische Helfer, alle per Sprache und mit eigener Karte in der App. Die m
 | *„Was heißt ‚Wo ist der Bahnhof?‘ auf Spanisch?“* | **Übersetzer:** Übersetzung mit Aussprache-Hilfe, Tipp und 🔊 Vorlese-Knopf in der richtigen Sprache. |
 | *„Gib mir ein Rezept für Lasagne“*, *„Was koche ich mit Nudeln, Feta und Tomaten?“* | **Rezept-Assistent:** Zutaten mit Mengen, Portionen-Rechner (+/−), Schritte zum Abhaken. Knopf 🛒 setzt alle Zutaten auf die Einkaufsliste. |
 | *„Wann fährt der nächste Zug von Hamburg nach Berlin?“*, *„Abfahrten Marienplatz München“* | **Bahn & Bus:** echte Verbindungen der Deutschen Bahn (auch S-/U-Bahn, Bus) mit Umstiegen, Gleis, Verspätung und Ausfällen, Link zur Buchung bei bahn.de. Ticketpreise kennt Jarvis nicht. |
+| *„Finde eine passende Route zu meiner Schule, ich muss um 8 Uhr da sein“* | **Routenplaner:** rechnet rückwärts von deiner Ankunftszeit (mit 5 Minuten Puffer) und sagt dir, **wann du losgehen musst**. Tür-zu-Tür mit Bus & Bahn inklusive Fußweg zur Haltestelle, Linie, Gleis, Umstieg und Verspätung. Dazu der Vergleich zu Fuß, Fahrrad (und Auto), ein Zeitstrahl, eine Mini-Karte und der Link zu Google Maps. Jarvis bietet an, dich rechtzeitig zu erinnern. Tipp: *„Merk dir: Adresse: Musterstraße 5, Frankfurt“* und *„Merk dir: Schule: Goethe-Gymnasium, Frankfurt“*. |
 | *„Wann sind die nächsten Ferien in Bayern?“* | **Schulferien & Feiertage:** Countdown bis zu den nächsten Ferien, alle Ferien und Feiertage des Bundeslands. Tipp: *„Merk dir, ich wohne in NRW“*. |
 | *„Was ist 17 mal 23?“*, *„250 plus 19 Prozent“*, *„Wurzel aus 2“* | **Rechner:** rechnet exakt statt zu schätzen (Prozent, Potenzen, Wurzel, sin/cos/tan, log). |
 | *„Wie viel sind 100 Euro in Dollar?“* | **Währungsrechner:** echter EZB-Tageskurs, Betrag in der Karte änderbar. |
@@ -200,7 +201,7 @@ Zehn praktische Helfer, alle per Sprache und mit eigener Karte in der App. Die m
 | *„Fass mir diesen Artikel zusammen: https://…“* | **Artikel zusammenfassen:** Kernaussage, wichtigste Punkte, Lesezeit. Texte auf der Seite gelten nur als Information, nie als Befehl. Bezahlschranken und PDFs gehen nicht. |
 | *„Wie hat Dortmund gespielt?“*, *„Zeig mir die Bundesliga-Tabelle“* | **Fußball:** Spieltag mit Ergebnissen (live markiert) und Tabelle der 1./2. Bundesliga oder 3. Liga, dein Verein hervorgehoben. |
 
-Quellen (alle kostenlos, ohne Schlüssel): db.transport.rest (Deutsche Bahn), OpenHolidays API, Frankfurter (EZB-Kurse) und OpenLigaDB. Übersetzer, Rezepte, Quiz und Zusammenfassungen brauchen den KI-Schlüssel (`GROQ_API_KEY`).
+Quellen (alle kostenlos, ohne Schlüssel): db.transport.rest (Deutsche Bahn), OpenStreetMap (Adressen, Fuß-/Rad-/Autowege), OpenHolidays API, Frankfurter (EZB-Kurse) und OpenLigaDB. Übersetzer, Rezepte, Quiz und Zusammenfassungen brauchen den KI-Schlüssel (`GROQ_API_KEY`).
 
 ## Memory Palace: Jarvis' 3D-Gedächtnis 🧠
 

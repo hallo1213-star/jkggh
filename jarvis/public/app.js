@@ -1493,6 +1493,7 @@ function handleMessage(message) {
     case 'countdown':
     case 'summary':
     case 'football':
+    case 'route':
       if (isEverydayCard(message.type)) showEverydayCard(message);
       break;
     case 'studio_open':

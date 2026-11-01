@@ -7,6 +7,7 @@ import { OFFER_ALLOWED, STATUSES, findCustomer, summarize, upsertCustomer } from
 import { getNews, getWeather, lookupWikipedia, searchNews, topNews } from './knowledge.js';
 import { getChart, getMarkets } from './markets.js';
 import { getIss } from './iss.js';
+import { describeRoute, planRoute } from './route.js';
 import { STATES, calculate, convertCurrency, countdownTarget, getBundesliga, getDepartures, getHolidays, getJourneys, ingredientText, makeQr, makeQuiz, planRecipe, summarizeUrl, translate } from './everyday.js';
 import { bauplanConfig, missingSettings } from './bauplan-page.js';
 import { describeScene, designScene } from './model3d.js';
@@ -969,6 +970,36 @@ export const cloudTools = [
     }
   },
   {
+    name: 'route_plan',
+    description: 'Routenplaner mit Ankunftszeit: findet die beste Route von Tür zu Tür (Bus & Bahn inkl. Fußweg zur Haltestelle, zu Fuß, Fahrrad, Auto) und rechnet RÜCKWÄRTS aus, wann er spätestens losgehen muss, um pünktlich zu sein (mit Puffer). Für „Finde eine Route zu meiner Schule, ich muss um 8 da sein“, „Wann muss ich los, um um 14 Uhr beim Arzt zu sein?“. Ziele wie „meine Schule“, „Arbeit“, „Oma“ und seine Wohnadresse aus dem Gedächtnis nehmen; fehlt eine Adresse, einmal fragen und mit memory_save merken (z. B. "Schule: Goethe-Gymnasium, Musterstraße 1, Frankfurt").',
+    parameters: {
+      type: 'object',
+      properties: {
+        to: { type: 'string', description: 'Ziel: Adresse oder eindeutiger Name mit Stadt, z. B. "Goethe-Gymnasium, Frankfurt"' },
+        arrive_by: { type: 'string', description: 'Spätestens da um, HH:MM, z. B. "08:00"' },
+        from: { type: 'string', description: 'Start-Adresse; leer = Wohnadresse aus dem Gedächtnis' },
+        date: { type: 'string', description: 'Optional: JJJJ-MM-TT oder "morgen". Leer = heute bzw. morgen, wenn die Zeit heute schon vorbei ist' },
+        mode: { type: 'string', enum: ['oepnv', 'zu_fuss', 'fahrrad', 'auto'], description: 'Standard oepnv (Bus & Bahn); Vergleich mit zu Fuß und Fahrrad kommt immer mit' },
+        buffer: { type: 'number', description: 'Puffer in Minuten vor der Zielzeit (Standard 5)' }
+      },
+      required: ['to', 'arrive_by']
+    },
+    label: (a) => `Route: ${a.to} (an ${a.arrive_by})`,
+    run: async ({ to, arrive_by: arriveBy, from, date, mode, buffer }, context) => {
+      const start = String(from ?? '').trim() || homeAddress(context);
+      const route = await planRoute({ from: start, to, arriveBy, date, mode, buffer });
+      context.showVisual?.({ type: 'route', route });
+      const spoken = describeRoute(route);
+      return {
+        ...spoken,
+        start: route.from,
+        ziel: route.to,
+        startUngenau: !String(from ?? '').trim() && !/\d/.test(start) ? 'Start ist nur der Wohnort – für eine genaue Gehzeit nach seiner Straße fragen und merken.' : undefined,
+        hinweis: `Sag zuerst klar, wann er losgehen muss (${spoken.losgehen} Uhr) und wann er ankommt, dann kurz die Schritte (Linie, Haltestelle, Gleis). Die Karte mit Zeitstrahl und Google-Maps-Link ist auf dem Bildschirm. Biete an, ihn zur Losgeh-Zeit zu erinnern (reminder_add, ein paar Minuten vorher). Fahrplandaten sind live, aber Verspätungen können sich ändern.`
+      };
+    }
+  },
+  {
     name: 'holidays',
     description: 'Schulferien und gesetzliche Feiertage für ein Bundesland, mit Countdown bis zu den nächsten Ferien. Für „Wann sind die nächsten Ferien?“, „Wie lange noch bis Weihnachtsferien?“, „Ist nächsten Montag Feiertag?“. Bundesland aus dem Gedächtnis nehmen oder einmal fragen und mit memory_save merken.',
     parameters: { type: 'object', properties: { state: { type: 'string', description: `Bundesland: ${Object.values(STATES).join(', ')}` } }, required: ['state'] },
@@ -1578,6 +1609,16 @@ Jarvis ruft ${spokenPhone(order.restaurant.phone)} an und sagt, dass er ein KI-A
 
 export function findCloudTool(name) {
   return cloudTools.find((tool) => tool.name === name);
+}
+
+// Home address from memory ("Adresse: …", "wohnt in …"); empty if unknown.
+function homeAddress(context) {
+  const memories = context.getMemories?.() || [];
+  for (const m of memories) {
+    const match = /(?:wohnadresse|adresse(?: zu ?hause)?|zuhause|zu hause|wohnt (?:in der|in|an der))\s*(?:ist|:)?\s*([^;]+)/i.exec(typeof m === 'string' ? m : m?.text || '');
+    if (match && /\d/.test(match[1])) return match[1].trim().slice(0, 140);
+  }
+  return context.homeTown?.() || '';
 }
 
 function escapeHtml(value) {

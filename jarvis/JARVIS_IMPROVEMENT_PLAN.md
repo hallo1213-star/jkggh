@@ -40,6 +40,15 @@ Diese Datei hält fest, was analysiert, gebaut und getestet wurde und was noch o
   - Status aller Dienste und Modelle.
   - Schlüssel werden bewusst nur bei Render eingetragen.
 
+## Erledigt: Routenplaner „pünktlich da sein“
+
+- [x] `route.js`, Werkzeug `route_plan`, Karte in `public/cards.js`.
+- Rechnet rückwärts von der Ankunftszeit (Puffer 5 min, einstellbar): Losgeh-Zeit, Tür-zu-Tür mit Bus & Bahn (db.transport.rest mit Adressen und `arrival`), dazu Vergleich zu Fuß, Fahrrad, Auto (OSRM auf routing.openstreetmap.de).
+- Wahl: die späteste Verbindung, die noch pünktlich ist. Bei kurzem Fußweg wird Laufen empfohlen. Fällt der Fahrplan aus, gibt es trotzdem Fuß/Rad.
+- Ist die Zeit heute schon vorbei, wird automatisch morgen geplant. Deutsche Zeitzone inkl. Sommerzeit.
+- Start = Wohnadresse aus dem Gedächtnis („Adresse: …“), Ziele wie „Schule“ ebenfalls. Fehlt etwas, fragt Jarvis und merkt es sich. Er bietet eine Erinnerung zur Losgeh-Zeit an.
+- Tests: Unit-Test `route` 16/16, Browser-Test mit simulierten Diensten (Zeitstrahl, Modus-Wechsel, Google-Maps-Link, Handy-Breite, beide Designs) ohne Fehler. Echte Antworten der Routendienste nicht getestet.
+
 ## Erledigt: 10 Alltagshelfer
 
 - [x] **Übersetzer** (`translate`): Aussprache, Hinweis, Vorlesen in der Zielsprache (Browser-Sprachausgabe), Kopieren.

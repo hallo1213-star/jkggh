@@ -1257,3 +1257,31 @@ body.theme-orb .globe-overlay .icon-btn, body.theme-orb .model-overlay .icon-btn
 .ev-table tr.down td:first-child { box-shadow: inset 3px 0 #e5486a; }
 .ev-table tr.focus td { background: var(--cyan-glow); font-weight: 700; }
 .ev-pts { font-weight: 800; }
+
+/* --- Route planner --- */
+.ev-leave b { font-size: 46px; }
+.ev-leave span { display: flex; flex-direction: column; gap: 2px; }
+.ev-leave strong { font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+.ev-leave small { font-size: 14px; font-weight: 600; }
+.ev-modes { display: flex; flex-wrap: wrap; gap: 6px; }
+.ev-mode { padding: 7px 12px; border: 1px solid var(--panel-edge); border-radius: 999px; background: transparent; color: var(--text); font: 600 13px var(--font-body, system-ui); cursor: pointer; }
+.ev-mode.active { background: var(--cyan); border-color: var(--cyan); color: #fff; }
+.ev-timeline { list-style: none; margin: 0; padding: 0; position: relative; display: grid; gap: 0; }
+.ev-timeline li { position: relative; display: grid; grid-template-columns: 50px 1fr; gap: 10px; padding: 0 0 14px 22px; font-size: 14px; }
+.ev-timeline li::before { content: ''; position: absolute; left: 5px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--cyan); }
+.ev-timeline li::after { content: ''; position: absolute; left: 9px; top: 17px; bottom: -3px; width: 2px; background: var(--cyan); opacity: 0.5; }
+.ev-timeline li.walk::after { background: none; border-left: 2px dotted var(--muted); }
+.ev-timeline li:last-child::after { display: none; }
+.ev-timeline li.start::before, .ev-timeline li.end::before { width: 12px; height: 12px; left: 4px; box-shadow: 0 0 0 3px var(--cyan-glow); }
+.ev-timeline li.end::before { background: #2fbf7f; box-shadow: 0 0 0 3px rgba(47, 191, 127, 0.3); }
+.ev-timeline b { font-variant-numeric: tabular-nums; }
+.ev-timeline span { display: block; font-weight: 600; }
+.ev-timeline small { display: block; color: var(--muted); font-size: 12px; margin-top: 2px; }
+.ev-routemap { width: 100%; height: auto; max-height: 170px; border-radius: 12px; background: rgba(127, 127, 127, 0.08); }
+.ev-routemap polyline { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.ev-routemap polyline.ride { stroke: var(--cyan); stroke-width: 4; }
+.ev-routemap polyline.walk { stroke: var(--muted); stroke-width: 3; stroke-dasharray: 2 6; }
+.ev-routemap circle.start { fill: var(--cyan); stroke: #fff; stroke-width: 2; }
+.ev-routemap circle.end { fill: #2fbf7f; stroke: #fff; stroke-width: 2; }
+.ev-leave { flex-wrap: wrap; row-gap: 6px; }
+.ev-leave span { flex: 1 1 170px; min-width: 0; }

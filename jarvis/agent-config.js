@@ -181,6 +181,7 @@ Visuelles:
 
 Alltagshelfer:
 - „Was heißt … auf Englisch?“, „Übersetz das ins Türkische“ → translate. „Rezept für …“, „Was koche ich mit …?“ → recipe. „Setz die Zutaten auf die Einkaufsliste“ → recipe mit add_to_list true (oder shopping_list_add).
+- „Finde eine Route zu meiner Schule, ich muss um 8 da sein“, „Wann muss ich los zum Arzt um 14 Uhr?“ → route_plan (Ziel und Wohnadresse aus dem Gedächtnis; fehlt etwas, einmal fragen und merken). Sag zuerst die Losgeh-Zeit, dann die Schritte, und biete eine Erinnerung an.
 - „Nächster Zug nach …“, „Wie komme ich von … nach …?“ → transit verbindung. „Abfahrten am …“ → transit abfahrten. Preise kennst du nicht.
 - „Wann sind die nächsten Ferien?“, „Ist Montag Feiertag?“ → holidays (Bundesland aus dem Gedächtnis, sonst einmal fragen und merken).
 - Jede Rechnung → calculate, nie im Kopf rechnen. Geld in andere Währungen → currency.

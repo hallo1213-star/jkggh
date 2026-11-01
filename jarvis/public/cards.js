@@ -356,7 +356,102 @@ function footballCard({ data }) {
   ctx.cardMessage('Fußball', c);
 }
 
+
+// --- Route planner: "be there by 08:00" ---
+const MODE_INFO = { oepnv: ['🚌', 'Bus & Bahn'], zu_fuss: ['🚶', 'Zu Fuß'], fahrrad: ['🚲', 'Fahrrad'], auto: ['🚗', 'Auto'] };
+const hm = (iso) => (iso ? new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) : '');
+
+function routeMap(option, route) {
+  const paths = option.legs ? option.legs.map((l) => ({ walking: l.walking, pts: l.path || [] })) : [{ walking: option.mode === 'zu_fuss', pts: option.path || [] }];
+  const all = paths.flatMap((p) => p.pts);
+  const a = [route.fromPoint.lon, route.fromPoint.lat];
+  const b = [route.toPoint.lon, route.toPoint.lat];
+  if (!all.length) paths.push({ walking: true, pts: [a, b] });
+  const pts = [...all, a, b];
+  const lat0 = (Math.min(...pts.map((p) => p[1])) + Math.max(...pts.map((p) => p[1]))) / 2;
+  const kx = Math.cos((lat0 * Math.PI) / 180);
+  const xs = pts.map((p) => p[0] * kx);
+  const ys = pts.map((p) => p[1]);
+  const [minX, maxX, minY, maxY] = [Math.min(...xs), Math.max(...xs), Math.min(...ys), Math.max(...ys)];
+  const W = 320;
+  const H = 150;
+  const scale = Math.min((W - 30) / Math.max(maxX - minX, 1e-6), (H - 30) / Math.max(maxY - minY, 1e-6));
+  const proj = (p) => [15 + (p[0] * kx - minX) * scale + ((W - 30) - (maxX - minX) * scale) / 2, H - 15 - (p[1] - minY) * scale - ((H - 30) - (maxY - minY) * scale) / 2];
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('class', 'ev-routemap');
+  svg.setAttribute('aria-label', 'Streckenverlauf');
+  for (const p of paths) {
+    if (p.pts.length < 2) continue;
+    const line = document.createElementNS(ns, 'polyline');
+    line.setAttribute('points', p.pts.map((q) => proj(q).map((v) => v.toFixed(1)).join(',')).join(' '));
+    line.setAttribute('class', p.walking ? 'walk' : 'ride');
+    svg.append(line);
+  }
+  for (const [p, cls] of [[a, 'start'], [b, 'end']]) {
+    const dot = document.createElementNS(ns, 'circle');
+    const [x, y] = proj(p);
+    dot.setAttribute('cx', x.toFixed(1));
+    dot.setAttribute('cy', y.toFixed(1));
+    dot.setAttribute('r', '6');
+    dot.setAttribute('class', cls);
+    svg.append(dot);
+  }
+  return svg;
+}
+
+function routeCard({ route }) {
+  const c = card('route');
+  let current = route.options.find((o) => o.mode === route.recommended) || route.options[0];
+  c.append(head('🧭', `Route zu ${route.to.split(',')[0]}`, `${route.day} · spätestens da um ${hm(route.arriveBy)}`));
+  const hero = el('div', 'ev-hero ev-leave');
+  const body = el('div');
+  const modes = el('div', 'ev-modes');
+  const render = () => {
+    const [icon, name] = MODE_INFO[current.mode];
+    const wait = Math.round((new Date(route.arriveBy) - new Date(current.arrive)) / 60000);
+    hero.replaceChildren(el('b', '', hm(current.leave)), (() => { const t = el('span'); t.append(el('strong', '', 'Losgehen'), el('small', '', `${icon} ${name} · ${current.minutes} min · an ${hm(current.arrive)}${wait > 0 ? ` · ${wait} min Puffer` : ''}`)); return t; })());
+    const timeline = el('ol', 'ev-timeline');
+    const add = (time, title, sub, cls) => { const li = el('li', cls); li.append(el('b', '', time), (() => { const d = el('div'); d.append(el('span', '', title)); if (sub) d.append(el('small', '', sub)); return d; })()); timeline.append(li); };
+    add(hm(current.leave), `Start: ${route.from.split(',').slice(0, 2).join(',')}`, '', 'start');
+    if (current.legs) {
+      current.legs.forEach((l) => {
+        if (l.walking) add(hm(l.departure), `🚶 Zu Fuß bis ${l.to || 'Ziel'}`, l.distance ? `${l.distance} m · ca. ${Math.max(1, Math.round((new Date(l.arrival) - new Date(l.departure)) / 60000))} min` : '', 'walk');
+        else add(hm(l.departure), `${l.line} ${l.direction ? `→ ${l.direction}` : ''}`, `ab ${l.from}${l.platform ? ` · Gleis ${l.platform}` : ''} · an ${hm(l.arrival)} ${l.to}${l.delay ? ` · +${l.delay} min` : ''}`, 'ride');
+      });
+    } else {
+      add(hm(current.leave), `${MODE_INFO[current.mode][0]} ${MODE_INFO[current.mode][1]}`, `${current.km ? `${String(current.km).replace('.', ',')} km · ` : ''}${current.minutes} min${current.mode === 'auto' ? ' (inkl. Verkehr & Parken)' : ''}`, current.mode === 'zu_fuss' ? 'walk' : 'ride');
+    }
+    add(hm(current.arrive), `Ankunft: ${route.to.split(',').slice(0, 2).join(',')}`, '', 'end');
+    const parts = [timeline, routeMap(current, route)];
+    if (current.alternatives?.length) {
+      const alt = el('p', 'ev-muted', `Andere Verbindungen: ${current.alternatives.map((j) => `los ${hm(j.leave)} → an ${hm(j.arrive)}`).join(' · ')}`);
+      parts.push(alt);
+    }
+    body.replaceChildren(...parts);
+    modes.querySelectorAll('button').forEach((b) => b.classList.toggle('active', b.dataset.mode === current.mode));
+    link.href = link.href.replace(/travelmode=\w+/, `travelmode=${{ oepnv: 'transit', zu_fuss: 'walking', fahrrad: 'bicycling', auto: 'driving' }[current.mode]}`);
+  };
+  const link = safeLink(route.link, '🗺️ In Google Maps öffnen');
+  [...route.options].sort((x, y) => Object.keys(MODE_INFO).indexOf(x.mode) - Object.keys(MODE_INFO).indexOf(y.mode)).forEach((o) => {
+    const [icon, name] = MODE_INFO[o.mode];
+    const b = button(`${icon} ${o.minutes} min`, () => { current = o; render(); }, 'ev-mode');
+    b.dataset.mode = o.mode;
+    b.title = `${name}: los um ${hm(o.leave)}`;
+    modes.append(b);
+  });
+  c.append(hero, modes, body);
+  if (route.reason) c.append(el('p', 'ev-muted', `💡 ${route.reason}`));
+  const actions = el('div', 'ev-actions');
+  actions.append(link);
+  c.append(actions, el('p', 'card-source', 'Fahrplan: Deutsche Bahn (live) · Wege: OpenStreetMap'));
+  render();
+  ctx.cardMessage('Route', c);
+}
+
 const RENDERERS = {
+  route: routeCard,
   translate: translateCard,
   recipe: recipeCard,
   journeys: journeysCard,
