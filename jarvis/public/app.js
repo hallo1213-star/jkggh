@@ -5,6 +5,7 @@ import { handleGlobeMessage, initGlobe } from './globe.js';
 import { addOrderCard, handleCallEvent, initCall } from './call.js';
 import { initModels, modelLoading, showModel } from './model3d.js';
 import { initProjects, projectLoading, showProject } from './projects.js';
+import { handleTaskEvent, initTasks } from './tasks.js';
 
 const OUTPUT_SAMPLE_RATE = 24000;
 
@@ -1178,6 +1179,7 @@ function toast(message, kind = '') {
 
 initMoney({ toast });
 initCall({ toast });
+initTasks({ toast });
 document.getElementById('image-input').addEventListener('change', (event) => {
   sendImage(event.target.files[0]).catch((error) => toast(error.message, 'error'));
   event.target.value = '';
@@ -1374,6 +1376,9 @@ function handleMessage(message) {
       break;
     case 'image':
       addImageCard(message);
+      break;
+    case 'task':
+      handleTaskEvent(message);
       break;
     case 'weekly':
       addWeeklyCard(message.numbers);

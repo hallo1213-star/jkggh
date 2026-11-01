@@ -862,6 +862,16 @@ export const cloudTools = [
     }
   },
   {
+    name: 'run_task',
+    description: 'Aufgabenmodus für größere Aufträge, die mehrere Schritte brauchen und ein fertiges Ergebnis liefern sollen: recherchieren und vergleichen („die besten kostenlosen 3D-Programme für Windows als Vergleichstabelle“), Dokumente schreiben (Referat, Bewerbung, Plan, Anleitung), Code erklären oder ausarbeiten. Jarvis plant die Schritte selbst und arbeitet sie im Hintergrund ab; das Ergebnis erscheint als Dokument. Nicht für Spiele/Apps (create_project) oder 3D (create_3d_model).',
+    parameters: { type: 'object', properties: { goal: { type: 'string', description: 'Der Auftrag, möglichst vollständig in seinen Worten' } }, required: ['goal'] },
+    label: (a) => `Aufgabe: ${a.goal}`,
+    run: async ({ goal }, context) => {
+      const task = context.startTask(goal);
+      return { gestartet: true, aufgabe: task.title, hinweis: 'Die Aufgabe läuft jetzt im Hintergrund, der Fortschritt ist in der Aufgabenübersicht zu sehen. Sag kurz, dass du dich darum kümmerst und Bescheid gibst, wenn es fertig ist. Er kann währenddessen weiter mit dir reden.' };
+    }
+  },
+  {
     name: 'create_image',
     description: 'Erschafft ein neues Bild nach seiner Beschreibung (z. B. „eine futuristische Stadt bei Nacht“) und zeigt es in der App an. Du planst Motiv und Stil selbst. Keine Bildersuche im Internet. Keine echten, namentlich bekannten Personen.',
     parameters: {

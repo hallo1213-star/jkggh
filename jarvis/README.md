@@ -135,6 +135,17 @@ Falls Google kein App-Passwort anbietet (z. B. bei Schul-/Firmenkonten oder „E
 - **Ansehen und löschen:** oben rechts auf das Gehirn-Symbol tippen. Passwörter, PINs und Bank- oder Kartendaten merkt sich Jarvis nie.
 - Jarvis **knüpft an euer letztes Gespräch an** – auch nach dem Schließen der App. Der Verlauf bleibt auf deinem Gerät und lässt sich im Gedächtnis-Fenster löschen.
 
+## Aufgabenmodus 📋
+
+Für größere Aufträge, z. B. **„Recherchiere die besten kostenlosen 3D-Programme für Windows und erstelle mir eine Vergleichstabelle“**, **„Schreib mir ein Referat über …“** oder **„Erstelle mir einen Lernplan für …“**:
+
+1. Jarvis **plant die Schritte selbst**: Wissen erarbeiten, bei Wikipedia nachschlagen, aktuelle Meldungen suchen, Ergebnis schreiben.
+2. Er **arbeitet sie im Hintergrund ab**, ohne nach jedem Schritt zu fragen. Du kannst währenddessen weiter mit ihm reden.
+3. Den Fortschritt siehst du unter **Aufgaben**: jeder Schritt mit Status und ein Zähler am Knopf.
+4. Das **fertige Dokument** (mit Tabellen, Listen, Fazit) öffnet sich automatisch. Du kannst es kopieren oder als Datei speichern. Mit Telegram bekommst du es zusätzlich als Datei.
+
+Dinge, die sich ändern können (Preise, Versionen), kennzeichnet Jarvis ehrlich als „bitte prüfen“. Braucht `GROQ_API_KEY`.
+
 ## Bilder erschaffen und verstehen 🎨🔍
 
 - **Bilder erschaffen:** „Erstelle mir ein Bild von einer futuristischen Stadt bei Nacht.“ Jarvis plant das Bild selbst (Motiv, Stil, Licht, Perspektive) und lässt es vom kostenlosen Bildgenerator Pollinations malen, ohne Schlüssel. Das Bild erscheint im Gespräch und lässt sich groß öffnen und speichern.

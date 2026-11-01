@@ -81,6 +81,10 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 1 7l11 5 9-4.1V15h2V7L12 2Zm-7 9.2v4.3C5 18 8.1 20 12 20s7-2 7-4.5v-4.3l-7 3.2-7-3.2Z"/></svg>
           <span>Kunden</span>
         </button>
+        <button class="ctrl" id="tasks-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h2v2H3V5Zm4 0h14v2H7V5ZM3 11h2v2H3v-2Zm4 0h14v2H7v-2Zm-4 6h2v2H3v-2Zm4 0h14v2H7v-2Z"/></svg>
+          <span>Aufgaben</span><span class="tasks-badge" id="tasks-badge" hidden>0</span>
+        </button>
         <button class="ctrl" id="project-button" type="button">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.6 16.6-4.6-4.6 4.6-4.6L7.2 6 1.2 12l6 6 1.4-1.4Zm6.8 0 4.6-4.6-4.6-4.6L16.8 6l6 6-6 6-1.4-1.4Z"/></svg>
           <span>Werkstatt</span>
@@ -231,6 +235,21 @@
         <button class="ctrl" id="money-new" type="button" title="Neues Projekt mit diesem Auftrag starten">Neu starten</button>
       </div>
       <div class="money-body" id="money-body"><p class="empty">Lädt …</p></div>
+    </div>
+  </div>
+
+  <div class="modal" id="tasks-modal" hidden>
+    <div class="modal-card games-card planner-card" role="dialog" aria-modal="true" aria-labelledby="tasks-title">
+      <div class="games-head"><h3 id="tasks-title">Aufgaben</h3><button class="icon-btn" id="tasks-close" type="button" aria-label="Schließen">✕</button></div>
+      <div class="planner-body" id="tasks-body"></div>
+    </div>
+  </div>
+
+  <div class="doc-overlay" id="doc-overlay" hidden>
+    <div class="doc-card" role="dialog" aria-modal="true" aria-labelledby="doc-title">
+      <div class="games-head"><h3 id="doc-title">Ergebnis</h3><button class="icon-btn" id="doc-close" type="button" aria-label="Schließen">✕</button></div>
+      <article class="doc-body" id="doc-body"></article>
+      <div class="order-actions"><button class="ctrl" id="doc-copy" type="button">Text kopieren</button><button class="ctrl" id="doc-download" type="button">Als Datei speichern</button></div>
     </div>
   </div>
 

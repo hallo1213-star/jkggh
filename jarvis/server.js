@@ -34,6 +34,7 @@ import { productFiles } from './bauplan-content.js';
 import { designScene, sanitizeScene } from './model3d.js';
 import { sanitizeProject, writeProject } from './projects.js';
 import { describeImage } from './llm.js';
+import { startTask } from './tasks.js';
 import { findTool as findLaptopTool, functionDefinitions as laptopFunctions } from './laptop/tools.js';
 
 if (!process.env.TZ) process.env.TZ = 'Europe/Berlin';
@@ -759,6 +760,19 @@ browserWss.on('connection', (browser, request) => {
     globeMemory: {},
     modelMemory: {},
     projectMemory: {},
+    startTask(goal) {
+      return startTask(goal, {
+        onEvent(event) {
+          for (const other of sessions) other.toBrowser({ type: 'task', ...event });
+          if (event.status === 'fertig') {
+            if (agentOpen) agent.sendInjectAgentMessage({ type: 'InjectAgentMessage', message: `Die Aufgabe „${event.title}“ ist fertig. Das Ergebnis liegt auf deinem Bildschirm.` });
+            if (telegramConfigured() && event.document) sendTelegramDocument(event.document, `${event.title.replace(/[^\w äöüÄÖÜß-]+/g, '').slice(0, 50) || 'Ergebnis'}.md`, `✅ Aufgabe fertig: ${event.title}`).catch(() => {});
+          } else if (event.status === 'fehler' && agentOpen) {
+            agent.sendInjectAgentMessage({ type: 'InjectAgentMessage', message: `Bei der Aufgabe „${event.title}“ gab es ein Problem: ${String(event.error || '').slice(0, 150)}` });
+          }
+        }
+      });
+    },
     showImage(image) {
       toBrowser({ type: 'image', ...image });
     },

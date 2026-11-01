@@ -683,6 +683,34 @@ body {
 .image-card p { margin: 8px 0 0; font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .image-card .order-actions a.ctrl { text-decoration: none; }
 
+/* --- Tasks & documents --- */
+.tasks-badge { min-width: 20px; padding: 0 6px; border-radius: 10px; background: var(--amber); color: #1b1200; font-size: 12px; font-weight: 700; line-height: 20px; text-align: center; }
+.tasks-badge[hidden] { display: none; }
+.task-card { padding: 12px; border: 1px solid var(--panel-edge); background: rgba(56, 225, 255, 0.04); display: flex; flex-direction: column; gap: 8px; }
+.task-card[data-status="läuft"] { border-color: var(--cyan); }
+.task-card[data-status="fehler"] { border-color: var(--red); }
+.task-head { display: flex; justify-content: space-between; gap: 10px; }
+.task-head b { overflow-wrap: anywhere; }
+.task-head span { flex: none; color: var(--cyan-soft); font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; }
+.task-steps { margin: 0; padding-left: 4px; list-style: none; font-size: 14px; color: var(--muted); display: grid; gap: 3px; }
+.task-steps li[data-status="läuft"] { color: var(--text); }
+.task-card .ctrl { align-self: flex-start; }
+.doc-overlay { position: fixed; inset: 0; z-index: 56; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, 0.7); }
+.doc-overlay[hidden] { display: none; }
+.doc-card { width: min(900px, 100%); max-height: 100%; display: flex; flex-direction: column; gap: 10px; padding: 18px; border: 1px solid var(--cyan); background: linear-gradient(180deg, rgba(6, 22, 34, 0.98), rgba(2, 10, 16, 0.99)); }
+.doc-body { flex: 1; min-height: 0; overflow-y: auto; padding-right: 6px; font-size: 16px; line-height: 1.55; }
+.doc-body h2, .doc-body h3, .doc-body h4 { color: var(--cyan-soft); font-family: var(--font-display); letter-spacing: 0.04em; margin: 18px 0 8px; font-size: 18px; }
+.doc-body h2 { font-size: 22px; }
+.doc-body p, .doc-body ul, .doc-body ol { margin: 8px 0; }
+.doc-body code { background: rgba(56, 225, 255, 0.1); padding: 1px 5px; font-family: Consolas, monospace; font-size: 14px; }
+.doc-body pre { background: rgba(0, 0, 0, 0.5); border: 1px solid var(--panel-edge); padding: 10px; overflow-x: auto; }
+.doc-body pre code { background: none; padding: 0; }
+.doc-table { overflow-x: auto; margin: 10px 0; }
+.doc-body table { border-collapse: collapse; width: 100%; font-size: 14px; }
+.doc-body th, .doc-body td { border: 1px solid var(--panel-edge); padding: 7px 9px; text-align: left; vertical-align: top; }
+.doc-body th { background: rgba(56, 225, 255, 0.12); color: var(--cyan-soft); }
+.doc-body blockquote { margin: 8px 0; padding: 6px 12px; border-left: 3px solid var(--amber); color: var(--muted); }
+
 /* --- Project workshop --- */
 .project-overlay { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; background: radial-gradient(ellipse at 50% 0%, #0b2537, #02060b 70%); }
 .project-overlay[hidden] { display: none; }
