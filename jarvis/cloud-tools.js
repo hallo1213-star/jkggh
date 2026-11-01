@@ -8,6 +8,7 @@ import { getNews, getWeather, lookupWikipedia, searchNews, topNews } from './kno
 import { getMarkets } from './markets.js';
 import { bauplanConfig, missingSettings } from './bauplan-page.js';
 import { describeScene, designScene } from './model3d.js';
+import { writeProject } from './projects.js';
 import { gumroadConfigured, gumroadProducts } from './gumroad.js';
 import { geocodePlace, placeDetails } from './places.js';
 import { MODES as ORDER_MODES, checkOrder, cleanOrderItems, describeItem, findRestaurant, normalizePhone, orderSummary, orderTotal, readMenu, spokenPhone } from './restaurants.js';
@@ -857,6 +858,28 @@ export const cloudTools = [
       context.schedule(ms, String(message || 'Dein Timer ist abgelaufen.'));
       const due = new Date(Date.now() + ms).toLocaleTimeString('de-DE', { timeZone, hour: '2-digit', minute: '2-digit' });
       return { gestellt: true, faelligUm: due };
+    }
+  },
+  {
+    name: 'create_project',
+    description: 'Programmiert SELBST ein komplettes, lauffähiges Projekt nach seinem Wunsch und startet es in der Projekt-Werkstatt der App: Spiele (auch 3D-Spiele), Apps, Werkzeuge (Taschenrechner, Timer, Quiz …), Websites mit Funktionen (z. B. Online-Shop mit Produktseiten und Warenkorb). Mit edit=true wird das zuletzt gezeigte Projekt geändert („Mach das Spiel schwerer“). Nie im Internet nach fertigen Projekten suchen.',
+    parameters: {
+      type: 'object',
+      properties: {
+        description: { type: 'string', description: 'Was programmiert oder geändert werden soll, möglichst genau in seinen Worten' },
+        edit: { type: 'boolean', description: 'true = das zuletzt gezeigte Projekt ändern' }
+      },
+      required: ['description']
+    },
+    label: (a) => `Programmieren${a.edit ? ' (Änderung)' : ''}: ${a.description}`,
+    run: async ({ description, edit }, context) => {
+      const base = edit ? context.projectMemory?.last : null;
+      if (edit && !base) throw new Error('Gerade ist kein Projekt offen, das ich ändern kann. Beschreib mir, was ich neu programmieren soll.');
+      context.projectLoading?.(edit ? 'Jarvis baut um …' : 'Jarvis programmiert …');
+      const project = await writeProject(description, { base });
+      if (context.projectMemory) context.projectMemory.last = project;
+      context.showProject(project);
+      return { fertig: true, titel: project.title, art: project.kind, beschreibung: project.description, dateien: project.files.map((f) => f.path), hinweis: 'Das Projekt läuft jetzt in der Werkstatt. Sag kurz, was du programmiert hast und wie man es bedient. Er kann es ändern lassen, den Code ansehen oder als ZIP speichern.' };
     }
   },
   {

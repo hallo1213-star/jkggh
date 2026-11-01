@@ -32,6 +32,7 @@ import { spokenPhone } from './restaurants.js';
 import { bauplanConfig, missingSettings, renderSalesPage } from './bauplan-page.js';
 import { productFiles } from './bauplan-content.js';
 import { designScene, sanitizeScene } from './model3d.js';
+import { sanitizeProject, writeProject } from './projects.js';
 import { findTool as findLaptopTool, functionDefinitions as laptopFunctions } from './laptop/tools.js';
 
 if (!process.env.TZ) process.env.TZ = 'Europe/Berlin';
@@ -337,6 +338,21 @@ const httpServer = createServer(async (request, response) => {
     const config = bauplanConfig();
     response.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache', 'x-content-type-options': 'nosniff', 'referrer-policy': 'strict-origin-when-cross-origin' });
     response.end(renderSalesPage(config));
+    return;
+  }
+
+  if (pathname === '/api/project' && request.method === 'POST') {
+    if (!isAuthenticated(request) || !String(request.headers['content-type'] || '').startsWith('application/json')) {
+      sendJson(response, 401, { error: 'Nicht angemeldet' });
+      return;
+    }
+    try {
+      const body = JSON.parse(await readBody(request, 600 * 1024));
+      const project = await writeProject(body.prompt, { base: body.base ? sanitizeProject(body.base) : null });
+      sendJson(response, 200, { project });
+    } catch (error) {
+      sendJson(response, 400, { error: error.message });
+    }
     return;
   }
 
@@ -727,6 +743,13 @@ browserWss.on('connection', (browser, request) => {
     },
     globeMemory: {},
     modelMemory: {},
+    projectMemory: {},
+    showProject(project) {
+      toBrowser({ type: 'project', project });
+    },
+    projectLoading(text) {
+      toBrowser({ type: 'project_loading', text });
+    },
     showModel(scene) {
       toBrowser({ type: 'model3d', scene });
     },
@@ -985,6 +1008,8 @@ browserWss.on('connection', (browser, request) => {
       memoryStore.set(message.items);
     } else if (/^(planner|notes|expenses|vocab)_update$/.test(message.type)) {
       syncedStores[message.type.replace('_update', '')].set(message.items);
+    } else if (message.type === 'project_current') {
+      context.projectMemory.last = sanitizeProject(message.project);
     } else if (message.type === 'model_current') {
       context.modelMemory.last = sanitizeScene(message.scene);
     } else if (message.type === 'globe_location') {

@@ -81,6 +81,10 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 1 7l11 5 9-4.1V15h2V7L12 2Zm-7 9.2v4.3C5 18 8.1 20 12 20s7-2 7-4.5v-4.3l-7 3.2-7-3.2Z"/></svg>
           <span>Kunden</span>
         </button>
+        <button class="ctrl" id="project-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8.6 16.6-4.6-4.6 4.6-4.6L7.2 6 1.2 12l6 6 1.4-1.4Zm6.8 0 4.6-4.6-4.6-4.6L16.8 6l6 6-6 6-1.4-1.4Z"/></svg>
+          <span>Werkstatt</span>
+        </button>
         <button class="ctrl" id="model-button" type="button">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5Zm0 2.3 6.6 3.7L12 11.7 5.4 8 12 4.3ZM5 9.7l6 3.4v6.6l-6-3.4V9.7Zm8 10v-6.6l6-3.4v6.6l-6 3.4Z"/></svg>
           <span>3D</span>
@@ -224,6 +228,34 @@
       </div>
       <div class="money-body" id="money-body"><p class="empty">Lädt …</p></div>
     </div>
+  </div>
+
+  <div class="project-overlay" id="project-overlay" hidden>
+    <div class="project-head">
+      <div class="globe-heading">
+        <p class="globe-kicker">J.A.R.V.I.S. · Projekt-Werkstatt</p>
+        <h3 id="project-title">Projekt-Werkstatt</h3>
+        <p id="project-desc"></p>
+      </div>
+      <button class="icon-btn globe-close" id="project-close" type="button" aria-label="Werkstatt schließen">✕</button>
+    </div>
+    <iframe id="project-frame" class="project-frame" title="Vorschau des Projekts" sandbox="allow-scripts allow-pointer-lock" allow="fullscreen; gamepad"></iframe>
+    <div class="project-bar">
+      <form id="project-edit" class="globe-search">
+        <input type="text" placeholder="Programmieren oder ändern, z. B. „Mach das Spiel schwerer“" maxlength="400" enterkeyhint="send" aria-label="Projekt programmieren oder ändern">
+      </form>
+      <div class="globe-buttons">
+        <button class="ctrl" id="project-reload" type="button">Neu starten</button>
+        <button class="ctrl" id="project-code" type="button">Code ansehen</button>
+        <button class="ctrl" id="project-zip" type="button">Als ZIP speichern</button>
+        <select class="ctrl model-list" id="project-list" aria-label="Meine Projekte"></select>
+      </div>
+    </div>
+    <div class="project-code-view" id="project-code-view" hidden>
+      <div class="project-code-head"><select class="ctrl model-list" id="project-code-file" aria-label="Datei"></select><button class="icon-btn" id="project-code-close" type="button" aria-label="Code schließen">✕</button></div>
+      <pre id="project-code-text"></pre>
+    </div>
+    <div class="globe-loading" id="project-loading" hidden><span class="globe-spinner"></span><span>Jarvis programmiert …</span></div>
   </div>
 
   <div class="model-overlay" id="model-overlay" hidden>

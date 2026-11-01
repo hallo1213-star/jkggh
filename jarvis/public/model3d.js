@@ -571,7 +571,7 @@ function exportGlb() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `${(current?.title || 'jarvis-modell').replace(/[^\wäöüÄÖÜß-]+/g, '-')}.glb`;
+    link.download = `${(current?.title || 'jarvis-modell').replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/Ä/g, 'Ae').replace(/Ö/g, 'Oe').replace(/Ü/g, 'Ue').replace(/ß/g, 'ss').replace(/[^\w-]+/g, '-')}.glb`;
     document.body.append(link);
     link.click();
     link.remove();

@@ -4,6 +4,7 @@ import { initMoney, showMoney } from './money.js';
 import { handleGlobeMessage, initGlobe } from './globe.js';
 import { addOrderCard, handleCallEvent, initCall } from './call.js';
 import { initModels, modelLoading, showModel } from './model3d.js';
+import { initProjects, projectLoading, showProject } from './projects.js';
 
 const OUTPUT_SAMPLE_RATE = 24000;
 
@@ -1122,6 +1123,14 @@ function toast(message, kind = '') {
 
 initMoney({ toast });
 initCall({ toast });
+initProjects({
+  toast,
+  send: (message) => {
+    if (state.ws?.readyState !== WebSocket.OPEN) return false;
+    state.ws.send(JSON.stringify(message));
+    return true;
+  }
+});
 initModels({
   toast,
   send: (message) => {
@@ -1325,6 +1334,12 @@ function handleMessage(message) {
       break;
     case 'model3d':
       showModel(message.scene);
+      break;
+    case 'project_loading':
+      projectLoading(message.text);
+      break;
+    case 'project':
+      showProject(message.project);
       break;
     case 'call':
       handleCallEvent(message);

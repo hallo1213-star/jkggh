@@ -674,6 +674,19 @@ body {
 .call-hangup { border-color: var(--red); color: var(--red); }
 .call-hangup[hidden], .call-close[hidden] { display: none; }
 
+/* --- Project workshop --- */
+.project-overlay { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; background: radial-gradient(ellipse at 50% 0%, #0b2537, #02060b 70%); }
+.project-overlay[hidden] { display: none; }
+.project-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: max(14px, env(safe-area-inset-top)) 18px 10px; }
+#project-desc { margin: 2px 0 0; color: var(--muted); font-size: 14px; max-width: 760px; }
+.project-frame { flex: 1; min-height: 0; width: calc(100% - 24px); margin: 0 12px; border: 1px solid var(--cyan); border-radius: 12px; background: #fff; box-shadow: 0 0 40px rgba(56, 225, 255, 0.18); }
+.project-bar { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 10px 12px max(14px, env(safe-area-inset-bottom)); }
+.project-overlay .globe-buttons .ctrl { background: rgba(2, 10, 16, 0.8); }
+.project-code-view { position: absolute; inset: 70px 12px 120px; z-index: 3; display: flex; flex-direction: column; border: 1px solid var(--cyan); border-radius: 12px; background: rgba(2, 8, 14, 0.97); }
+.project-code-view[hidden] { display: none; }
+.project-code-head { display: flex; justify-content: space-between; gap: 8px; padding: 8px; border-bottom: 1px solid var(--panel-edge); }
+.project-code-view pre { flex: 1; margin: 0; overflow: auto; padding: 12px; font: 13px/1.5 Consolas, 'Cascadia Mono', monospace; color: #cfe8f3; white-space: pre; }
+
 /* --- 3D studio --- */
 .model-overlay { position: fixed; inset: 0; z-index: 50; background: #02060b; overflow: hidden; }
 .model-overlay[hidden] { display: none; }
