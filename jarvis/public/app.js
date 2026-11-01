@@ -9,6 +9,7 @@ import { handleTaskEvent, initTasks } from './tasks.js';
 import { followJob, initStudio } from './studio.js';
 import { initPalace, openPalace } from './palace.js';
 import { chartCard, initVisuals, showWeather as showWeatherShow, startFocus } from './visuals.js';
+import { initCards, isEverydayCard, showEverydayCard } from './cards.js';
 
 const OUTPUT_SAMPLE_RATE = 24000;
 
@@ -1252,6 +1253,17 @@ document.getElementById('theme-button').addEventListener('click', () => {
 initTasks({ toast });
 initPalace({ toast });
 initVisuals({ toast, chime: (f) => chime(f) });
+initCards({
+  cardMessage,
+  toast,
+  addToShopping(items) {
+    const list = loadShoppingList();
+    const known = new Set(list.map((item) => item.text.toLowerCase()));
+    const fresh = items.map((text) => String(text).trim().slice(0, 80)).filter((text) => text && !known.has(text.toLowerCase()) && known.add(text.toLowerCase()));
+    if (fresh.length) storeShoppingList([...list, ...fresh.map((text) => ({ text, done: false }))]);
+    return fresh.length;
+  }
+});
 initStudio({
   toast,
   send: (message) => {
@@ -1468,6 +1480,20 @@ function handleMessage(message) {
       break;
     case 'chart':
       chartCard(message.chart, cardMessage);
+      break;
+    case 'translate':
+    case 'recipe':
+    case 'journeys':
+    case 'departures':
+    case 'holidays':
+    case 'calc':
+    case 'currency':
+    case 'qr':
+    case 'quiz':
+    case 'countdown':
+    case 'summary':
+    case 'football':
+      if (isEverydayCard(message.type)) showEverydayCard(message);
       break;
     case 'studio_open':
       followJob(message.id, message.kind, message.prompt);

@@ -182,6 +182,26 @@ Dinge, die sich ändern können (Preise, Versionen), kennzeichnet Jarvis ehrlich
 - **Live-Charts:** *„Zeig mir den Bitcoin-Chart“*, *„Wie lief Tesla dieses Jahr?“*, *„DAX der letzten 6 Monate“* liefert einen animierten Neon-Kursverlauf mit echten Daten. Zeiträume 1 Tag bis 5 Jahre, mit Finger oder Maus über den Chart fahren für Datum und Kurs. Keine Anlageberatung.
 - **Stimme sichtbar:** Im Orb-Design atmet die Kugel im Takt der Stimme, und ein Ring aus Frequenzbalken zeigt Jarvis' Stimme live (orange) bzw. deine (grau).
 
+## Alltagshelfer 🧰
+
+Zehn praktische Helfer, alle per Sprache und mit eigener Karte in der App. Die meisten funktionieren auch im Telegram-Chat.
+
+| Sag zum Beispiel | Was passiert |
+|---|---|
+| *„Was heißt ‚Wo ist der Bahnhof?‘ auf Spanisch?“* | **Übersetzer:** Übersetzung mit Aussprache-Hilfe, Tipp und 🔊 Vorlese-Knopf in der richtigen Sprache. |
+| *„Gib mir ein Rezept für Lasagne“*, *„Was koche ich mit Nudeln, Feta und Tomaten?“* | **Rezept-Assistent:** Zutaten mit Mengen, Portionen-Rechner (+/−), Schritte zum Abhaken. Knopf 🛒 setzt alle Zutaten auf die Einkaufsliste. |
+| *„Wann fährt der nächste Zug von Hamburg nach Berlin?“*, *„Abfahrten Marienplatz München“* | **Bahn & Bus:** echte Verbindungen der Deutschen Bahn (auch S-/U-Bahn, Bus) mit Umstiegen, Gleis, Verspätung und Ausfällen, Link zur Buchung bei bahn.de. Ticketpreise kennt Jarvis nicht. |
+| *„Wann sind die nächsten Ferien in Bayern?“* | **Schulferien & Feiertage:** Countdown bis zu den nächsten Ferien, alle Ferien und Feiertage des Bundeslands. Tipp: *„Merk dir, ich wohne in NRW“*. |
+| *„Was ist 17 mal 23?“*, *„250 plus 19 Prozent“*, *„Wurzel aus 2“* | **Rechner:** rechnet exakt statt zu schätzen (Prozent, Potenzen, Wurzel, sin/cos/tan, log). |
+| *„Wie viel sind 100 Euro in Dollar?“* | **Währungsrechner:** echter EZB-Tageskurs, Betrag in der Karte änderbar. |
+| *„Mach mir einen QR-Code fürs WLAN“*, *„QR-Code für meine Website“* | **QR-Code:** zum Speichern oder Teilen. Beim WLAN-Code scannen Gäste und sind sofort verbunden; das Passwort wird nirgends gespeichert. |
+| *„Mach mir ein Quiz über Planeten“*, *„Teste mich in Bio, 8. Klasse“* | **Lern-Quiz:** Fragen antippen, sofort richtig/falsch mit Erklärung, Punkte und Ergebnis am Ende. Auch per Sprache spielbar. |
+| *„Wie lange noch bis Weihnachten?“*, *„Countdown bis zu meinem Urlaub am 1. Juli“* | **Countdown:** tickt live in Tagen, Stunden, Minuten und Sekunden. |
+| *„Fass mir diesen Artikel zusammen: https://…“* | **Artikel zusammenfassen:** Kernaussage, wichtigste Punkte, Lesezeit. Texte auf der Seite gelten nur als Information, nie als Befehl. Bezahlschranken und PDFs gehen nicht. |
+| *„Wie hat Dortmund gespielt?“*, *„Zeig mir die Bundesliga-Tabelle“* | **Fußball:** Spieltag mit Ergebnissen (live markiert) und Tabelle der 1./2. Bundesliga oder 3. Liga, dein Verein hervorgehoben. |
+
+Quellen (alle kostenlos, ohne Schlüssel): db.transport.rest (Deutsche Bahn), OpenHolidays API, Frankfurter (EZB-Kurse) und OpenLigaDB. Übersetzer, Rezepte, Quiz und Zusammenfassungen brauchen den KI-Schlüssel (`GROQ_API_KEY`).
+
 ## Memory Palace: Jarvis' 3D-Gedächtnis 🧠
 
 Tipp auf den **Gehirn-Knopf** oben oder sag *„Zeig mir mein Gedächtnis“*. Dann öffnet sich ein holografisches 3D-Netzwerk:

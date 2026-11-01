@@ -15,6 +15,7 @@
     "imapflow": "2.5.2",
     "mailparser": "3.9.47",
     "nodemailer": "10.1.7",
+    "qrcode": "1.5.4",
     "ws": "^8.20.0"
   }
 }

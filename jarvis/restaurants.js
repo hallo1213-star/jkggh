@@ -33,7 +33,7 @@ export async function findRestaurant(name, town, { fetchImpl = fetch } = {}) {
 }
 
 // Only public web pages – never addresses inside the server's own network.
-function safeUrl(value) {
+export function safeUrl(value) {
   try {
     const url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`);
     if (!/^https?:$/.test(url.protocol)) return null;
@@ -44,7 +44,7 @@ function safeUrl(value) {
   }
 }
 
-async function fetchPage(url, fetchImpl) {
+export async function fetchPage(url, fetchImpl) {
   const response = await fetchImpl(url.href, { headers: { 'user-agent': 'Mozilla/5.0 (Jarvis-Assistant; Speisekarte lesen)', accept: 'text/html,text/plain' }, redirect: 'follow', signal: AbortSignal.timeout(12_000) });
   if (!response.ok) throw new Error(`Website antwortet mit Status ${response.status}`);
   return (await response.text()).slice(0, 1_500_000);

@@ -7,12 +7,13 @@ Diese Datei hält fest, was analysiert, gebaut und getestet wurde und was noch o
 | Baustein | Dateien | Zweck |
 |---|---|---|
 | Server & Gespräch | `server.js`, `agent-config.js` | Login, WebSocket zum Browser, Deepgram Voice Agent, Werkzeug-Ausführung, Bestätigungen |
-| Werkzeuge (Skills) | `cloud-tools.js`, `laptop/tools.js` | Alle Fähigkeiten, die Jarvis selbst aufruft (rund 60 Cloud- und 21 Laptop-Werkzeuge) |
+| Werkzeuge (Skills) | `cloud-tools.js`, `laptop/tools.js` | Alle Fähigkeiten, die Jarvis selbst aufruft (rund 80 Cloud- und 21 Laptop-Werkzeuge) |
 | KI-Kern für Werkzeuge | `llm.js` | Groq / OpenRouter / Gemini / Claude, automatische Modellwahl, Bildanalyse, Werkzeug-Aufrufe |
 | Kreativ | `model3d.js`, `projects.js`, `images.js`, `public/model3d.js`, `public/projects.js` | 3D-Modelle, Spiele/Apps/Shops, Bilder |
 | Aufgaben | `tasks.js`, `money-agent.js`, `money-state.js` | Aufgabenmodus mit Plan und Abbruch, Geld-Modus |
 | Planer & Persönliches | `planner.js`, `scheduler.js`, `personal.js`, `memories.js` | Erinnerungen, Termine, Briefing, Notizen, Ausgaben, Vokabeln, Gedächtnis |
 | Telegram | `telegram.js`, `telegram-bot.js`, `voice-message.js`, `mail-watch.js` | Benachrichtigungen, Sprachnachrichten, Sicherung, Chat-Assistent |
+| Alltagshelfer | `everyday.js`, `public/cards.js` | Übersetzer, Rezepte, Bahn, Ferien, Rechner, Währung, QR, Quiz, Countdown, Artikel, Fußball |
 | Welt & Wissen | `knowledge.js`, `places.js`, `markets.js`, `webcams.js`, `public/globe.js` | Wetter, Nachrichten, Wikipedia, Orte, Börse, 3D-Erde |
 | Telefon & Bestellen | `restaurants.js`, `phone-call.js`, `public/call.js` | Restaurant finden, Speisekarte prüfen, Anruf über Twilio, Testmodus |
 | Verkauf | `bauplan-page.js`, `bauplan-content.js` | Verkaufsseite und Produkte „Jarvis-Bauplan“ |
@@ -38,6 +39,22 @@ Diese Datei hält fest, was analysiert, gebaut und getestet wurde und was noch o
   - Anzahl der Erinnerungen.
   - Status aller Dienste und Modelle.
   - Schlüssel werden bewusst nur bei Render eingetragen.
+
+## Erledigt: 10 Alltagshelfer
+
+- [x] **Übersetzer** (`translate`): Aussprache, Hinweis, Vorlesen in der Zielsprache (Browser-Sprachausgabe), Kopieren.
+- [x] **Rezept-Assistent** (`recipe`): Portionen-Rechner, Schritte abhaken, Zutaten per Knopf oder per Sprache (`add_to_list`) auf die Einkaufsliste.
+- [x] **Bahn & Bus** (`transit`, db.transport.rest): Verbindungen mit Umstiegen/Verspätung/Ausfall, Abfahrtstafel, Link zu bahn.de.
+- [x] **Schulferien & Feiertage** (`holidays`, OpenHolidays API): Countdown zu den nächsten Ferien.
+- [x] **Rechner** (`calculate`): eigener sicherer Parser ohne `eval` (deutsches Komma, Prozent, Potenzen, Funktionen). **Währung** (`currency`, EZB-Kurse über Frankfurter).
+- [x] **QR-Code** (`qr_code`, npm `qrcode`): Link, Text, WLAN. Passwort wird nicht gespeichert.
+- [x] **Lern-Quiz** (`quiz`): interaktiv mit Punkten und Erklärungen.
+- [x] **Countdown** (`countdown`): Live-Karte, deutsche Zeitzone inkl. Sommerzeit.
+- [x] **Artikel zusammenfassen** (`summarize_url`): nur öffentliche Adressen, auch jede Weiterleitung wird geprüft, Seiteninhalt gilt als Material und nie als Befehl.
+- [x] **Fußball** (`football`, OpenLigaDB): Spieltag (live) und Tabelle, eigener Verein hervorgehoben.
+- [x] Telegram: alle außer QR-Code und Countdown (reine Bildschirm-Karten).
+- Tests: Unit-Test `everyday` 40/40. Browser-Test mit simulierten Diensten: alle 12 Karten (Bahn doppelt) ohne Fehler, Handy-Breite ohne Querscrollen, helles und dunkles Design.
+- Nicht getestet: echte Antworten von db.transport.rest, OpenHolidays, Frankfurter, OpenLigaDB und Groq (vom Container aus nicht erreichbar).
 
 ## Erledigt: 5 Show-Funktionen
 
