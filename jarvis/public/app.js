@@ -627,6 +627,80 @@ function cardMessage(label, card) {
   els.transcript.scrollTop = els.transcript.scrollHeight;
 }
 
+// --- Markets & weekly numbers (film-style status reports) ---------------------
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
+function addMarketsCard(markets) {
+  if (!Array.isArray(markets?.werte)) return;
+  const card = el('div', 'info-card markets-card');
+  card.append(el('span', 'shop-card-title', '📈 Märkte'));
+  const grid = el('div', 'stat-grid');
+  for (const w of markets.werte) {
+    const tile = el('div', 'stat-tile');
+    const change = typeof w.heuteProzent === 'number' ? w.heuteProzent : null;
+    const value = w.unit === 'Punkte' ? Math.round(w.kurs).toLocaleString('de-DE') : w.kurs.toLocaleString('de-DE', { maximumFractionDigits: w.kurs < 10 ? 4 : 2 });
+    tile.append(el('small', '', w.name), el('b', '', `${value}${w.unit === '$' ? ' $' : ''}`), el('em', change === null ? '' : change >= 0 ? 'up' : 'down', change === null ? '–' : `${change >= 0 ? '▲' : '▼'} ${Math.abs(change).toLocaleString('de-DE')} % heute${typeof w.wocheProzent === 'number' ? ` · Woche ${w.wocheProzent >= 0 ? '+' : ''}${w.wocheProzent.toLocaleString('de-DE')} %` : ''}`));
+    grid.append(tile);
+  }
+  card.append(grid);
+  if (markets.schlagzeilen?.length) {
+    const list = el('ul', 'news-list');
+    for (const item of markets.schlagzeilen.slice(0, 4)) {
+      const row = el('li');
+      const entry = /^https:\/\//.test(item.link || '') ? Object.assign(el('a', '', item.titel), { href: item.link, target: '_blank', rel: 'noopener noreferrer' }) : el('span', '', item.titel);
+      row.append(entry);
+      list.append(row);
+    }
+    card.append(list);
+  }
+  card.append(el('p', 'card-source', markets.quelle || ''));
+  cardMessage('Börse', card);
+}
+
+function addWeeklyCard(numbers) {
+  if (!Array.isArray(numbers)) return;
+  const card = el('div', 'info-card markets-card');
+  card.append(el('span', 'shop-card-title', '📊 Zahlen der Woche'));
+  const grid = el('div', 'stat-grid');
+  for (const n of numbers) {
+    const tile = el('div', 'stat-tile');
+    tile.append(el('small', '', n.label), el('b', '', n.value), el('em', '', n.sub || ''));
+    grid.append(tile);
+  }
+  card.append(grid, el('p', 'card-source', 'Echte Daten aus deinem Jarvis'));
+  cardMessage('Zahlen', card);
+}
+
+// "Alle Systeme online": short boot sequence when Jarvis connects.
+let booted = false;
+function bootSequence() {
+  if (booted) return;
+  booted = true;
+  const overlay = el('div', 'boot-overlay');
+  overlay.setAttribute('aria-hidden', 'true');
+  const box = el('div', 'boot-box');
+  box.append(el('p', 'boot-title', 'J.A.R.V.I.S.'));
+  ['Spracherkennung', 'Erdbeobachtung', 'Nachrichtenlage', 'Märkte', 'Geld-Modus', 'Planer & Gedächtnis'].forEach((name, i) => {
+    const row = el('p', 'boot-line');
+    row.style.animationDelay = `${0.15 + i * 0.22}s`;
+    row.append(el('span', '', name), el('b', '', 'online'));
+    box.append(row);
+  });
+  const done = el('p', 'boot-done', 'Alle Systeme online');
+  done.style.animationDelay = '1.6s';
+  box.append(done);
+  overlay.append(box);
+  document.body.append(overlay);
+  setTimeout(() => overlay.classList.add('fade'), 2600);
+  setTimeout(() => overlay.remove(), 3200);
+}
+
 function addWeatherCard(weather) {
   if (!weather?.jetzt) return;
   const card = document.createElement('div');
@@ -1171,6 +1245,7 @@ function handleMessage(message) {
   switch (message.type) {
     case 'status':
       if (message.state === 'listening' && !state.connected) {
+        bootSequence();
         state.connected = true;
         setControlsEnabled(true);
       }
@@ -1188,6 +1263,12 @@ function handleMessage(message) {
       break;
     case 'news':
       addNewsCard(message.news);
+      break;
+    case 'markets':
+      addMarketsCard(message.markets);
+      break;
+    case 'weekly':
+      addWeeklyCard(message.numbers);
       break;
     case 'planner':
     case 'notes':

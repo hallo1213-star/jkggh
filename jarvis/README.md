@@ -135,6 +135,18 @@ Falls Google kein App-Passwort anbietet (z. B. bei Schul-/Firmenkonten oder „E
 - **Ansehen und löschen:** oben rechts auf das Gehirn-Symbol tippen. Passwörter, PINs und Bank- oder Kartendaten merkt sich Jarvis nie.
 - Jarvis **knüpft an euer letztes Gespräch an** – auch nach dem Schließen der App. Der Verlauf bleibt auf deinem Gerät und lässt sich im Gedächtnis-Fenster löschen.
 
+## Film-Modus: „Alle Systeme online, Master“ 🎬
+
+So wie der JARVIS aus den Filmen:
+
+- **Butler-Stil:** Sag „Nenn mich Master“ oder „Sei wie der Jarvis aus Iron Man“. Ab dann siezt dich Jarvis, nennt dich „Master“ (oder wie du willst, z. B. „Sir“ oder „Chef“) und antwortet elegant mit trockenem Sarkasmus: „Sie wollen schlechte Laune? Bitte sehr.“ Er begrüßt dich dann z. B. mit „Ich habe Sie gehört, Master. Alle Systeme sind online.“ Zurück zum lockeren Stil: „Sei wieder normal.“
+- **Start-Animation:** Beim Verbinden fahren die Systeme hoch: Spracherkennung, Erdbeobachtung, Nachrichtenlage, Märkte … „Alle Systeme online“.
+- **Lagebericht:** „Mach die Nachrichten an“: Die Erde dreht sich, rechts erscheinen die Top-Meldungen der Welt. „Und wie ist es in Deutschland?“ und „Gehen wir nach Russland“: Jarvis fliegt hin und zeigt die Meldungen von dort.
+- **Börse:** „Was macht der Aktienmarkt?“ zeigt echte Kurse von DAX, S&P 500, Nasdaq, Öl, Gold, Euro/Dollar und Bitcoin, jeweils mit der Veränderung von heute und der Woche, dazu die Börsen-Schlagzeilen. Die Kurse sind ca. 15 Minuten verzögert, und es gibt keine Anlageberatung.
+- **Zahlen der Woche:** „Gib mir die Zahlen der Woche“ zeigt deine echten Zahlen aus Jarvis: Einnahmen, Gumroad-Verkäufe, Geld-Modus-Fortschritt, Ausgaben, Termine, ungelesene Mails und Einkaufsliste.
+
+Alles davon sind echte Daten. Jarvis erfindet keine Meldungen, Kurse oder Zahlen, auch nicht im Butler-Stil.
+
 ## Persönlichkeit
 
 Jarvis redet wie ein guter Freund: locker, mit Humor und eigener Meinung, fragt nach, greift auf, was du erzählt hast, und reagiert auf deine Stimmung. Er begrüßt dich jedes Mal etwas anders. Ehrlich bleibt er trotzdem: Fragst du ernsthaft, sagt er dir, dass er eine KI ist. Geht es dir richtig schlecht, nimmt er das ernst und nennt Hilfe (Telefonseelsorge 0800 111 0 111, Nummer gegen Kummer 116 111, Notruf 112).

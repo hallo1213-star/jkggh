@@ -4,11 +4,13 @@ import { DIFFICULTIES, GAME_TYPES, encodeGame, sanitizeGame } from './public/gam
 import { describeEmail, gmailConfigured, listEmails, readEmail, sendEmail } from './gmail.js';
 import { addItems, listAsText, removeItems, sellLinks, shopLinks } from './shopping.js';
 import { OFFER_ALLOWED, STATUSES, findCustomer, summarize, upsertCustomer } from './customers.js';
-import { getNews, getWeather, lookupWikipedia } from './knowledge.js';
+import { getNews, getWeather, lookupWikipedia, searchNews, topNews } from './knowledge.js';
+import { getMarkets } from './markets.js';
+import { gumroadConfigured, gumroadProducts } from './gumroad.js';
 import { geocodePlace, placeDetails } from './places.js';
 import { MODES as ORDER_MODES, checkOrder, cleanOrderItems, describeItem, findRestaurant, normalizePhone, orderSummary, orderTotal, readMenu, spokenPhone } from './restaurants.js';
 import { twilioConfigured } from './phone-call.js';
-import { addMemory, forgetMemory } from './memories.js';
+import { addMemory, forgetMemory, sanitizeMemories } from './memories.js';
 import { sendTelegram, telegramConfigured } from './telegram.js';
 import { sendVoiceNote } from './voice-message.js';
 import { getAutobahnWebcams, normalizeRoad, webcamSearchLinks } from './webcams.js';
@@ -853,6 +855,112 @@ export const cloudTools = [
       context.schedule(ms, String(message || 'Dein Timer ist abgelaufen.'));
       const due = new Date(Date.now() + ms).toLocaleTimeString('de-DE', { timeZone, hour: '2-digit', minute: '2-digit' });
       return { gestellt: true, faelligUm: due };
+    }
+  },
+  {
+    name: 'persona_settings',
+    description: 'Ändert, wie Jarvis redet: stil butler = eleganter Film-JARVIS, siezt, nennt den Nutzer „Master“ (oder eine andere Anrede), trockener Sarkasmus; stil freund = locker, duzt. Für „Nenn mich Master“, „Sei wie der Jarvis aus Iron Man“, „Sei wieder normal“.',
+    parameters: {
+      type: 'object',
+      properties: {
+        stil: { type: 'string', enum: ['butler', 'freund'] },
+        anrede: { type: 'string', description: 'Wie er angesprochen werden will, z. B. "Master", "Sir", "Chef", oder sein Name' }
+      }
+    },
+    label: (a) => `Stil: ${a.stil || ''}${a.anrede ? ` (${a.anrede})` : ''}`,
+    run: async ({ stil, anrede }, context) => {
+      let list = context.getMemories().filter((m) => !(stil && /^Stil:/i.test(m.text)) && !(anrede && /^Anrede:/i.test(m.text)));
+      if (stil) list = [...list, { text: `Stil: ${stil === 'butler' ? 'Butler' : 'Freund'}` }];
+      const address = String(anrede ?? '').replace(/[^\p{L}\p{N} .'-]/gu, '').trim().slice(0, 30);
+      if (address) list = [...list, { text: `Anrede: ${address}` }];
+      context.setMemories(sanitizeMemories(list));
+      context.refreshPrompt?.();
+      return { gespeichert: true, hinweis: 'Ab sofort gilt der neue Stil – antworte schon jetzt so.' };
+    }
+  },
+  {
+    name: 'news_region',
+    description: 'Lagebericht wie im Film: zeigt Nachrichten auf der 3D-Erdkugel. region welt = Weltnachrichten (ganze Erde, dreht sich), deutschland = Nachrichten aus Deutschland, wirtschaft = Wirtschaft, sonst ein Land/eine Stadt/Region (z. B. "Russland", "USA", "Naher Osten") – fliegt dorthin, rechts erscheinen die Meldungen. Für „Mach die Nachrichten an“, „Und wie ist es in Deutschland?“, „Gehen wir nach Russland“.',
+    parameters: {
+      type: 'object',
+      properties: {
+        region: { type: 'string', description: '"welt", "deutschland", "wirtschaft" oder ein Land/Ort' },
+        topic: { type: 'string', description: 'Optional ein Thema, z. B. "Krieg", "Wahl"' }
+      },
+      required: ['region']
+    },
+    label: (a) => `Nachrichten: ${a.region}${a.topic ? ` – ${a.topic}` : ''}`,
+    run: async ({ region, topic }, context) => {
+      const wanted = String(region ?? '').trim().toLowerCase();
+      const subject = String(topic ?? '').trim().slice(0, 60);
+      let news;
+      let place = null;
+      if (['welt', 'wirtschaft'].includes(wanted) && !subject) {
+        news = await topNews(wanted);
+        context.showGlobe({ action: 'world_news', title: wanted === 'welt' ? 'Weltlage' : 'Wirtschaft', items: news.meldungen });
+      } else {
+        place = await geocodePlace(wanted === 'deutschland' ? 'Deutschland' : region);
+        if (context.globeMemory) context.globeMemory.place = place;
+        context.showGlobe({ action: 'fly', place, topic: subject || 'Nachrichten' });
+        news = wanted === 'deutschland' && !subject ? await topNews('deutschland') : await searchNews(subject ? `${subject} ${place.name}` : place.name, { limit: 8, days: 2 });
+        const details = await placeDetails(place, '').catch(() => null);
+        context.showGlobe({ action: 'panels', place, left: details?.left || { weather: null, info: null }, right: { title: subject ? `${subject} · ${place.name}` : `Nachrichten · ${place.name}`, topic: subject || 'Nachrichten', query: news.suche || (news.rubrik === 'deutschland' ? 'Top-Meldungen Deutschland' : news.rubrik), items: news.meldungen } });
+      }
+      return {
+        region: place?.label || wanted,
+        meldungen: news.meldungen.slice(0, 6).map((m) => `${m.titel} (${m.quelle})`),
+        hinweis: 'Fasse die zwei bis vier wichtigsten Meldungen zusammen, eine pro Satz, knapp wie ein Lagebericht. Nur was in diesen Meldungen steht – nichts dazuerfinden, keine eigene politische Wertung.'
+      };
+    }
+  },
+  {
+    name: 'markets',
+    description: 'Börsen-Lagebericht mit echten Kursen (DAX, S&P 500, Nasdaq, Öl, Gold, Euro/Dollar, Bitcoin; heute und Woche) und den Börsen-Schlagzeilen des Tages. Für „Was macht der Aktienmarkt?“, „Wie steht der DAX?“.',
+    parameters: { type: 'object', properties: {} },
+    label: () => 'Börse abgerufen',
+    run: async (args, context) => {
+      const markets = await getMarkets();
+      context.showMarkets(markets);
+      return {
+        werte: markets.werte.map((w) => `${w.name}: ${w.kurs} ${w.unit}, heute ${w.heuteProzent ?? '?'} %, Woche ${w.wocheProzent ?? '?'} %`),
+        schlagzeilen: markets.schlagzeilen.map((m) => m.titel),
+        hinweis: 'Nenne die zwei, drei auffälligsten Bewegungen. Gründe nur, wenn sie in den Schlagzeilen stehen. Keine Anlageberatung, keine Kauf- oder Verkaufsempfehlungen. Kurse sind ca. 15 Minuten verzögert.'
+      };
+    }
+  },
+  {
+    name: 'weekly_numbers',
+    description: '„Zahlen der Woche“: echte Zahlen aus seinem Jarvis – Einnahmen (eingetragen und Gumroad-Verkäufe), Geld-Modus-Fortschritt, Ausgaben, Termine der nächsten 7 Tage, ungelesene Mails, offene Einkäufe. Zeigt eine Übersicht an.',
+    parameters: { type: 'object', properties: {} },
+    label: () => 'Zahlen der Woche',
+    run: async (args, context) => {
+      const weekAgo = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
+      const { state } = context.getMoney();
+      const incomeWeek = state.income.filter((e) => e.date >= weekAgo).reduce((sum, e) => sum + e.amount, 0);
+      const incomeTotal = state.income.reduce((sum, e) => sum + e.amount, 0);
+      const doneWeek = state.projects.flatMap((p) => p.tasks).filter((t) => t.status === 'erledigt' && t.doneAt && t.doneAt.slice(0, 10) >= weekAgo).length;
+      const productsWeek = state.products.filter((p) => p.createdAt.slice(0, 10) >= weekAgo).length;
+      const expenses = (context.getStore('expenses') || []).filter((e) => e.date >= weekAgo);
+      const appointments = upcomingAppointments(context.getStore('planner'), { days: 7 });
+      const [gumroad, mail] = await Promise.allSettled([
+        gumroadConfigured() ? gumroadProducts() : Promise.resolve(null),
+        gmailConfigured() ? listEmails({ unreadOnly: true, limit: 1 }) : Promise.resolve(null)
+      ]);
+      const euro = (v) => `${v.toFixed(2).replace('.', ',')} €`;
+      const numbers = [
+        { label: 'Einnahmen diese Woche', value: euro(incomeWeek), sub: `insgesamt ${euro(incomeTotal)} · von dir eingetragen` },
+        gumroad.status === 'fulfilled' && gumroad.value ? { label: 'Gumroad', value: `${gumroad.value.totalSales} Verkäufe`, sub: `${gumroad.value.totalUsd.toFixed(2)} $ Umsatz insgesamt` } : null,
+        { label: 'Geld-Modus', value: `${doneWeek} Aufgaben`, sub: `${productsWeek} neue Produkte/Texte diese Woche · Modus ${state.enabled ? 'an' : 'aus'}` },
+        { label: 'Ausgaben diese Woche', value: euro(expenses.reduce((sum, e) => sum + e.amount, 0)), sub: `${expenses.length} Einträge im Haushaltsbuch` },
+        { label: 'Termine (7 Tage)', value: String(appointments.length), sub: appointments.slice(0, 2).map((a) => a.title).join(', ') || 'keine' },
+        mail.status === 'fulfilled' && mail.value ? { label: 'Ungelesene Mails', value: String(mail.value.treffer), sub: 'Gmail' } : null,
+        { label: 'Einkaufsliste', value: String(context.getShoppingList().filter((i) => !i.done).length), sub: 'offene Sachen' }
+      ].filter(Boolean);
+      context.showWeekly(numbers);
+      return {
+        zahlen: numbers.map((n) => `${n.label}: ${n.value} (${n.sub})`),
+        hinweis: 'Das sind alle echten Zahlen, die Jarvis hat. Trag sie knapp vor. Erfinde keine weiteren Zahlen (keine Reichweite, Follower oder Newsletter – dafür gibt es keine Daten). Sind es kleine Zahlen, sag es ehrlich, gern mit trockenem Humor.'
+      };
     }
   },
   {

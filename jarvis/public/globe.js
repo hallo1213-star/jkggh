@@ -41,6 +41,7 @@ let loading = null;
 let Cesium = null;
 let layers = {};
 let spinning = false;
+let spinTimer = null;
 let marker = null;
 let sendToServer = () => false;
 let notify = () => {};
@@ -247,6 +248,7 @@ function showMarker(place) {
 export async function flyToPlace(place) {
   await openGlobe();
   if (!viewer) return;
+  clearTimeout(spinTimer);
   setSpin(false);
   setHeading(place.name, [place.kind, place.label].filter(Boolean).join(' · '));
   setStatus('Navigiere …');
@@ -357,6 +359,42 @@ function panelsLoading(place, topic) {
   else { els.left.hidden = false; els.right.hidden = false; syncToggles(); }
 }
 
+// "Mach die Nachrichten an": the whole earth turns slowly, the headlines appear
+// on the right and a short situation overview on the left.
+async function worldNews({ title, items = [] }) {
+  await openGlobe();
+  if (!viewer) return;
+  setNight(false);
+  if (marker) marker.show = false;
+  wholeEarth();
+  setHeading(title || 'Weltlage', `Lagebericht · ${new Date().toLocaleString('de-DE', { weekday: 'long', hour: '2-digit', minute: '2-digit' })}`);
+  clearTimeout(spinTimer);
+  spinTimer = setTimeout(() => setSpin(true), 2600);
+  const sources = [...new Set(items.map((item) => item.quelle).filter(Boolean))];
+  els.leftBody.replaceChildren(
+    el('h4', { textContent: title || 'Weltlage' }),
+    el('p', { class: 'muted', textContent: `${items.length} aktuelle Meldungen` }),
+    el('div', { class: 'globe-facts' },
+      el('div', {}, el('small', { textContent: 'Stand' }), new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })),
+      el('div', {}, el('small', { textContent: 'Quellen' }), String(sources.length))),
+    sources.length ? el('p', { class: 'muted', textContent: sources.slice(0, 8).join(' · ') }) : null,
+    el('p', { class: 'globe-note', textContent: 'Sag z. B. „Und wie ist es in Deutschland?“ oder „Gehen wir nach Russland.“' })
+  );
+  renderNewsList(title || 'Weltlage', items, 'Google News – Top-Meldungen');
+  if (narrow()) showPanel('right');
+  else { els.left.hidden = false; els.right.hidden = false; syncToggles(); }
+}
+
+function renderNewsList(heading, items, sourceText) {
+  els.rightTitle.textContent = heading;
+  els.rightBody.replaceChildren(
+    ...(items.length ? items.map((item) => el('div', { class: 'globe-news' },
+      item.link ? el('a', { href: item.link, target: '_blank', rel: 'noopener noreferrer', textContent: item.titel }) : el('span', { textContent: item.titel }),
+      el('small', { textContent: [item.quelle, ago(item.zeit)].filter(Boolean).join(' · ') }))) : [el('p', { class: 'muted', textContent: 'Keine aktuellen Meldungen gefunden.' })]),
+    el('p', { class: 'globe-note', textContent: sourceText })
+  );
+}
+
 function renderPanels({ place, left, right }) {
   const w = left.weather;
   els.leftBody.replaceChildren(
@@ -375,7 +413,7 @@ function renderPanels({ place, left, right }) {
     left.info?.link ? el('a', { class: 'more', href: left.info.link, target: '_blank', rel: 'noopener noreferrer', textContent: 'Mehr bei Wikipedia ↗' }) : null,
     el('p', { class: 'globe-note', textContent: 'Wetter & Uhrzeit: live (Open-Meteo). Satellitenbild: Archivaufnahme, nicht live.' })
   );
-  els.rightTitle.textContent = right.topic ? `Meldungen: ${right.topic}` : 'Aktuelle Meldungen';
+  els.rightTitle.textContent = right.title || (right.topic ? `Meldungen: ${right.topic}` : 'Aktuelle Meldungen');
   const items = right.items || [];
   els.rightBody.replaceChildren(
     ...(items.length ? items.map((item) => el('div', { class: 'globe-news' },
@@ -395,6 +433,8 @@ export async function handleGlobeMessage(message) {
       return flyToPlace(message.place);
     case 'panels':
       return renderPanels(message);
+    case 'world_news':
+      return worldNews(message);
     case 'located':
       return located(message.place);
     case 'error':

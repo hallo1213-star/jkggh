@@ -625,6 +625,24 @@ body {
 .planner-total { padding: 12px; border: 1px solid var(--cyan); background: rgba(56, 225, 255, 0.08); font-size: 16px; }
 .planner-total b { font-family: var(--font-display); color: var(--cyan-soft); font-size: 22px; }
 
+/* --- Markets, weekly numbers, boot sequence --- */
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-top: 10px; }
+.stat-tile { min-width: 0; padding: 8px 10px; border: 1px solid var(--panel-edge); background: rgba(2, 12, 20, 0.55); }
+.stat-tile small { display: block; color: var(--muted); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; }
+.stat-tile b { display: block; font-family: var(--font-display); font-size: 18px; color: var(--cyan-soft); overflow-wrap: anywhere; }
+.stat-tile em { display: block; font-style: normal; font-size: 12px; color: var(--muted); overflow-wrap: anywhere; }
+.stat-tile em.up { color: var(--green); }
+.stat-tile em.down { color: var(--red); }
+.card-source { margin: 8px 0 0; color: var(--muted); font-size: 12px; }
+.boot-overlay { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; background: radial-gradient(circle, rgba(4, 24, 38, 0.92), rgba(0, 0, 0, 0.96)); transition: opacity 0.6s; pointer-events: none; }
+.boot-overlay.fade { opacity: 0; }
+.boot-box { width: min(360px, calc(100vw - 32px)); padding: 22px; border: 1px solid var(--cyan); box-shadow: 0 0 40px rgba(56, 225, 255, 0.25); background: rgba(2, 10, 16, 0.9); }
+.boot-title { margin: 0 0 12px; font-family: var(--font-display); letter-spacing: 0.4em; color: var(--cyan-soft); text-shadow: 0 0 16px var(--cyan-glow); }
+.boot-line, .boot-done { margin: 4px 0; display: flex; justify-content: space-between; gap: 12px; font-family: var(--font-display); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); opacity: 0; animation: boot-in 0.3s forwards; }
+.boot-line b { color: var(--green); font-weight: 500; }
+.boot-done { margin-top: 12px; justify-content: center; color: var(--cyan-soft); font-size: 14px; }
+@keyframes boot-in { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+
 /* --- Food order & phone call --- */
 .order-card { padding: 12px; border: 1px solid var(--amber); background: linear-gradient(135deg, rgba(255, 181, 71, 0.1), rgba(255, 181, 71, 0.02)); }
 .order-summary { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; font-size: 15px; line-height: 1.45; color: var(--text); }

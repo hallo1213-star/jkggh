@@ -180,6 +180,17 @@ export async function searchNews(query, { fetchImpl = fetch, limit = 8, days = 7
   return { suche: q, quelle: 'Google News', meldungen: parseNewsSearch(await response.text(), Math.min(Math.max(Number(limit) || 8, 1), 15)) };
 }
 
+// Top stories of a Google News section: world, Germany, business (no key).
+const NEWS_SECTIONS = { welt: 'WORLD', deutschland: 'NATION', wirtschaft: 'BUSINESS', technik: 'TECHNOLOGY', sport: 'SPORTS' };
+
+export async function topNews(section = 'welt', { fetchImpl = fetch, limit = 8 } = {}) {
+  const key = NEWS_SECTIONS[section] ? section : 'welt';
+  const url = `https://news.google.com/rss/headlines/section/topic/${NEWS_SECTIONS[key]}?hl=de&gl=DE&ceid=DE:de`;
+  const response = await fetchImpl(url, { headers: { 'user-agent': USER_AGENT }, signal: AbortSignal.timeout(TIMEOUT_MS) });
+  if (!response.ok) throw new Error(`Die Nachrichten antworten mit Status ${response.status}.`);
+  return { rubrik: key, quelle: 'Google News', meldungen: parseNewsSearch(await response.text(), Math.min(Math.max(Number(limit) || 8, 1), 15)) };
+}
+
 // --- Wikipedia ---------------------------------------------------------------
 
 export async function lookupWikipedia(query, { fetchImpl = fetch } = {}) {

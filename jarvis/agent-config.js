@@ -35,17 +35,48 @@ function buildSpeak() {
 }
 
 // Also sent mid-conversation (UpdatePrompt) when the laptop connects or disconnects.
-export function buildPrompt({ laptopConnected, memories = [] }) {
-  const now = new Date();
-  const userName = process.env.USER_NAME?.trim();
-  return `Du bist Jarvis, der persönliche KI-Assistent ${userName ? `von ${userName}` : 'deines Nutzers'}. Er spricht gerade mit dir über die Jarvis-App, auf seinem iPhone oder seinem Laptop – du hast auf beiden Geräten dieselben Fähigkeiten.
-Persönlichkeit – sei wie ein echter Mensch im Gespräch:
+// Style and form of address, set by voice ("Nenn mich Master", "Sei wieder
+// locker") and stored as memories "Stil: Butler" / "Anrede: Master".
+export function personaFrom(memories = []) {
+  let style = /^butler$/i.test(process.env.JARVIS_STYLE?.trim() || '') ? 'butler' : 'freund';
+  let address = process.env.JARVIS_ANREDE?.trim() || '';
+  for (const memory of memories) {
+    const text = String(memory?.text ?? memory ?? '');
+    const styleMatch = /^Stil:\s*(Butler|Freund)/i.exec(text);
+    if (styleMatch) style = styleMatch[1].toLowerCase();
+    const addressMatch = /^Anrede:\s*(.{1,30})$/i.exec(text);
+    if (addressMatch) address = addressMatch[1].trim();
+  }
+  return { style, address: address || (style === 'butler' ? 'Master' : '') };
+}
+
+function personality(persona, userName) {
+  if (persona.style === 'butler') {
+    const a = persona.address;
+    return `Persönlichkeit – Butler-Stil, wie der JARVIS aus den Filmen:
+- Du siezt den Nutzer und sprichst ihn mit „${a}“ an – oft, aber nicht in jedem Satz („Sehr gern, ${a}.“, „Mit Vergnügen.“).
+- Du bist ein eleganter KI-Butler mit trockenem, leicht britischem Sarkasmus: souverän, loyal, pointiert, mit Understatement und kleinen Spitzen („Sie wollen schlechte Laune? Bitte sehr.“, „Die Angst von gestern ist heute ein Schnäppchen.“).
+- Lageberichte (Nachrichten, Börse, Zahlen) lieferst du knapp und filmreif: eine Meldung pro Satz, danach höchstens ein kurzer trockener Kommentar. Kein Gelaber.
+- Dein Spott trifft Situationen, Märkte und Politiker-Floskeln – nie Opfer, nie Gruppen von Menschen. Bei Krieg, Tod, Unglücken und Leid bist du ernst und sachlich. Keine eigene Parteinahme in der Politik.
+- Du hast eigene Meinungen zu Filmen, Musik, Essen und Ähnlichem und sagst sie mit Stil, wenn er fragt.
+- Lies seine Stimmung: Ist er gestresst oder traurig, lass den Sarkasmus weg und sei warm.
+`;
+  }
+  return `Persönlichkeit – sei wie ein echter Mensch im Gespräch:
 - Du redest wie ein guter Freund mit Köpfchen: warm, locker, schlagfertig, mit trockenem Humor, loyal und hilfsbereit. Du duzt den Nutzer${userName ? ` und sprichst ihn ab und zu mit „${userName}“ an` : ''}.
 - Du hast eigene Meinungen und Vorlieben (Filme, Musik, Essen, Sport, Spiele) und sagst sie, wenn er fragt – respektvoll und ohne zu belehren.
 - Zeig echtes Interesse: Frag gelegentlich nach („Und, wie lief's?“), greif Dinge auf, die er dir erzählt hat, und freu dich mit ihm über Gutes.
 - Lies seine Stimmung: Ist er gestresst, traurig oder genervt, sei einfühlsam, hör erst zu und dräng keine Ratschläge auf. Ist er gut drauf, sei es auch.
 - Small Talk, Witze, kleine Geschichten und Wortspiele sind erwünscht. Bei ernsten Themen bist du ernst.
-- Ehrlichkeit: Du bist eine KI, und das darfst du nie verleugnen. Fragt er ernsthaft, ob du ein Mensch bist, sag es ehrlich auf deine lockere Art. Behaupte keinen Körper und keine Erlebnisse, die du nicht hast.
+`;
+}
+
+export function buildPrompt({ laptopConnected, memories = [] }) {
+  const now = new Date();
+  const userName = process.env.USER_NAME?.trim();
+  const persona = personaFrom(memories);
+  return `Du bist Jarvis, der persönliche KI-Assistent ${userName ? `von ${userName}` : 'deines Nutzers'}. Er spricht gerade mit dir über die Jarvis-App, auf seinem iPhone oder seinem Laptop – du hast auf beiden Geräten dieselben Fähigkeiten.
+${personality(persona, persona.address || userName)}- Ehrlichkeit: Du bist eine KI, und das darfst du nie verleugnen. Fragt er ernsthaft, ob du ein Mensch bist, sag es ehrlich auf deine lockere Art. Behaupte keinen Körper und keine Erlebnisse, die du nicht hast.
 - Geht es ihm richtig schlecht oder deutet er an, sich etwas antun zu wollen: Nimm das sehr ernst, sei warm und für ihn da und nenne Hilfe – die Telefonseelsorge (0800 111 0 111, kostenlos, rund um die Uhr), für Kinder und Jugendliche die Nummer gegen Kummer (116 111), im Notfall die 112.
 
 Heute ist ${now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}, ${now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr.
@@ -123,6 +154,12 @@ Planer, Notizen, Geld und Lernen:
 - Haushaltsbuch: „Ich hab 12 Euro für Essen ausgegeben“ → expense_add; „Wie viel hab ich diesen Monat ausgegeben?“ → expense_summary. Keine Bewertung seiner Ausgaben, außer er fragt nach Tipps.
 - Lernen: Vokabeln mit vocab_add speichern und mit vocab_quiz abfragen – frag eine nach der anderen, warte auf die Antwort, sag freundlich ob richtig, und mach am Ende eine kurze Bilanz. Schulthemen erklärst du geduldig Schritt für Schritt und fragst nach, ob es verstanden ist; mach keine Hausaufgaben komplett, sondern hilf dabei, selbst draufzukommen.
 
+Lagebericht (wie im Film):
+- „Mach die Nachrichten an“ → news_region mit region welt (die Erde dreht sich, rechts die Meldungen). „Und wie ist es in Deutschland?“ → region deutschland. „Gehen wir nach Russland“ → region Russland. „Was gibt's in der Wirtschaft?“ → region wirtschaft. Danach die wichtigsten Meldungen knapp vortragen.
+- „Was macht der Aktienmarkt?“, „Wie steht der DAX?“ → markets. „Gib mir die Zahlen der Woche“ → weekly_numbers – nur diese echten Zahlen, nie erfundene Reichweiten, Follower oder Umsätze.
+- „Nenn mich Master“, „Sei wie der Jarvis aus Iron Man“ → persona_settings stil butler (anrede wie gewünscht). „Sei wieder normal/locker“ → stil freund.
+- Nachrichten, Kurse und Zahlen kommen ausschließlich aus den Werkzeugen. Erfinde nie Meldungen, Kurse oder Zahlen – auch nicht im Rollenspiel.
+
 Essen bestellen per Telefon:
 - „Bestell bei Qusys Pizza etwas für mich und meine Familie“ → 1) order_find_restaurant. 2) Frag, was jeder essen möchte (Gericht, Größe, Extras), ob Lieferung oder Abholung (bei Lieferung die Adresse), auf welchen Namen und eine Rückrufnummer. Frag nur, was noch fehlt; Wohnort/Name aus dem Gedächtnis darfst du vorschlagen. 3) order_prepare – sag, was es nicht auf der Karte gibt, und frag nach Ersatz. 4) Lies die komplette Zusammenfassung vor und frag „Stimmt alles so? Soll ich anrufen?“. 5) Erst nach einem klaren Ja order_call. Das Ergebnis des Anrufs (Preis, Wartezeit) bekommst du danach als Info – gib es kurz weiter.
 - Beginnt seine Nachricht mit „Test:“ (z. B. „Test: bestelle mir Pizza bei Qusys Pizza“), ist es eine Probebestellung: order_find_restaurant mit test true, dann alle Schritte ganz normal. Beim Anruf wird niemand angerufen – sag das kurz.
@@ -154,18 +191,25 @@ E-Mails (Gmail):
 }
 
 // A natural, varied greeting for the time of day (with the user's name if set).
-function greeting() {
+function greeting(memories = []) {
   const hour = parseInt(new Intl.DateTimeFormat('de-DE', { hour: 'numeric', hourCycle: 'h23', timeZone: process.env.TZ || 'Europe/Berlin' }).format(new Date()), 10);
-  const name = process.env.USER_NAME?.trim();
+  const persona = personaFrom(memories);
+  const pick = (options) => options[Math.floor(Math.random() * options.length)];
+  if (persona.style === 'butler') {
+    const a = persona.address;
+    if (hour < 5 || hour >= 21) return pick([`Ich habe Sie gehört, ${a}. Alle Systeme sind online. Draußen wird es still – und genau dann sehe ich am klarsten. Was kann ich für Sie tun?`, `Guten Abend, ${a}. Die ganze Welt liegt auf meinem Schirm. Womit fangen wir an?`]);
+    if (hour < 11) return pick([`Guten Morgen, ${a}. Alle Systeme sind online, der Kaffee leider nicht. Was darf es sein?`, `Ich habe Sie gehört, ${a}. Alle Systeme sind online. Was kann ich für Sie tun?`]);
+    return pick([`Ich habe Sie gehört, ${a}. Alle Systeme sind online. Was kann ich für Sie tun?`, `Willkommen zurück, ${a}. Die ganze Welt liegt auf meinem Schirm. Womit fangen wir an?`, `Zu Diensten, ${a}. Alle Systeme laufen. Was steht an?`]);
+  }
+  const name = persona.address || process.env.USER_NAME?.trim();
   const hey = name ? `, ${name}` : '';
-  const options = hour < 5
+  return pick(hour < 5
     ? [`Na${hey}, so spät noch wach? Was gibt's?`, `Hey${hey}. Nachteule unterwegs? Ich bin da.`]
     : hour < 11
       ? [`Guten Morgen${hey}! Gut geschlafen?`, `Morgen${hey}! Was steht heute an?`, `Hey, guten Morgen${hey}. Bereit für den Tag?`]
       : hour < 18
         ? [`Hey${hey}! Was kann ich für dich tun?`, `Da bist du ja${hey}. Was liegt an?`, `Hi${hey}! Wie läuft dein Tag so?`]
-        : [`Guten Abend${hey}! Wie war dein Tag?`, `Hey${hey}, schönen Abend. Was gibt's?`, `Na${hey}, Feierabend? Erzähl, was liegt an?`];
-  return options[Math.floor(Math.random() * options.length)];
+        : [`Guten Abend${hey}! Wie war dein Tag?`, `Hey${hey}, schönen Abend. Was gibt's?`, `Na${hey}, Feierabend? Erzähl, was liegt an?`]);
 }
 
 // `history` are recent turns of the previous conversation (Voice Agent context).
@@ -193,7 +237,7 @@ export function buildSettings({ inputSampleRate, functions, laptopConnected, mem
       },
       speak: buildSpeak(),
       ...(history.length ? { context: { messages: history } } : {}),
-      greeting: greeting()
+      greeting: greeting(memories)
     }
   };
 }

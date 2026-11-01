@@ -718,6 +718,15 @@ browserWss.on('connection', (browser, request) => {
     showNews(news) {
       toBrowser({ type: 'news', news });
     },
+    showMarkets(markets) {
+      toBrowser({ type: 'markets', markets });
+    },
+    showWeekly(numbers) {
+      toBrowser({ type: 'weekly', numbers });
+    },
+    refreshPrompt() {
+      session.updatePrompt?.();
+    },
     setCustomers(list, { show = false } = {}) {
       customerStore.set(list);
       if (show) customerStore.send(session, { show: true });
