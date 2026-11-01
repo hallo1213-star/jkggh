@@ -8,6 +8,7 @@ import { initProjects, projectLoading, showProject } from './projects.js';
 import { handleTaskEvent, initTasks } from './tasks.js';
 import { followJob, initStudio } from './studio.js';
 import { initPalace, openPalace } from './palace.js';
+import { chartCard, initVisuals, showWeather as showWeatherShow, startFocus } from './visuals.js';
 
 const OUTPUT_SAMPLE_RATE = 24000;
 
@@ -1250,6 +1251,7 @@ document.getElementById('theme-button').addEventListener('click', () => {
 });
 initTasks({ toast });
 initPalace({ toast });
+initVisuals({ toast, chime: (f) => chime(f) });
 initStudio({
   toast,
   send: (message) => {
@@ -1457,6 +1459,15 @@ function handleMessage(message) {
       break;
     case 'task':
       handleTaskEvent(message);
+      break;
+    case 'weather_show':
+      showWeatherShow(message.weather);
+      break;
+    case 'focus':
+      startFocus(message);
+      break;
+    case 'chart':
+      chartCard(message.chart, cardMessage);
       break;
     case 'studio_open':
       followJob(message.id, message.kind, message.prompt);
@@ -1697,6 +1708,38 @@ setInterval(tickClock, 10_000);
 const ctx = els.canvas.getContext('2d');
 const levelData = new Uint8Array(512);
 let smoothLevel = 0;
+
+// Orb design: the orb breathes with the voice and a ring of frequency bars
+// shows Jarvis' (or your) voice live.
+const orbCanvas = document.getElementById('orb-spectrum');
+const orbCtx = orbCanvas?.getContext('2d');
+let orbBins = null;
+function drawOrbSpectrum(speaking) {
+  if (!orbCtx) return;
+  document.body.style.setProperty('--voice', smoothLevel.toFixed(3));
+  const analyser = speaking ? state.outputAnalyser : state.micMuted ? null : state.inputAnalyser;
+  const { width, height } = orbCanvas;
+  orbCtx.clearRect(0, 0, width, height);
+  if (!analyser) return;
+  if (!orbBins || orbBins.length !== analyser.frequencyBinCount) orbBins = new Uint8Array(analyser.frequencyBinCount);
+  analyser.getByteFrequencyData(orbBins);
+  const cx = width / 2;
+  const cy = height / 2;
+  const bars = 72;
+  const inner = width * 0.3;
+  orbCtx.lineCap = 'round';
+  for (let i = 0; i < bars; i += 1) {
+    const bin = orbBins[Math.floor((i < bars / 2 ? i : bars - i) * (orbBins.length * 0.5) / (bars / 2))] / 255;
+    const len = 4 + bin * width * 0.16;
+    const a = (i / bars) * Math.PI * 2 - Math.PI / 2;
+    orbCtx.strokeStyle = speaking ? `rgba(224, 112, 63, ${0.25 + bin * 0.75})` : `rgba(120, 130, 145, ${0.2 + bin * 0.6})`;
+    orbCtx.lineWidth = 3;
+    orbCtx.beginPath();
+    orbCtx.moveTo(cx + Math.cos(a) * inner, cy + Math.sin(a) * inner);
+    orbCtx.lineTo(cx + Math.cos(a) * (inner + len), cy + Math.sin(a) * (inner + len));
+    orbCtx.stroke();
+  }
+}
 let angle = 0;
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -1725,6 +1768,7 @@ function draw() {
   const speaking = isSpeaking();
   const raw = speaking ? readLevel(state.outputAnalyser) : state.micMuted ? 0 : readLevel(state.inputAnalyser);
   smoothLevel += (raw - smoothLevel) * 0.2;
+  if (document.body.classList.contains('theme-orb')) drawOrbSpectrum(speaking);
   const speed = state.mode === 'thinking' ? 0.04 : state.mode === 'offline' ? 0.004 : 0.012;
   if (!reduceMotion) angle += speed;
   const [r, g, b] = palette();

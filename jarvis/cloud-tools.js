@@ -5,7 +5,8 @@ import { describeEmail, gmailConfigured, listEmails, readEmail, sendEmail } from
 import { addItems, listAsText, removeItems, sellLinks, shopLinks } from './shopping.js';
 import { OFFER_ALLOWED, STATUSES, findCustomer, summarize, upsertCustomer } from './customers.js';
 import { getNews, getWeather, lookupWikipedia, searchNews, topNews } from './knowledge.js';
-import { getMarkets } from './markets.js';
+import { getChart, getMarkets } from './markets.js';
+import { getIss } from './iss.js';
 import { bauplanConfig, missingSettings } from './bauplan-page.js';
 import { describeScene, designScene } from './model3d.js';
 import { writeProject } from './projects.js';
@@ -873,6 +874,52 @@ export const cloudTools = [
     run: async ({ goal }, context) => {
       const task = context.startTask(goal);
       return { gestartet: true, aufgabe: task.title, hinweis: 'Die Aufgabe läuft jetzt im Hintergrund, der Fortschritt ist in der Aufgabenübersicht zu sehen. Sag kurz, dass du dich darum kümmerst und Bescheid gibst, wenn es fertig ist. Er kann währenddessen weiter mit dir reden.' };
+    }
+  },
+  {
+    name: 'weather_show',
+    description: 'Große animierte Wetter-Show im Vollbild: aktuelle Lage mit Live-Animation (Regen, Schnee, Sonne, Gewitter, Wolken) und 7-Tage-Verlauf mit Temperaturkurve. Für „Wie wird das Wetter diese Woche?“, „Zeig mir das Wetter“.',
+    parameters: { type: 'object', properties: { place: { type: 'string', description: 'Ort; leer = Wohnort aus dem Gedächtnis' } } },
+    label: (a) => `Wetter-Show${a.place ? `: ${a.place}` : ''}`,
+    run: async ({ place }, context) => {
+      const where = String(place ?? '').trim() || context.homeTown?.();
+      if (!where) throw new Error('Für welchen Ort? Sag mir die Stadt (oder ich merke mir deinen Wohnort).');
+      const weather = await getWeather(where, { days: 7 });
+      context.showVisual?.({ type: 'weather_show', weather });
+      return { ort: weather.ort, jetzt: weather.jetzt, tage: weather.tage.map((t) => `${t.tag}: ${t.wetter}, ${t.min}–${t.max} Grad, Regen ${t.regenWahrscheinlichkeit} %`), hinweis: 'Die Wetter-Show ist jetzt auf dem Bildschirm. Fass das Wetter der Woche in zwei, drei Sätzen zusammen.' };
+    }
+  },
+  {
+    name: 'iss_live',
+    description: 'Zeigt die Internationale Raumstation ISS live auf der 3D-Erde (echte Position in Echtzeit, Umlaufbahn, Höhe, Geschwindigkeit). Für „Wo ist gerade die ISS?“.',
+    parameters: { type: 'object', properties: {} },
+    label: () => 'ISS live',
+    run: async (args, context) => {
+      const iss = await getIss();
+      context.showGlobe?.({ action: 'iss' });
+      return { breite: iss.lat.toFixed(2), laenge: iss.lon.toFixed(2), hoeheKm: iss.altitudeKm, geschwindigkeitKmh: iss.speedKmh, tageslicht: iss.daylight, hinweis: 'Die ISS ist jetzt live auf der Erde zu sehen. Sag grob, über welcher Region sie gerade fliegt (aus den Koordinaten), und nenne Höhe und Tempo.' };
+    }
+  },
+  {
+    name: 'focus_mode',
+    description: 'Startet den Fokus-Modus: Vollbild mit leuchtendem Countdown-Ring und ruhiger Animation zum konzentrierten Lernen/Arbeiten (Pomodoro). Für „Starte 25 Minuten Fokus“, „Ich muss lernen, lass mich 45 Minuten in Ruhe“.',
+    parameters: { type: 'object', properties: { minutes: { type: 'number', description: 'Dauer in Minuten (Standard 25)' }, label: { type: 'string', description: 'Woran er arbeitet, z. B. "Mathe lernen"' } } },
+    label: (a) => `Fokus: ${a.minutes || 25} min${a.label ? ` – ${a.label}` : ''}`,
+    run: async ({ minutes, label }, context) => {
+      const total = Math.min(Math.max(Math.round(Number(minutes) || 25), 1), 180);
+      context.showVisual?.({ type: 'focus', minutes: total, label: String(label ?? '').slice(0, 60) });
+      return { gestartet: true, minuten: total, hinweis: 'Der Fokus-Modus läuft. Wünsch kurz viel Erfolg und sei danach still, bis er dich anspricht.' };
+    }
+  },
+  {
+    name: 'show_chart',
+    description: 'Zeigt einen animierten Kursverlauf (Chart) mit echten Daten: Aktien, Indizes, Krypto, Gold, Öl, Währungen. Für „Zeig mir den Bitcoin-Chart“, „Wie lief Tesla dieses Jahr?“, „DAX der letzten 6 Monate“.',
+    parameters: { type: 'object', properties: { asset: { type: 'string', description: 'z. B. Bitcoin, DAX, Apple, Tesla, Gold oder ein Kürzel wie NVDA' }, range: { type: 'string', enum: ['1d', '5d', '1mo', '6mo', '1y', '5y'] } }, required: ['asset'] },
+    label: (a) => `Chart: ${a.asset}${a.range ? ` (${a.range})` : ''}`,
+    run: async ({ asset, range }, context) => {
+      const chart = await getChart(asset, range || '1mo');
+      context.showVisual?.({ type: 'chart', chart });
+      return { name: chart.name, letzterKurs: `${chart.last} ${chart.currency}`, veraenderung: `${chart.changePct} %`, hoch: chart.high, tief: chart.low, zeitraum: chart.range, hinweis: 'Der Chart ist auf dem Bildschirm. Nenne kurz Kurs und Veränderung. Keine Anlageberatung.' };
     }
   },
   {

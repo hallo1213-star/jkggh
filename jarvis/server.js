@@ -38,6 +38,8 @@ import { twilioConfigured } from './phone-call.js';
 import { telegramAssistantEnabled } from './telegram-bot.js';
 import { cancelTasks, startTask } from './tasks.js';
 import { buildSite, editSite, fixSite } from './studio.js';
+import { getChart } from './markets.js';
+import { getIss } from './iss.js';
 import { startTelegramAssistant } from './telegram-bot.js';
 import { findTool as findLaptopTool, functionDefinitions as laptopFunctions } from './laptop/tools.js';
 
@@ -250,7 +252,7 @@ function broadcastTask(event) {
 // --- Jarvis on Telegram ----------------------------------------------------------
 // Tools the Telegram assistant may use on its own. Anything that needs an
 // on-screen confirmation (sending mails, deleting, calls, installing) stays in the app.
-const TELEGRAM_CLOUD_TOOLS = ['get_datetime', 'get_weather', 'get_news', 'wiki_lookup', 'daily_briefing', 'memory_save', 'memory_forget', 'memory_list', 'briefing_settings', 'reminder_add', 'reminder_list', 'reminder_remove', 'appointment_add', 'appointment_list', 'appointment_remove', 'note_add', 'note_find', 'note_remove', 'expense_add', 'expense_summary', 'expense_remove_last', 'vocab_lists', 'shopping_list_add', 'shopping_list_remove', 'shopping_list_show', 'email_list', 'email_read', 'money_status', 'money_income_add', 'money_task_done', 'markets', 'weekly_numbers', 'create_image', 'run_task', 'cancel_task', 'laptop_status', 'persona_settings', 'set_timer'];
+const TELEGRAM_CLOUD_TOOLS = ['get_datetime', 'get_weather', 'get_news', 'wiki_lookup', 'daily_briefing', 'memory_save', 'memory_forget', 'memory_list', 'briefing_settings', 'reminder_add', 'reminder_list', 'reminder_remove', 'appointment_add', 'appointment_list', 'appointment_remove', 'note_add', 'note_find', 'note_remove', 'expense_add', 'expense_summary', 'expense_remove_last', 'vocab_lists', 'shopping_list_add', 'shopping_list_remove', 'shopping_list_show', 'email_list', 'email_read', 'money_status', 'money_income_add', 'money_task_done', 'markets', 'weekly_numbers', 'create_image', 'run_task', 'cancel_task', 'show_chart', 'iss_live', 'weather_show', 'laptop_status', 'persona_settings', 'set_timer'];
 const TELEGRAM_LAPTOP_TOOLS = ['pc_open_website', 'open_app', 'close_app', 'media_control', 'set_volume', 'system_info', 'list_files', 'find_files', 'open_path', 'read_text_file', 'search_software'];
 
 function telegramContext({ send, sendPhoto }) {
@@ -443,6 +445,20 @@ const httpServer = createServer(async (request, response) => {
   }
 
   // Memory Palace: read and change Jarvis' memory directly.
+  if (pathname === '/api/chart' || pathname === '/api/iss') {
+    if (!isAuthenticated(request)) {
+      sendJson(response, 401, { error: 'Nicht angemeldet' });
+      return;
+    }
+    const params = new URL(request.url, 'http://localhost').searchParams;
+    try {
+      sendJson(response, 200, pathname === '/api/iss' ? await getIss() : { chart: await getChart(params.get('symbol'), params.get('range') || '1mo') });
+    } catch (error) {
+      sendJson(response, 400, { error: error.message });
+    }
+    return;
+  }
+
   if (pathname === '/api/memories') {
     if (!isAuthenticated(request)) {
       sendJson(response, 401, { error: 'Nicht angemeldet' });
@@ -1018,6 +1034,9 @@ browserWss.on('connection', (browser, request) => {
     },
     showBauplan(info) {
       toBrowser({ type: 'bauplan', ...info });
+    },
+    showVisual(message) {
+      toBrowser(message);
     },
     showMarkets(markets) {
       toBrowser({ type: 'markets', markets });

@@ -39,6 +39,16 @@ Diese Datei hält fest, was analysiert, gebaut und getestet wurde und was noch o
   - Status aller Dienste und Modelle.
   - Schlüssel werden bewusst nur bei Render eingetragen.
 
+## Erledigt: 5 Show-Funktionen
+
+- [x] **Wetter-Show** (`weather_show`, `public/visuals.js`): animierte Szenen (Regen, Schnee, Sonne, Wolken, Nebel, Gewitter), 7-Tage-Kurve (SVG), Tageskarten.
+- [x] **ISS live** (`iss.js`, `/api/iss`, `iss_live`, Globus): Echtzeitposition, Umlaufbahn als Leuchtspur, Aktualisierung alle 5 s.
+- [x] **Fokus-Modus** (`focus_mode`): Countdown-Ring, Partikel, Pause, Wake Lock, Ton und Vibration am Ende.
+- [x] **Live-Charts** (`show_chart`, `/api/chart`, `markets.getChart`): Neon-Chart mit Animation, Zeiträume, Tooltip beim Drüberfahren.
+- [x] **Orb reagiert auf Stimme:** Frequenzring und Atmen im Takt.
+- [x] **Fix:** Vollbild-Ansichten bleiben auch im hellen Design dunkel und lesbar.
+- Test im Browser mit simulierten Daten: alle fünf ohne Fehler.
+
 ## Erledigt: Memory Palace + Jarvis Studio
 
 - [x] **Jarvis Studio**:

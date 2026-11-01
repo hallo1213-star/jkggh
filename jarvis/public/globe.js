@@ -194,6 +194,7 @@ export async function openGlobe() {
 }
 
 export function closeGlobe() {
+  stopIss();
   els.overlay.hidden = true;
   document.body.classList.remove('globe-open');
   spinning = false;
@@ -425,16 +426,86 @@ function renderPanels({ place, left, right }) {
   else { els.left.hidden = false; els.right.hidden = false; syncToggles(); }
 }
 
+// --- ISS live ---------------------------------------------------------------------
+const ISS_ICON = `data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><g fill="none" stroke="#bff6ff" stroke-width="2"><rect x="26" y="26" width="12" height="12" fill="#38e1ff"/><path d="M32 18v28M18 32h28"/><rect x="4" y="22" width="12" height="20" fill="#1e5a8a"/><rect x="48" y="22" width="12" height="20" fill="#1e5a8a"/></g></svg>')}`;
+let iss = null;
+
+function stopIss() {
+  if (!iss) return;
+  clearInterval(iss.timer);
+  viewer?.entities.remove(iss.entity);
+  viewer?.entities.remove(iss.track);
+  iss = null;
+}
+
+async function fetchIss() {
+  const response = await fetch('/api/iss', { cache: 'no-store' });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'ISS nicht erreichbar');
+  return data;
+}
+
+async function showIss() {
+  await openGlobe();
+  if (!viewer) return;
+  stopIss();
+  hidePanels(true);
+  setNight(false);
+  if (marker) marker.show = false;
+  setSpin(false);
+  try {
+    const data = await fetchIss();
+    const position = (d) => Cesium.Cartesian3.fromDegrees(d.lon, d.lat, d.altitudeKm * 1000);
+    const entity = viewer.entities.add({
+      position: position(data),
+      billboard: { image: ISS_ICON, scale: 0.9, disableDepthTestDistance: Number.POSITIVE_INFINITY },
+      label: { text: 'ISS', font: '700 16px Rajdhani, sans-serif', fillColor: Cesium.Color.fromCssColorString('#bff6ff'), outlineColor: Cesium.Color.BLACK, outlineWidth: 3, style: Cesium.LabelStyle.FILL_AND_OUTLINE, pixelOffset: new Cesium.Cartesian2(0, -36), disableDepthTestDistance: Number.POSITIVE_INFINITY }
+    });
+    // The path crosses the date line: Cesium draws it fine as a geodesic polyline.
+    const track = viewer.entities.add({
+      polyline: {
+        positions: [[data.lat, data.lon, data.altitudeKm], ...data.path].map(([lat, lon, alt]) => Cesium.Cartesian3.fromDegrees(lon, lat, (alt || 420) * 1000)),
+        width: 3,
+        material: new Cesium.PolylineGlowMaterialProperty({ glowPower: 0.25, color: Cesium.Color.fromCssColorString('#38e1ff') }),
+        arcType: Cesium.ArcType.NONE
+      }
+    });
+    iss = { entity, track, timer: null };
+    const describe = (d) => {
+      setHeading('ISS · live', `Höhe ${d.altitudeKm.toLocaleString('de-DE')} km · ${d.speedKmh.toLocaleString('de-DE')} km/h · ${d.daylight ? 'im Sonnenlicht' : 'im Erdschatten'}`);
+      setStatus(`Position ${d.lat.toFixed(2)}°, ${d.lon.toFixed(2)}° · Umlaufbahn als Leuchtspur`);
+    };
+    describe(data);
+    viewer.camera.flyTo({ destination: Cesium.Cartesian3.fromDegrees(data.lon, data.lat, 11_000_000), duration: 3 });
+    iss.timer = setInterval(async () => {
+      try {
+        const next = await fetchIss();
+        if (!iss) return;
+        iss.entity.position = position(next);
+        describe(next);
+      } catch {
+        // keep the last position
+      }
+    }, 5000);
+  } catch (error) {
+    setStatus(error.message);
+    notify(error.message, 'error');
+  }
+}
+
 // Commands from the voice assistant (see the "globe" cloud tool).
 export async function handleGlobeMessage(message) {
   switch (message.action) {
     case 'fly':
+      stopIss();
       panelsLoading(message.place, message.topic);
       return flyToPlace(message.place);
     case 'panels':
       return renderPanels(message);
     case 'world_news':
       return worldNews(message);
+    case 'iss':
+      return showIss();
     case 'located':
       return located(message.place);
     case 'error':

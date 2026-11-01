@@ -174,6 +174,14 @@ Dinge, die sich ändern können (Preise, Versionen), kennzeichnet Jarvis ehrlich
 - Für die Bildanalyse wählt Jarvis automatisch ein Bild-Modell über `GROQ_API_KEY`. Ein eigenes Modell geht mit `GROQ_VISION_MODEL`.
 - Menschen auf Fotos beschreibt Jarvis nur allgemein. Er erkennt niemanden am Gesicht.
 
+## Show-Funktionen ✨
+
+- **Wetter-Show:** *„Wie wird das Wetter diese Woche?“* öffnet ein Vollbild mit Live-Animation passend zum Wetter (Regen, Schnee, Sonne mit Strahlen, Wolken, Nebel, Gewitter mit Blitzen), großer Temperatur, animierter 7-Tage-Temperaturkurve und Tageskarten. Echte Daten von Open-Meteo.
+- **ISS live:** *„Wo ist gerade die ISS?“* zeigt die Raumstation in Echtzeit auf der 3D-Erde, mit Umlaufbahn als Leuchtspur, Höhe, Tempo und ob sie gerade im Sonnenlicht fliegt. Die Position aktualisiert sich alle 5 Sekunden (wheretheiss.at, ohne Schlüssel).
+- **Fokus-Modus:** *„Starte 25 Minuten Fokus“* (oder *„Ich muss Mathe lernen, 45 Minuten“*) zeigt ein Vollbild mit leuchtendem Countdown-Ring und schwebenden Partikeln. Pause und Beenden sind möglich, der Bildschirm bleibt an. Am Ende gibt es einen Ton und Vibration.
+- **Live-Charts:** *„Zeig mir den Bitcoin-Chart“*, *„Wie lief Tesla dieses Jahr?“*, *„DAX der letzten 6 Monate“* liefert einen animierten Neon-Kursverlauf mit echten Daten. Zeiträume 1 Tag bis 5 Jahre, mit Finger oder Maus über den Chart fahren für Datum und Kurs. Keine Anlageberatung.
+- **Stimme sichtbar:** Im Orb-Design atmet die Kugel im Takt der Stimme, und ein Ring aus Frequenzbalken zeigt Jarvis' Stimme live (orange) bzw. deine (grau).
+
 ## Memory Palace: Jarvis' 3D-Gedächtnis 🧠
 
 Tipp auf den **Gehirn-Knopf** oben oder sag *„Zeig mir mein Gedächtnis“*. Dann öffnet sich ein holografisches 3D-Netzwerk:

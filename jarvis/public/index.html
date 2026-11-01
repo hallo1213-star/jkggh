@@ -65,7 +65,7 @@
     <section class="core" aria-live="polite">
       <div class="reactor-wrap">
         <canvas id="reactor" width="560" height="560" aria-hidden="true"></canvas>
-        <div class="orb" aria-hidden="true"><span class="orb-glow"></span><span class="orb-core"></span></div>
+        <div class="orb" aria-hidden="true"><canvas class="orb-spectrum" id="orb-spectrum" width="360" height="360"></canvas><span class="orb-glow"></span><span class="orb-core"></span></div>
         <button class="activate" id="activate" type="button">
           <span class="activate-label">Jarvis aktivieren</span>
           <span class="activate-sub">Mikrofon freigeben</span>
@@ -248,6 +248,25 @@
       </div>
       <div class="money-body" id="money-body"><p class="empty">Lädt …</p></div>
     </div>
+  </div>
+
+  <div class="wx-overlay" id="wx-overlay" hidden>
+    <canvas class="wx-canvas" id="wx-canvas" aria-hidden="true"></canvas>
+    <button class="icon-btn wx-close" id="wx-close" type="button" aria-label="Wetter schließen">✕</button>
+    <div class="wx-body" id="wx-body"></div>
+  </div>
+
+  <div class="focus-overlay" id="focus-overlay" hidden>
+    <canvas class="focus-canvas" id="focus-canvas" aria-hidden="true"></canvas>
+    <div class="focus-center">
+      <svg class="focus-svg" viewBox="0 0 320 320" aria-hidden="true">
+        <defs><linearGradient id="focusg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7af0ff"/><stop offset="1" stop-color="#7a7bff"/></linearGradient></defs>
+        <circle cx="160" cy="160" r="140" class="focus-track"/>
+        <circle cx="160" cy="160" r="140" class="focus-ring" id="focus-ring"/>
+      </svg>
+      <div class="focus-text"><p id="focus-label">Fokus</p><b id="focus-time">25:00</b></div>
+    </div>
+    <div class="focus-actions"><button class="ctrl" id="focus-pause" type="button">Pause</button><button class="ctrl" id="focus-stop" type="button">Beenden</button></div>
   </div>
 
   <div class="palace-overlay" id="palace-overlay" hidden>
