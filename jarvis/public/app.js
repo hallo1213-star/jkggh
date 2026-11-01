@@ -677,6 +677,31 @@ function addWeeklyCard(numbers) {
   cardMessage('Zahlen', card);
 }
 
+// The sales website for the Jarvis-Bauplan: link, downloads and what is missing.
+function addBauplanCard(info) {
+  const card = el('div', 'info-card bauplan-card');
+  card.append(el('span', 'shop-card-title', '🚀 Deine Verkaufswebsite: Jarvis-Bauplan'));
+  card.append(el('p', 'bauplan-status', info.missing?.length ? '🟡 Entwurf – vor dem Veröffentlichen noch ergänzen' : '🟢 Fertig und online'));
+  const actions = el('div', 'order-actions');
+  const open = Object.assign(el('a', 'ctrl', 'Website öffnen'), { href: info.url, target: '_blank', rel: 'noopener' });
+  const copy = el('button', 'ctrl', 'Link kopieren');
+  copy.type = 'button';
+  copy.addEventListener('click', () => navigator.clipboard?.writeText(info.url).then(() => toast('Link kopiert.'), () => {}));
+  const download = (file, label) => Object.assign(el('a', 'ctrl', label), { href: `/api/bauplan/download?file=${file}`, download: '' });
+  actions.append(open, copy, download('page', 'Website als HTML'), download('starter', `Produkt Starter (${info.prices?.starter || ''})`), download('komplett', `Produkt Komplett (${info.prices?.komplett || ''})`));
+  card.append(actions);
+  if (info.missing?.length) {
+    const list = el('ul', 'bauplan-missing');
+    for (const m of info.missing) {
+      const row = el('li');
+      row.append(el('code', '', m.key), document.createTextNode(` – ${m.what}`));
+      list.append(row);
+    }
+    card.append(el('p', 'card-source', 'Bei Render → Environment eintragen:'), list);
+  }
+  cardMessage('Website', card);
+}
+
 // "Alle Systeme online": short boot sequence when Jarvis connects.
 let booted = false;
 function bootSequence() {
@@ -1266,6 +1291,9 @@ function handleMessage(message) {
       break;
     case 'markets':
       addMarketsCard(message.markets);
+      break;
+    case 'bauplan':
+      addBauplanCard(message);
       break;
     case 'weekly':
       addWeeklyCard(message.numbers);

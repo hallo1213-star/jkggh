@@ -135,6 +135,34 @@ Falls Google kein App-Passwort anbietet (z. B. bei Schul-/Firmenkonten oder „E
 - **Ansehen und löschen:** oben rechts auf das Gehirn-Symbol tippen. Passwörter, PINs und Bank- oder Kartendaten merkt sich Jarvis nie.
 - Jarvis **knüpft an euer letztes Gespräch an** – auch nach dem Schließen der App. Der Verlauf bleibt auf deinem Gerät und lässt sich im Gedächtnis-Fenster löschen.
 
+## Deine Verkaufswebsite: Jarvis-Bauplan 🚀
+
+Sag **„Erstelle mir deine Website“**. Dann bekommst du eine fertige, professionelle Verkaufsseite für den **Jarvis-Bauplan**: den Text, mit dem sich andere ihren eigenen Jarvis bauen lassen. Dein Jarvis bleibt bei dir, du verkaufst nur den Bauplan.
+
+- **Adresse:** `https://<deine-render-adresse>/bauplan`. Die Seite ist öffentlich, ohne Login, und du kannst sie teilen. Zusätzlich gibt es sie als HTML-Datei für eigenes Hosting.
+- **Pakete:**
+  - **Starter 29 €:** der Bauplan
+  - **Komplett 49 €:** Bauplan + Schritt-für-Schritt-Einrichtung + Fehlerhilfe + Updates
+- **Produktdateien:** In der App gibt es Knöpfe für `Jarvis-Bauplan-Starter.md` und `Jarvis-Bauplan-Komplett.md`. Alles ist dein eigener Text.
+
+**Veröffentlichen in 3 Schritten:**
+1. Auf **gumroad.com** zwei Produkte anlegen: „Jarvis-Bauplan – Starter“ für 29 € und „Jarvis-Bauplan – Komplett“ für 49 €. Jeweils die passende Datei hochladen.
+2. Bei **Render → Environment** eintragen:
+   - `VERKAEUFER_NAME`
+   - `VERKAEUFER_ADRESSE`, z. B. `Musterstraße 1, 12345 Berlin`
+   - `VERKAEUFER_EMAIL`
+   - `BAUPLAN_LINK_STARTER` und `BAUPLAN_LINK_KOMPLETT` (die Gumroad-Links)
+
+   Andere Preise gehen mit `BAUPLAN_PREIS_STARTER` und `BAUPLAN_PREIS_KOMPLETT`.
+3. Fertig: Das Entwurfs-Banner verschwindet, und die Kauf-Knöpfe führen zu Gumroad.
+
+Solange Impressum oder Links fehlen, ist die Seite als **Entwurf** markiert und für Suchmaschinen gesperrt.
+
+**Wichtig:**
+- In Deutschland brauchst du für Verkäufe ein Impressum. Bei regelmäßigen Einnahmen brauchst du ein Gewerbe, und unter 18 die Zustimmung deiner Eltern.
+- Die Widerrufsbelehrung auf der Seite ist ein Muster. Lass sie am besten mit einem Rechtstext-Generator prüfen.
+- Gumroad wickelt Zahlung und Umsatzsteuer ab.
+
 ## Film-Modus: „Alle Systeme online, Master“ 🎬
 
 So wie der JARVIS aus den Filmen:

@@ -31,3 +31,13 @@ services:
         sync: false
       - key: TWILIO_PHONE_NUMBER
         sync: false
+      - key: VERKAEUFER_NAME
+        sync: false
+      - key: VERKAEUFER_ADRESSE
+        sync: false
+      - key: VERKAEUFER_EMAIL
+        sync: false
+      - key: BAUPLAN_LINK_STARTER
+        sync: false
+      - key: BAUPLAN_LINK_KOMPLETT
+        sync: false

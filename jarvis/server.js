@@ -29,6 +29,8 @@ import { gumroadConfigured, gumroadProducts } from './gumroad.js';
 import { geocodePlace, placeDetails, reversePlace } from './places.js';
 import { getActiveCall, handleStatusCallback, handleTwilioStream, hangup as hangupCall, simulateCall, startCall } from './phone-call.js';
 import { spokenPhone } from './restaurants.js';
+import { bauplanConfig, missingSettings, renderSalesPage } from './bauplan-page.js';
+import { productFiles } from './bauplan-content.js';
 import { findTool as findLaptopTool, functionDefinitions as laptopFunctions } from './laptop/tools.js';
 
 if (!process.env.TZ) process.env.TZ = 'Europe/Berlin';
@@ -326,6 +328,33 @@ const httpServer = createServer(async (request, response) => {
   if (pathname === '/api/session') {
     if (!isAuthenticated(request)) sendJson(response, 401, { error: 'Nicht angemeldet' });
     else sendJson(response, 200, { ok: true, laptop: laptopConnected() });
+    return;
+  }
+
+  // The public sales page for the Jarvis-Bauplan (no login – it is meant to be shared).
+  if (pathname === '/bauplan' || pathname === '/bauplan/') {
+    const config = bauplanConfig();
+    response.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache', 'x-content-type-options': 'nosniff', 'referrer-policy': 'strict-origin-when-cross-origin' });
+    response.end(renderSalesPage(config));
+    return;
+  }
+
+  if (pathname === '/api/bauplan/download') {
+    if (!isAuthenticated(request)) {
+      sendJson(response, 401, { error: 'Nicht angemeldet' });
+      return;
+    }
+    const file = new URL(request.url, 'http://localhost').searchParams.get('file');
+    const products = productFiles();
+    const download = file === 'page'
+      ? { filename: 'jarvis-bauplan-website.html', content: renderSalesPage(bauplanConfig()), type: 'text/html' }
+      : products[file] ? { ...products[file], type: 'text/markdown' } : null;
+    if (!download) {
+      sendJson(response, 404, { error: 'Unbekannte Datei' });
+      return;
+    }
+    response.writeHead(200, { 'content-type': `${download.type}; charset=utf-8`, 'content-disposition': `attachment; filename="${download.filename}"`, 'cache-control': 'no-store' });
+    response.end(download.content);
     return;
   }
 
@@ -717,6 +746,9 @@ browserWss.on('connection', (browser, request) => {
     },
     showNews(news) {
       toBrowser({ type: 'news', news });
+    },
+    showBauplan(info) {
+      toBrowser({ type: 'bauplan', ...info });
     },
     showMarkets(markets) {
       toBrowser({ type: 'markets', markets });

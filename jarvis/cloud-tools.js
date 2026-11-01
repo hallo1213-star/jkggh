@@ -6,6 +6,7 @@ import { addItems, listAsText, removeItems, sellLinks, shopLinks } from './shopp
 import { OFFER_ALLOWED, STATUSES, findCustomer, summarize, upsertCustomer } from './customers.js';
 import { getNews, getWeather, lookupWikipedia, searchNews, topNews } from './knowledge.js';
 import { getMarkets } from './markets.js';
+import { bauplanConfig, missingSettings } from './bauplan-page.js';
 import { gumroadConfigured, gumroadProducts } from './gumroad.js';
 import { geocodePlace, placeDetails } from './places.js';
 import { MODES as ORDER_MODES, checkOrder, cleanOrderItems, describeItem, findRestaurant, normalizePhone, orderSummary, orderTotal, readMenu, spokenPhone } from './restaurants.js';
@@ -855,6 +856,28 @@ export const cloudTools = [
       context.schedule(ms, String(message || 'Dein Timer ist abgelaufen.'));
       const due = new Date(Date.now() + ms).toLocaleTimeString('de-DE', { timeZone, hour: '2-digit', minute: '2-digit' });
       return { gestellt: true, faelligUm: due };
+    }
+  },
+  {
+    name: 'create_sales_website',
+    description: 'Für „Erstelle mir deine Website“: Erstellt und veröffentlicht die professionelle Verkaufswebsite für den „Jarvis-Bauplan“ (der Nutzer verkauft den Bauplan-Text, mit dem man sich einen eigenen Jarvis bauen lässt – Starter und Komplett). Zeigt Link, HTML-Download und die Produktdateien für Gumroad an und sagt, was für die Veröffentlichung noch fehlt.',
+    parameters: { type: 'object', properties: {} },
+    label: () => 'Verkaufswebsite Jarvis-Bauplan',
+    run: async (args, context) => {
+      const config = bauplanConfig();
+      const missing = missingSettings(config);
+      const url = `${context.origin}/bauplan`;
+      context.showBauplan({ url, missing, prices: { starter: config.priceStarter, komplett: config.priceKomplett } });
+      return {
+        erstellt: true,
+        adresse: url,
+        preise: `Starter ${config.priceStarter}, Komplett ${config.priceKomplett}`,
+        status: missing.length ? 'Entwurf – noch nicht veröffentlichen' : 'fertig und online',
+        fehlt: missing.map((m) => `${m.key}: ${m.what}`),
+        naechsteSchritte: missing.length
+          ? 'Erkläre kurz: 1) Die beiden Produktdateien (Knöpfe in der App) bei Gumroad als zwei Produkte hochladen (Starter und Komplett, Preise wie oben). 2) Die Gumroad-Links und die Impressum-Angaben bei Render eintragen (die fehlenden Variablen). Dann ist die Seite automatisch fertig. Hinweis: Gewerbe anmelden; unter 18 nur mit Zustimmung der Eltern.'
+          : 'Die Seite ist fertig und kann geteilt werden (Link oder HTML-Datei für eigenes Hosting).'
+      };
     }
   },
   {

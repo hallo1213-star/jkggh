@@ -643,6 +643,11 @@ body {
 .boot-done { margin-top: 12px; justify-content: center; color: var(--cyan-soft); font-size: 14px; }
 @keyframes boot-in { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
 
+.bauplan-status { margin: 8px 0 0; font-size: 15px; }
+.bauplan-missing { margin: 4px 0 0; padding-left: 18px; font-size: 14px; color: var(--text); }
+.bauplan-missing code { color: var(--amber); }
+.bauplan-card .order-actions a.ctrl { text-decoration: none; }
+
 /* --- Food order & phone call --- */
 .order-card { padding: 12px; border: 1px solid var(--amber); background: linear-gradient(135deg, rgba(255, 181, 71, 0.1), rgba(255, 181, 71, 0.02)); }
 .order-summary { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; font-size: 15px; line-height: 1.45; color: var(--text); }
