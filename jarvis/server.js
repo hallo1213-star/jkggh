@@ -31,6 +31,7 @@ import { getActiveCall, handleStatusCallback, handleTwilioStream, hangup as hang
 import { spokenPhone } from './restaurants.js';
 import { bauplanConfig, missingSettings, renderSalesPage } from './bauplan-page.js';
 import { productFiles } from './bauplan-content.js';
+import { designScene, sanitizeScene } from './model3d.js';
 import { findTool as findLaptopTool, functionDefinitions as laptopFunctions } from './laptop/tools.js';
 
 if (!process.env.TZ) process.env.TZ = 'Europe/Berlin';
@@ -336,6 +337,21 @@ const httpServer = createServer(async (request, response) => {
     const config = bauplanConfig();
     response.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache', 'x-content-type-options': 'nosniff', 'referrer-policy': 'strict-origin-when-cross-origin' });
     response.end(renderSalesPage(config));
+    return;
+  }
+
+  if (pathname === '/api/model' && request.method === 'POST') {
+    if (!isAuthenticated(request) || !String(request.headers['content-type'] || '').startsWith('application/json')) {
+      sendJson(response, 401, { error: 'Nicht angemeldet' });
+      return;
+    }
+    try {
+      const body = JSON.parse(await readBody(request, 256 * 1024));
+      const scene = await designScene(body.prompt, { base: body.base ? sanitizeScene(body.base) : null });
+      sendJson(response, 200, { scene });
+    } catch (error) {
+      sendJson(response, 400, { error: error.message });
+    }
     return;
   }
 
@@ -710,6 +726,13 @@ browserWss.on('connection', (browser, request) => {
       toBrowser({ type: 'globe', ...command });
     },
     globeMemory: {},
+    modelMemory: {},
+    showModel(scene) {
+      toBrowser({ type: 'model3d', scene });
+    },
+    modelLoading(text) {
+      toBrowser({ type: 'model3d_loading', text });
+    },
     orderDraft: {},
     homeTown,
     showOrder(order) {
@@ -962,6 +985,8 @@ browserWss.on('connection', (browser, request) => {
       memoryStore.set(message.items);
     } else if (/^(planner|notes|expenses|vocab)_update$/.test(message.type)) {
       syncedStores[message.type.replace('_update', '')].set(message.items);
+    } else if (message.type === 'model_current') {
+      context.modelMemory.last = sanitizeScene(message.scene);
     } else if (message.type === 'globe_location') {
       // "Wo bin ich?": the device sent its position; name the place and tell the agent.
       reversePlace(message.lat, message.lon)

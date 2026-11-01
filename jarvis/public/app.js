@@ -3,6 +3,7 @@
 import { initMoney, showMoney } from './money.js';
 import { handleGlobeMessage, initGlobe } from './globe.js';
 import { addOrderCard, handleCallEvent, initCall } from './call.js';
+import { initModels, modelLoading, showModel } from './model3d.js';
 
 const OUTPUT_SAMPLE_RATE = 24000;
 
@@ -1121,6 +1122,14 @@ function toast(message, kind = '') {
 
 initMoney({ toast });
 initCall({ toast });
+initModels({
+  toast,
+  send: (message) => {
+    if (state.ws?.readyState !== WebSocket.OPEN) return false;
+    state.ws.send(JSON.stringify(message));
+    return true;
+  }
+});
 initGlobe({
   toast,
   send: (message) => {
@@ -1310,6 +1319,12 @@ function handleMessage(message) {
       break;
     case 'order':
       addOrderCard(message);
+      break;
+    case 'model3d_loading':
+      modelLoading(message.text);
+      break;
+    case 'model3d':
+      showModel(message.scene);
       break;
     case 'call':
       handleCallEvent(message);

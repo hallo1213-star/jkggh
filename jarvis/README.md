@@ -135,6 +135,16 @@ Falls Google kein App-Passwort anbietet (z. B. bei Schul-/Firmenkonten oder „E
 - **Ansehen und löschen:** oben rechts auf das Gehirn-Symbol tippen. Passwörter, PINs und Bank- oder Kartendaten merkt sich Jarvis nie.
 - Jarvis **knüpft an euer letztes Gespräch an** – auch nach dem Schließen der App. Der Verlauf bleibt auf deinem Gerät und lässt sich im Gedächtnis-Fenster löschen.
 
+## 3D-Studio: Jarvis erschafft 3D-Modelle 🏗️
+
+Sag z. B. **„Erstelle mir ein futuristisches Haus mit Fenstern, Garten und Swimmingpool“** oder **„Bau eine futuristische Stadt mit fliegenden Autos bei Nacht“**.
+
+- Jarvis entwirft das Modell **selbst**: Häuser, Hochhäuser, ganze Stadtviertel, Pools, Gärten, Bäume, Autos, fliegende Autos, Brunnen, Laternen und Formen. Er sucht nichts im Internet und lädt keine fremden Modelle herunter.
+- Das Modell erscheint im **3D-Studio** (Knopf **3D**): mit Licht, Schatten, Himmel (Tag, Sonnenuntergang, Nacht, Weltraum) und kreisenden fliegenden Autos. Mit Finger oder Maus drehen und zoomen.
+- **Ändern:** „Mach das Haus dreistöckig“ oder „Füg zwei Palmen hinzu“, per Sprache oder im Textfeld.
+- **Speichern:** „Als 3D-Datei speichern“ erzeugt eine **GLB-Datei**. Die öffnet sich in Blender, im Windows-3D-Viewer oder in Online-Viewern. Die letzten 20 Modelle stehen unter „Meine Modelle“.
+- Für die Planung nutzt Jarvis den KI-Schlüssel aus dem Geld-Modus (`GROQ_API_KEY`). Ohne Schlüssel baut ein eingebauter Generator einfache Häuser und Städte.
+
 ## Deine Verkaufswebsite: Jarvis-Bauplan 🚀
 
 Sag **„Erstelle mir deine Website“**. Dann bekommst du eine fertige, professionelle Verkaufsseite für den **Jarvis-Bauplan**: den Text, mit dem sich andere ihren eigenen Jarvis bauen lassen. Dein Jarvis bleibt bei dir, du verkaufst nur den Bauplan.

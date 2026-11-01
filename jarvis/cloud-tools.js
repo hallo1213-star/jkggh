@@ -7,6 +7,7 @@ import { OFFER_ALLOWED, STATUSES, findCustomer, summarize, upsertCustomer } from
 import { getNews, getWeather, lookupWikipedia, searchNews, topNews } from './knowledge.js';
 import { getMarkets } from './markets.js';
 import { bauplanConfig, missingSettings } from './bauplan-page.js';
+import { describeScene, designScene } from './model3d.js';
 import { gumroadConfigured, gumroadProducts } from './gumroad.js';
 import { geocodePlace, placeDetails } from './places.js';
 import { MODES as ORDER_MODES, checkOrder, cleanOrderItems, describeItem, findRestaurant, normalizePhone, orderSummary, orderTotal, readMenu, spokenPhone } from './restaurants.js';
@@ -856,6 +857,28 @@ export const cloudTools = [
       context.schedule(ms, String(message || 'Dein Timer ist abgelaufen.'));
       const due = new Date(Date.now() + ms).toLocaleTimeString('de-DE', { timeZone, hour: '2-digit', minute: '2-digit' });
       return { gestellt: true, faelligUm: due };
+    }
+  },
+  {
+    name: 'create_3d_model',
+    description: 'Erschafft SELBST ein echtes 3D-Modell nach seiner Beschreibung (Häuser, Villen, Hochhäuser, ganze Städte, Gärten, Pools, Bäume, Autos, fliegende Autos, Brunnen, Formen …) und zeigt es im 3D-Studio der App (drehen, zoomen, als 3D-Datei speichern). Mit edit=true wird das zuletzt gezeigte Modell nach seinem Wunsch geändert („Mach das Dach rot“, „Füge einen Pool hinzu“). Niemals im Internet nach Modellen suchen.',
+    parameters: {
+      type: 'object',
+      properties: {
+        description: { type: 'string', description: 'Was gebaut oder geändert werden soll, möglichst genau in seinen Worten' },
+        edit: { type: 'boolean', description: 'true = das zuletzt gezeigte Modell ändern' }
+      },
+      required: ['description']
+    },
+    label: (a) => `3D-Modell${a.edit ? ' ändern' : ''}: ${a.description}`,
+    run: async ({ description, edit }, context) => {
+      const base = edit ? context.modelMemory?.last : null;
+      if (edit && !base) throw new Error('Es ist gerade kein Modell offen, das ich ändern kann. Beschreib mir, was ich neu bauen soll.');
+      context.modelLoading?.(edit ? 'Jarvis baut um …' : 'Jarvis entwirft dein Modell …');
+      const scene = await designScene(description, { base });
+      if (context.modelMemory) context.modelMemory.last = scene;
+      context.showModel(scene);
+      return { fertig: true, titel: scene.title, beschreibung: scene.description, bauteile: describeScene(scene), hinweis: `${scene.hinweis ? `${scene.hinweis} ` : ''}Das Modell ist jetzt im 3D-Studio zu sehen. Beschreibe kurz und begeistert, was du gebaut hast, und sag, dass er es drehen, als 3D-Datei speichern oder Änderungen wünschen kann.` };
     }
   },
   {

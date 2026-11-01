@@ -674,6 +674,18 @@ body {
 .call-hangup { border-color: var(--red); color: var(--red); }
 .call-hangup[hidden], .call-close[hidden] { display: none; }
 
+/* --- 3D studio --- */
+.model-overlay { position: fixed; inset: 0; z-index: 50; background: #02060b; overflow: hidden; }
+.model-overlay[hidden] { display: none; }
+.model-view { position: absolute; inset: 0; }
+.model-view canvas { display: block; width: 100% !important; height: 100% !important; }
+.model-bottom { bottom: 0; display: flex; flex-direction: column; gap: 10px; align-items: center; padding-bottom: max(26px, calc(env(safe-area-inset-bottom) + 18px)); background: linear-gradient(0deg, rgba(0, 0, 0, 0.8), transparent); }
+.model-status { margin: 0; color: var(--amber); font-size: 13px; text-align: center; text-shadow: 0 1px 4px #000; }
+#model-desc { margin: 2px 0 0; max-width: 640px; color: var(--text); font-size: 15px; opacity: 0.9; }
+.model-list { background: rgba(2, 10, 16, 0.8); color: var(--text); font: inherit; max-width: 220px; }
+.model-overlay .globe-buttons .ctrl { background: rgba(2, 10, 16, 0.8); }
+.model-overlay .ctrl[aria-pressed="true"] { border-color: var(--cyan); color: var(--cyan-soft); }
+
 /* --- 3D globe --- */
 .globe-overlay { position: fixed; inset: 0; z-index: 50; background: #000; overflow: hidden; }
 .globe-overlay[hidden] { display: none; }
