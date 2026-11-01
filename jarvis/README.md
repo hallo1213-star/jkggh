@@ -174,6 +174,18 @@ Dinge, die sich ändern können (Preise, Versionen), kennzeichnet Jarvis ehrlich
 - Für die Bildanalyse wählt Jarvis automatisch ein Bild-Modell über `GROQ_API_KEY`. Ein eigenes Modell geht mit `GROQ_VISION_MODEL`.
 - Menschen auf Fotos beschreibt Jarvis nur allgemein. Er erkennt niemanden am Gesicht.
 
+## Memory Palace: Jarvis' 3D-Gedächtnis 🧠
+
+Tipp auf den **Gehirn-Knopf** oben oder sag *„Zeig mir mein Gedächtnis“*. Dann öffnet sich ein holografisches 3D-Netzwerk:
+
+- **Bereiche** als leuchtende Knotenpunkte: Präferenzen, Projekte, Wissen, Aufgaben, Gesprächserinnerungen, wichtige Entscheidungen, offene Aufgaben.
+- **Jede Erinnerung** ist ein eigener schwebender Knoten. **Themen** wie „Jarvis Studio“ verbinden zusammengehörige Erinnerungen mit Lichtlinien.
+- **Drehen, zoomen und antippen:** Ein Knoten zeigt Text, Bereich, Verknüpfungen und „zuletzt geändert“. Du kannst ihn **bearbeiten** oder **löschen**. Ein Bereich oder Thema listet alle zugehörigen Erinnerungen.
+- **Suche:** Gib z. B. „Jarvis Studio“ ein. Alle dazugehörigen Erinnerungen leuchten auf, und die Kamera fliegt hin.
+- **+ Erinnerung** fügt selbst etwas hinzu.
+- **Intelligent:** Jarvis speichert nur Wichtiges (keinen Small Talk), mit Bereich und Verknüpfungen. Passwörter, PINs, Zugangs- und Bankdaten lehnt er auch beim Bearbeiten ab.
+- Alte Erinnerungen bleiben erhalten und werden automatisch einem Bereich zugeordnet.
+
 ## Jarvis Studio: professionelle Websites 🖥️
 
 Sag oder tippe z. B. **„Erstelle mir einen modernen Online-Shop für eine Luxus-Kleidungsmarke“**, **„eine Website für einen Friseursalon“** oder **„eine Portfolio-Seite mit Animationen“** (Knopf **Studio**).

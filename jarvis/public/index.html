@@ -250,6 +250,20 @@
     </div>
   </div>
 
+  <div class="palace-overlay" id="palace-overlay" hidden>
+    <div class="palace-view" id="palace-view"></div>
+    <div class="palace-top">
+      <div><p class="globe-kicker">J.A.R.V.I.S. · Memory Palace</p><h3>Gedächtnis</h3><p id="palace-stats"></p></div>
+      <button class="icon-btn" id="palace-close" type="button" aria-label="Memory Palace schließen">✕</button>
+    </div>
+    <div class="palace-bottom">
+      <form id="palace-search" class="globe-search" role="search"><input type="search" placeholder="Gedächtnis durchsuchen, z. B. Jarvis Studio" aria-label="Gedächtnis durchsuchen" enterkeyhint="search"></form>
+      <button class="ctrl" id="palace-add" type="button">+ Erinnerung</button>
+    </div>
+    <aside class="palace-panel" id="palace-panel" hidden></aside>
+    <div class="globe-loading" id="palace-loading" hidden><span class="globe-spinner"></span><span>Gedächtnis wird geladen …</span></div>
+  </div>
+
   <div class="studio-overlay" id="studio-overlay" hidden>
     <header class="studio-top">
       <div class="studio-name"><p class="globe-kicker">Jarvis Studio</p><h3 id="studio-title">Neue Website</h3><p id="studio-meta">Beschreib unten, was Jarvis bauen soll.</p></div>

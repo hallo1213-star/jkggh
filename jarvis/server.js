@@ -13,7 +13,7 @@ import { attemptLogin, clearedCookie, isAuthenticated, passwordConfigured, sessi
 import { cloudTools, findCloudTool } from './cloud-tools.js';
 import { addItems, sanitizeList } from './shopping.js';
 import { sanitizeCustomers } from './customers.js';
-import { sanitizeHistory, sanitizeMemories } from './memories.js';
+import { CATEGORIES, addMemory, removeMemoryById, sanitizeHistory, sanitizeMemories, updateMemory } from './memories.js';
 import { loadPinnedBackup, savePinnedBackup, sendTelegram, startSetupHelper, telegramConfigured } from './telegram.js';
 import { startMailWatcher } from './mail-watch.js';
 import { sanitizePlanner } from './planner.js';
@@ -439,6 +439,28 @@ const httpServer = createServer(async (request, response) => {
     const config = bauplanConfig();
     response.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache', 'x-content-type-options': 'nosniff', 'referrer-policy': 'strict-origin-when-cross-origin' });
     response.end(renderSalesPage(config));
+    return;
+  }
+
+  // Memory Palace: read and change Jarvis' memory directly.
+  if (pathname === '/api/memories') {
+    if (!isAuthenticated(request)) {
+      sendJson(response, 401, { error: 'Nicht angemeldet' });
+      return;
+    }
+    try {
+      if (request.method === 'POST' && String(request.headers['content-type'] || '').startsWith('application/json')) {
+        const body = JSON.parse(await readBody(request, 16384));
+        if (body.action === 'add') memoryStore.set(addMemory(memoryStore.items, body.text, { category: body.category, links: body.links }).list);
+        else if (body.action === 'update') memoryStore.set(updateMemory(memoryStore.items, body.id, { text: body.text, category: body.category, links: body.links }));
+        else if (body.action === 'delete') memoryStore.set(removeMemoryById(memoryStore.items, body.id));
+        else throw new Error('Unbekannte Aktion');
+        for (const session of sessions) session.updatePrompt?.();
+      }
+      sendJson(response, 200, { memories: memoryStore.items, categories: CATEGORIES, updatedAt: memoryStore.updatedAt });
+    } catch (error) {
+      sendJson(response, 400, { error: error.message });
+    }
     return;
   }
 

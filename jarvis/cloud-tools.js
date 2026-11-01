@@ -79,17 +79,21 @@ export const cloudTools = [
   },
   {
     name: 'memory_save',
-    description: 'Merkt sich dauerhaft etwas über den Nutzer (Name, Wohnort, Vorlieben, Familie, Hobbys, wichtige Termine) als kurzen Satz, z. B. "Wohnt in Köln". Niemals Passwörter, PINs oder Bankdaten.',
+    description: 'Speichert etwas Wichtiges dauerhaft im Gedächtnis (Memory Palace) – als kurzen Satz in der dritten Person, mit Kategorie und Verknüpfungen. Nur Wichtiges: Vorlieben, Projekte, Wissen über ihn, Aufgaben, wichtige Entscheidungen, offene Punkte. Nicht jedes Gespräch speichern. Niemals Passwörter, PINs, Zugangsdaten oder Bankdaten.',
     parameters: {
       type: 'object',
-      properties: { fact: { type: 'string', description: 'Kurzer Satz in der dritten Person' } },
+      properties: {
+        fact: { type: 'string', description: 'Kurzer Satz in der dritten Person, z. B. "Wohnt in Köln" oder "Arbeitet am Projekt Jarvis Studio (Website-Builder)"' },
+        category: { type: 'string', enum: ['praeferenz', 'projekt', 'wissen', 'aufgabe', 'gespraech', 'entscheidung', 'offen'] },
+        links: { type: 'array', items: { type: 'string' }, description: 'Themen/Projekte, mit denen die Erinnerung verknüpft ist, z. B. ["Jarvis", "Jarvis Studio"]' }
+      },
       required: ['fact']
     },
     label: (a) => `Gemerkt: ${a.fact}`,
-    run: async ({ fact }, context) => {
-      const { list, added } = addMemory(context.getMemories(), fact);
+    run: async ({ fact, category, links }, context) => {
+      const { list, added } = addMemory(context.getMemories(), fact, { category, links });
       context.setMemories(list);
-      return { gemerkt: added, bereitsBekannt: !added, anzahl: list.length };
+      return { gemerkt: added, aktualisiert: !added, anzahl: list.length };
     }
   },
   {

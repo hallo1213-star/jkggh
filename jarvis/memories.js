@@ -1,7 +1,31 @@
 // Things Jarvis remembers about the user ("wohnt in Köln", "mag Pizza").
 // Stored on the user's devices and synced like the other lists; passwords,
 // PINs and bank or card numbers are never stored.
-const MAX_MEMORIES = 60;
+const MAX_MEMORIES = 150;
+
+// Memory Palace categories (shown as hubs in the 3D view).
+export const CATEGORIES = {
+  praeferenz: 'Persönliche Präferenzen',
+  projekt: 'Projekte',
+  wissen: 'Wissen',
+  aufgabe: 'Aufgaben',
+  gespraech: 'Gesprächserinnerungen',
+  entscheidung: 'Wichtige Entscheidungen',
+  offen: 'Offene Aufgaben'
+};
+
+export function guessCategory(text) {
+  const t = String(text).toLowerCase();
+  if (/^(stil|anrede):|mag |liebt |lieblings|hasst |bevorzugt|wohnt|heißt|geburtstag|isst gern|hört gern/.test(t)) return 'praeferenz';
+  if (/projekt|website|app\b|shop|jarvis|studio|spiel/.test(t)) return 'projekt';
+  if (/entschied|entscheidung|hat sich für|will nicht mehr|möchte künftig/.test(t)) return 'entscheidung';
+  if (/muss noch|offen|todo|noch erledigen|nicht vergessen/.test(t)) return 'offen';
+  if (/aufgabe|erledigt|hausaufgabe|arbeit an/.test(t)) return 'aufgabe';
+  return 'wissen';
+}
+
+const newId = () => Math.random().toString(36).slice(2, 10);
+const cleanLinks = (links) => [...new Set((Array.isArray(links) ? links : String(links ?? '').split(/[,;]/)).map((l) => clean(l).slice(0, 40)).filter(Boolean))].slice(0, 6);
 const MAX_LENGTH = 200;
 const SENSITIVE = /passw|kennwort|\bpin\b|\btan\b|iban|kreditkart|kartennummer|cvc|sicherheitscode|zugangsdaten|\b\d(?:[ -]?\d){11,}\b/i;
 
@@ -22,20 +46,48 @@ export function sanitizeMemories(value) {
     const text = clean(typeof item === 'string' ? item : item?.text);
     if (!text || isSensitive(text) || seen.has(key(text))) continue;
     seen.add(key(text));
-    list.push({ text });
+    const category = CATEGORIES[item?.category] ? item.category : guessCategory(text);
+    list.push({
+      id: typeof item?.id === 'string' && /^[a-z0-9]{4,12}$/.test(item.id) ? item.id : newId(),
+      text,
+      category,
+      links: cleanLinks(item?.links).filter((l) => !isSensitive(l)),
+      updatedAt: Number.isFinite(Number(item?.updatedAt)) && Number(item.updatedAt) > 0 ? Number(item.updatedAt) : Date.now()
+    });
     if (list.length >= MAX_MEMORIES) break;
   }
   return list;
 }
 
-export function addMemory(list, fact) {
+export function addMemory(list, fact, { category, links } = {}) {
   const text = clean(fact);
   if (!text) throw new Error('Was soll ich mir merken?');
-  if (isSensitive(text)) throw new Error('Passwörter, PINs und Bank- oder Kartendaten merke ich mir aus Sicherheitsgründen nicht.');
+  if (isSensitive(text) || cleanLinks(links).some(isSensitive)) throw new Error('Passwörter, PINs und Bank- oder Kartendaten merke ich mir aus Sicherheitsgründen nicht.');
   const next = sanitizeMemories(list);
-  if (next.some((item) => key(item.text) === key(text))) return { list: next, added: false };
+  const existing = next.find((item) => key(item.text) === key(text));
+  if (existing) {
+    // Known already: only enrich category/links.
+    const updated = { ...existing, category: CATEGORIES[category] ? category : existing.category, links: cleanLinks([...existing.links, ...cleanLinks(links)]), updatedAt: Date.now() };
+    return { list: next.map((item) => (item.id === existing.id ? updated : item)), added: false, memory: updated };
+  }
+  const memory = sanitizeMemories([{ text, category, links }])[0];
   // When full, the oldest memory makes room.
-  return { list: [...next, { text }].slice(-MAX_MEMORIES), added: true };
+  return { list: [...next, memory].slice(-MAX_MEMORIES), added: true, memory };
+}
+
+export function updateMemory(list, id, changes = {}) {
+  const next = sanitizeMemories(list);
+  const item = next.find((m) => m.id === id);
+  if (!item) throw new Error('Diese Erinnerung gibt es nicht mehr.');
+  const text = changes.text !== undefined ? clean(changes.text) : item.text;
+  if (!text) throw new Error('Die Erinnerung darf nicht leer sein.');
+  if (isSensitive(text) || cleanLinks(changes.links ?? item.links).some(isSensitive)) throw new Error('Passwörter, PINs und Bank- oder Kartendaten speichere ich nicht.');
+  const updated = { ...item, text, category: CATEGORIES[changes.category] ? changes.category : item.category, links: changes.links !== undefined ? cleanLinks(changes.links) : item.links, updatedAt: Date.now() };
+  return next.map((m) => (m.id === id ? updated : m));
+}
+
+export function removeMemoryById(list, id) {
+  return sanitizeMemories(list).filter((m) => m.id !== id);
 }
 
 // Removes the memory that matches exactly, or the only one containing the words.

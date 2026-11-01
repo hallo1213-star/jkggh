@@ -7,6 +7,7 @@ import { initModels, modelLoading, showModel } from './model3d.js';
 import { initProjects, projectLoading, showProject } from './projects.js';
 import { handleTaskEvent, initTasks } from './tasks.js';
 import { followJob, initStudio } from './studio.js';
+import { initPalace, openPalace } from './palace.js';
 
 const OUTPUT_SAMPLE_RATE = 24000;
 
@@ -399,7 +400,7 @@ const memories = syncedList({
   key: 'jarvis.memories',
   timeKey: 'jarvis.memoriesUpdatedAt',
   updateType: 'memories_update',
-  clean: (list) => (Array.isArray(list) ? list : []).filter((item) => typeof item?.text === 'string').slice(0, 60).map((item) => ({ text: item.text.slice(0, 200) })),
+  clean: (list) => (Array.isArray(list) ? list : []).filter((item) => typeof item?.text === 'string').slice(0, 150).map((item) => ({ id: item.id, text: item.text.slice(0, 200), category: item.category, links: Array.isArray(item.links) ? item.links.slice(0, 6) : [], updatedAt: item.updatedAt })),
   onChange: () => {
     if (!els.memoryModal.hidden) renderMemories();
   }
@@ -430,7 +431,7 @@ function showMemories() {
   els.memoryModal.hidden = false;
 }
 
-els.memoryButton.addEventListener('click', showMemories);
+els.memoryButton.addEventListener('click', () => openPalace());
 els.memoryClose.addEventListener('click', () => {
   els.memoryModal.hidden = true;
 });
@@ -1248,6 +1249,7 @@ document.getElementById('theme-button').addEventListener('click', () => {
   toast(orb ? 'Design: Orb (hell)' : 'Design: Iron-Man (dunkel)');
 });
 initTasks({ toast });
+initPalace({ toast });
 initStudio({
   toast,
   send: (message) => {
@@ -1495,7 +1497,7 @@ function handleMessage(message) {
       break;
     case 'memories':
       memories.store(message.items, { sync: false, updatedAt: message.updatedAt });
-      if (message.show) showMemories();
+      if (message.show) openPalace();
       break;
     case 'user_speaking':
       stopPlayback();

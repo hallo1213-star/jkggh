@@ -39,6 +39,23 @@ Diese Datei hält fest, was analysiert, gebaut und getestet wurde und was noch o
   - Status aller Dienste und Modelle.
   - Schlüssel werden bewusst nur bei Render eingetragen.
 
+## Erledigt: Memory Palace + Jarvis Studio
+
+- [x] **Jarvis Studio**:
+  - `studio.js`, `public/studio.js`.
+  - Mehrstufige Website-Erzeugung mit eigenem Designsystem und generierten Bildern.
+  - Live-Vorschau für Desktop, Tablet, Handy und Vollbild.
+  - Automatische Prüfung mit Selbstreparatur: JS-Fehler, leere Seiten, kaputte Bilder, Querscrollen.
+  - Gezielte Änderungen (nur betroffene Dateien), Versionen mit Wiederherstellen.
+  - Dashboard: öffnen, umbenennen, löschen. Speicherung dauerhaft in IndexedDB auf dem Gerät.
+  - ZIP-Export mit README, Hintergrund-Aufträge mit Fortschritt.
+- [x] **Vorschau-Fix (alle Vorschauen):** Ersatzspeicher für `localStorage` in der Sandbox. Links wie `#/seite` bleiben in der Vorschau, statt zur Jarvis-Adresse zu springen.
+- [x] **Memory Palace**:
+  - `public/palace.js`, `memories.js`, `/api/memories`.
+  - Erinnerungen mit Bereich, Verknüpfungen, ID und Änderungsdatum (Altbestand automatisch eingeordnet).
+  - 3D-Netzwerk aus Bereichen, Erinnerungen, Themen, Linien und Partikeln.
+  - Antippen, Bearbeiten, Löschen, Hinzufügen, Suche mit Hervorhebung und Kameraflug.
+
 ## Früher erledigt (Auszug)
 
 3D-Studio (GLB-Export), Projekt-Werkstatt (Sandbox-Vorschau, ZIP), Bilder erschaffen/verstehen, Aufgabenmodus, Orb-Design, Film-Modus (Butler, Lagebericht, Börse, Wochenzahlen), Verkaufsseite, Essen bestellen per Telefon mit Testmodus, 3D-Erde, Geld-Modus, Planer, Gmail, Telegram-Benachrichtigungen, Laptop-Verbinder.
@@ -69,7 +86,14 @@ Diese Datei hält fest, was analysiert, gebaut und getestet wurde und was noch o
 | `TWILIO_*` | optional, kostenpflichtig | echte Anrufe |
 | `GUMROAD_ACCESS_TOKEN`, `CESIUM_ION_TOKEN`, `ELEVENLABS_*` | optional | Verkaufszahlen, schärfere Erde, andere Stimme |
 
-## Testergebnisse (diese Runde)
+## Testergebnisse (Memory Palace + Studio)
+
+- **Studio im Browser:** Shop gebaut (4 KI-Schritte). Der eingebaute Fehler wurde von der Prüfung gefunden und automatisch repariert, danach „keine Fehler“. Navigation, Warenkorb, Handy-Ansicht, Änderung „dunkler“, Versionen, ZIP, Dashboard und Neuladen funktionieren.
+- **Memory Palace im Browser:** 8 Erinnerungen dargestellt, Suche „Jarvis Studio“ findet 3. Hinzufügen, Bereich antippen, Erinnerung bearbeiten und speichern funktionieren. Passwort-Erinnerung abgelehnt.
+- **Unit-Test Gedächtnis:** 7 von 7 bestanden.
+- **Nicht getestet:** echte Groq-Antworten (Designqualität hängt vom Modell ab) und echte Pollinations-Bilder.
+
+## Testergebnisse (Runde davor)
 
 - **Unit-Tests:** auth, customers, game-config, gmail, knowledge, laptop-tools, planner, shopping, site-config, telegram, voice, webcams, money, llm-free, places, projects und model3d sind alle bestanden.
 - **Telegram-Assistent im Ablauf mit simulierten Diensten:**
