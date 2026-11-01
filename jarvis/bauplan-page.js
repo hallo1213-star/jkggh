@@ -14,7 +14,7 @@ export function bauplanConfig(env = process.env) {
     linkStarter: httpsOnly(env.BAUPLAN_LINK_STARTER),
     linkKomplett: httpsOnly(env.BAUPLAN_LINK_KOMPLETT),
     priceStarter: env.BAUPLAN_PREIS_STARTER?.trim() || '29 €',
-    priceKomplett: env.BAUPLAN_PREIS_KOMPLETT?.trim() || '49 €'
+    priceKomplett: env.BAUPLAN_PREIS_KOMPLETT?.trim() || '80 €'
   };
 }
 

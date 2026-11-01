@@ -142,11 +142,11 @@ Sag **„Erstelle mir deine Website“**. Dann bekommst du eine fertige, profess
 - **Adresse:** `https://<deine-render-adresse>/bauplan`. Die Seite ist öffentlich, ohne Login, und du kannst sie teilen. Zusätzlich gibt es sie als HTML-Datei für eigenes Hosting.
 - **Pakete:**
   - **Starter 29 €:** der Bauplan
-  - **Komplett 49 €:** Bauplan + Schritt-für-Schritt-Einrichtung + Fehlerhilfe + Updates
+  - **Komplett 80 €:** Bauplan + Schritt-für-Schritt-Einrichtung + Fehlerhilfe + Updates
 - **Produktdateien:** In der App gibt es Knöpfe für `Jarvis-Bauplan-Starter.md` und `Jarvis-Bauplan-Komplett.md`. Alles ist dein eigener Text.
 
 **Veröffentlichen in 3 Schritten:**
-1. Auf **gumroad.com** zwei Produkte anlegen: „Jarvis-Bauplan – Starter“ für 29 € und „Jarvis-Bauplan – Komplett“ für 49 €. Jeweils die passende Datei hochladen.
+1. Auf **gumroad.com** zwei Produkte anlegen: „Jarvis-Bauplan – Starter“ für 29 € und „Jarvis-Bauplan – Komplett“ für 80 €. Jeweils die passende Datei hochladen.
 2. Bei **Render → Environment** eintragen:
    - `VERKAEUFER_NAME`
    - `VERKAEUFER_ADRESSE`, z. B. `Musterstraße 1, 12345 Berlin`
