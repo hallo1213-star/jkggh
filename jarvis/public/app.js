@@ -6,6 +6,7 @@ import { addOrderCard, handleCallEvent, initCall } from './call.js';
 import { initModels, modelLoading, showModel } from './model3d.js';
 import { initProjects, projectLoading, showProject } from './projects.js';
 import { handleTaskEvent, initTasks } from './tasks.js';
+import { followJob, initStudio } from './studio.js';
 
 const OUTPUT_SAMPLE_RATE = 24000;
 
@@ -1247,6 +1248,14 @@ document.getElementById('theme-button').addEventListener('click', () => {
   toast(orb ? 'Design: Orb (hell)' : 'Design: Iron-Man (dunkel)');
 });
 initTasks({ toast });
+initStudio({
+  toast,
+  send: (message) => {
+    if (state.ws?.readyState !== WebSocket.OPEN) return false;
+    state.ws.send(JSON.stringify(message));
+    return true;
+  }
+});
 document.getElementById('image-input').addEventListener('change', (event) => {
   sendImage(event.target.files[0]).catch((error) => toast(error.message, 'error'));
   event.target.value = '';
@@ -1446,6 +1455,9 @@ function handleMessage(message) {
       break;
     case 'task':
       handleTaskEvent(message);
+      break;
+    case 'studio_open':
+      followJob(message.id, message.kind, message.prompt);
       break;
     case 'weekly':
       addWeeklyCard(message.numbers);

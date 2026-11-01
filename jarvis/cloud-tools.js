@@ -901,6 +901,26 @@ export const cloudTools = [
     }
   },
   {
+    name: 'studio_website',
+    description: 'Jarvis Studio: baut SELBST eine professionelle, mehrseitige Website im Stil einer Designagentur (eigenes Designsystem, echte Texte, generierte Bilder, Animationen, funktionierende Navigation; bei Shops Produktseiten und Warenkorb) mit Live-Vorschau, Qualitätsprüfung und Export. Für „Erstelle mir eine moderne Website/einen Online-Shop für …“. Mit edit=true wird die aktuell offene Studio-Website gezielt geändert („Mach das Design dunkler“, „Füg eine FAQ-Seite hinzu“). Einfache Visitenkarten-Seiten für Läden-Kunden weiterhin mit create_website.',
+    parameters: {
+      type: 'object',
+      properties: {
+        description: { type: 'string', description: 'Was gebaut oder geändert werden soll, in seinen Worten' },
+        edit: { type: 'boolean', description: 'true = die offene Studio-Website ändern' }
+      },
+      required: ['description']
+    },
+    label: (a) => `Jarvis Studio${a.edit ? ' (Änderung)' : ''}: ${a.description}`,
+    run: async ({ description, edit }, context) => {
+      if (!context.startStudio) throw new Error('Jarvis Studio geht nur in der App.');
+      const project = edit ? context.studioMemory?.last : null;
+      if (edit && !project) throw new Error('Gerade ist keine Studio-Website offen. Beschreib mir, was ich neu bauen soll.');
+      context.startStudio(edit ? 'edit' : 'build', { prompt: description, project });
+      return { gestartet: true, hinweis: edit ? 'Die Änderung läuft (dauert meist unter einer Minute). Die Vorschau aktualisiert sich von selbst.' : 'Jarvis Studio baut die Website jetzt in mehreren Schritten (Konzept, Design, Seiten, Prüfung) – das dauert ein bis drei Minuten. Der Fortschritt ist im Studio zu sehen. Sag kurz, dass du loslegst.' };
+    }
+  },
+  {
     name: 'create_project',
     description: 'Programmiert SELBST ein komplettes, lauffähiges Projekt nach seinem Wunsch und startet es in der Projekt-Werkstatt der App: Spiele (auch 3D-Spiele), Apps, Werkzeuge (Taschenrechner, Timer, Quiz …), Websites mit Funktionen (z. B. Online-Shop mit Produktseiten und Warenkorb). Mit edit=true wird das zuletzt gezeigte Projekt geändert („Mach das Spiel schwerer“). Nie im Internet nach fertigen Projekten suchen.',
     parameters: {

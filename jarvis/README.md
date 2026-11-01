@@ -174,6 +174,19 @@ Dinge, die sich ändern können (Preise, Versionen), kennzeichnet Jarvis ehrlich
 - Für die Bildanalyse wählt Jarvis automatisch ein Bild-Modell über `GROQ_API_KEY`. Ein eigenes Modell geht mit `GROQ_VISION_MODEL`.
 - Menschen auf Fotos beschreibt Jarvis nur allgemein. Er erkennt niemanden am Gesicht.
 
+## Jarvis Studio: professionelle Websites 🖥️
+
+Sag oder tippe z. B. **„Erstelle mir einen modernen Online-Shop für eine Luxus-Kleidungsmarke“**, **„eine Website für einen Friseursalon“** oder **„eine Portfolio-Seite mit Animationen“** (Knopf **Studio**).
+
+- **So baut Jarvis:** in mehreren Schritten: Konzept und eigenes **Designsystem** (Farben, Schriftpaar, Stil), dann CSS, dann alle **Seiten mit Funktionen** (Navigation, bei Shops Produktliste, Produktdetails, **Warenkorb**, Demo-Kasse), dann das HTML. Die Bilder werden passend zur Marke **generiert**, es gibt keine erfundenen Bild-URLs.
+- **Live-Vorschau** mit Ansichten für **Desktop, Tablet und Handy** und **Vollbild**. Du kannst die Website direkt darin durchklicken und testen.
+- **Automatische Prüfung:** Jarvis klickt alle Seiten durch und prüft auf JavaScript-Fehler, leere Seiten, kaputte Bilder und Querscrollen. Findet er Probleme, **repariert er sie selbst** und prüft erneut.
+- **Ändern per Sprache oder Text:** „Mach das Design dunkler“, „Füg eine FAQ-Seite hinzu“, „Besser fürs Handy“. Dabei ändert Jarvis nur die betroffenen Dateien, alles andere bleibt erhalten.
+- **Versionen:** Jede Änderung wird eine eigene Version, und frühere lassen sich wiederherstellen.
+- **„Meine Websites“:** öffnen, umbenennen, löschen, neue Website starten. Gespeichert wird dauerhaft in der Datenbank deines Browsers auf diesem Gerät. Für andere Geräte oder als Sicherung: Export.
+- **Export (ZIP):** kompletter Code mit README. `index.html` öffnen oder mit `npx serve` starten. Zum Veröffentlichen z. B. bei Netlify per Drag & Drop hochladen.
+- **Ehrlich:** Kasse und Formulare sind Demos ohne echte Zahlung bzw. ohne Versand. Für echte Zahlungen braucht es später einen Dienst wie Stripe. Animationen laufen mit schlankem CSS/JavaScript (kein React/Framer Motion), damit die Seiten ohne Build-Schritt überall laufen. Braucht `GROQ_API_KEY`. Wenn das kostenlose Kontingent kurz voll ist, wartet Jarvis automatisch eine Minute.
+
 ## Projekt-Werkstatt: Jarvis programmiert selbst 🧑‍💻
 
 Sag z. B. **„Programmier mir ein eigenes 3D-Spiel“**, **„Programmier mir einen Taschenrechner“** oder **„Erstelle mir einen modernen Online-Shop für Kleidung mit Warenkorb“**.

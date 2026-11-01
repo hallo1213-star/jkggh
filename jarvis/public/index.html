@@ -89,6 +89,10 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 1 7l11 5 9-4.1V15h2V7L12 2Zm-7 9.2v4.3C5 18 8.1 20 12 20s7-2 7-4.5v-4.3l-7 3.2-7-3.2Z"/></svg>
           <span>Kunden</span>
         </button>
+        <button class="ctrl" id="studio-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v14H3V4Zm2 2v10h14V6H5Zm3 14h8v2H8v-2Z"/></svg>
+          <span>Studio</span>
+        </button>
         <button class="ctrl" id="tasks-button" type="button">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h2v2H3V5Zm4 0h14v2H7V5ZM3 11h2v2H3v-2Zm4 0h14v2H7v-2Zm-4 6h2v2H3v-2Zm4 0h14v2H7v-2Z"/></svg>
           <span>Aufgaben</span><span class="tasks-badge" id="tasks-badge" hidden>0</span>
@@ -243,6 +247,31 @@
         <button class="ctrl" id="money-new" type="button" title="Neues Projekt mit diesem Auftrag starten">Neu starten</button>
       </div>
       <div class="money-body" id="money-body"><p class="empty">Lädt …</p></div>
+    </div>
+  </div>
+
+  <div class="studio-overlay" id="studio-overlay" hidden>
+    <header class="studio-top">
+      <div class="studio-name"><p class="globe-kicker">Jarvis Studio</p><h3 id="studio-title">Neue Website</h3><p id="studio-meta">Beschreib unten, was Jarvis bauen soll.</p></div>
+      <div class="studio-tools">
+        <button class="ctrl" data-device="desktop" type="button" aria-pressed="true">Desktop</button>
+        <button class="ctrl" data-device="tablet" type="button" aria-pressed="false">Tablet</button>
+        <button class="ctrl" data-device="mobile" type="button" aria-pressed="false">Handy</button>
+        <button class="ctrl" id="studio-full" type="button">Vollbild</button>
+        <button class="ctrl" id="studio-reload" type="button">Neu laden</button>
+        <select class="ctrl model-list" id="studio-versions" aria-label="Versionen"></select>
+        <button class="ctrl" id="studio-zip" type="button">Export (ZIP)</button>
+        <button class="ctrl" id="studio-dash" type="button">Meine Websites</button>
+        <button class="icon-btn" id="studio-close" type="button" aria-label="Studio schließen">✕</button>
+      </div>
+    </header>
+    <div class="studio-stage" id="studio-stage" data-device="desktop"><iframe id="studio-frame" title="Website-Vorschau" sandbox="allow-scripts"></iframe></div>
+    <p class="studio-qa" id="studio-qa"></p>
+    <form class="studio-prompt globe-search" id="studio-prompt"><input type="text" maxlength="600" placeholder="z. B. „Erstelle einen modernen Online-Shop für eine Luxus-Kleidungsmarke“ – danach: „Mach es dunkler“" aria-label="Website beschreiben oder ändern"></form>
+    <div class="studio-progress" id="studio-progress" hidden></div>
+    <div class="studio-dashboard" id="studio-dashboard" hidden>
+      <div class="games-head"><h3>Meine Websites</h3><div class="order-actions"><button class="ctrl" id="studio-new" type="button">+ Neue Website</button><button class="icon-btn" id="studio-dash-close" type="button" aria-label="Schließen">✕</button></div></div>
+      <div id="studio-dash-list" class="planner-body"></div>
     </div>
   </div>
 

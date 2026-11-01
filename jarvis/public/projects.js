@@ -29,7 +29,12 @@ let sendToServer = () => false;
 // security policy allows only inline code and the three.js CDN.
 const CSP = "default-src 'none'; script-src 'unsafe-inline' https://cdn.jsdelivr.net; style-src 'unsafe-inline'; img-src data: blob:; media-src data: blob:; font-src data:; connect-src https://cdn.jsdelivr.net";
 
-export function buildPreview(project) {
+// Sandboxed previews may not use the real browser storage; this in-memory
+// stand-in keeps carts, settings etc. working inside the preview. In-page
+// links (#/route) stay inside the preview instead of leaving it.
+const STORAGE_SHIM = `<script>(function(){function mem(){var d={};return{getItem:function(k){return Object.prototype.hasOwnProperty.call(d,k)?d[k]:null},setItem:function(k,v){d[k]=String(v)},removeItem:function(k){delete d[k]},clear:function(){d={}},key:function(i){return Object.keys(d)[i]||null},get length(){return Object.keys(d).length}}}['localStorage','sessionStorage'].forEach(function(n){try{window[n].getItem('x')}catch(e){try{Object.defineProperty(window,n,{value:mem(),configurable:true})}catch(_){}}});document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href]');if(!a)return;var h=a.getAttribute('href');if(h.charAt(0)==='#'){e.preventDefault();if(location.hash!==h)location.hash=h;else window.dispatchEvent(new HashChangeEvent('hashchange'));}else if(!/^(https?:|mailto:|tel:)/.test(h)){e.preventDefault();}},true)})();<\/script>`;
+
+export function buildPreview(project, { csp = CSP, inject = '' } = {}) {
   const files = Object.fromEntries(project.files.map((f) => [f.path, f.content]));
   let html = files['index.html'] || '<p>Keine index.html</p>';
   html = html.replace(/<link\b[^>]*href=["']([^"']+\.css)["'][^>]*>/gi, (tag, href) => (files[href.replace(/^\.\//, '')] !== undefined ? `<style>${files[href.replace(/^\.\//, '')]}</style>` : ''));
@@ -39,7 +44,7 @@ export function buildPreview(project) {
     const module = /type=["']module["']/i.test(before + after);
     return `<script${module ? ' type="module"' : ''}>${content.replace(/<\/script/gi, '<\\/script')}</script>`;
   });
-  const meta = `<meta http-equiv="Content-Security-Policy" content="${CSP}">`;
+  const meta = `<meta http-equiv="Content-Security-Policy" content="${csp}">${STORAGE_SHIM}${inject}`;
   return /<head[^>]*>/i.test(html) ? html.replace(/<head([^>]*)>/i, `<head$1>${meta}`) : `${meta}${html}`;
 }
 

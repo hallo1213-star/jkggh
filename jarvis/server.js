@@ -37,6 +37,7 @@ import { describeImage, llmLabel, llmProvider } from './llm.js';
 import { twilioConfigured } from './phone-call.js';
 import { telegramAssistantEnabled } from './telegram-bot.js';
 import { cancelTasks, startTask } from './tasks.js';
+import { buildSite, editSite, fixSite } from './studio.js';
 import { startTelegramAssistant } from './telegram-bot.js';
 import { findTool as findLaptopTool, functionDefinitions as laptopFunctions } from './laptop/tools.js';
 
@@ -209,6 +210,32 @@ function callEventHandler(origin) {
     if (telegramConfigured()) sendTelegram(full).catch(() => {});
     origin?.tell?.(full);
   };
+}
+
+// --- Jarvis Studio jobs (website builds take several AI steps) --------------------
+const studioJobs = new Map();
+function startStudioJob(kind, { prompt, project, problems }) {
+  if ([...studioJobs.values()].some((j) => j.status === 'läuft')) throw new Error('Jarvis Studio baut gerade schon eine Website. Einen Moment noch.');
+  const id = Math.random().toString(36).slice(2, 10);
+  const job = { id, kind, prompt: String(prompt || '').slice(0, 300), status: 'läuft', steps: [], startedAt: Date.now() };
+  studioJobs.set(id, job);
+  const onProgress = (step) => {
+    job.steps.push(step);
+    for (const session of sessions) session.toBrowser({ type: 'studio_job', id, status: 'läuft', step, prompt: job.prompt });
+  };
+  const base = project ? sanitizeProject(project) : null;
+  const run = kind === 'build' ? buildSite(prompt, { onProgress }) : kind === 'fix' ? fixSite({ ...base, plan: project.plan }, problems) : editSite({ ...base, plan: project?.plan }, prompt, { onProgress });
+  run.then((result) => {
+    job.status = 'fertig';
+    job.result = result;
+    for (const session of sessions) session.toBrowser({ type: 'studio_job', id, status: 'fertig' });
+  }).catch((error) => {
+    job.status = 'fehler';
+    job.error = error.message;
+    for (const session of sessions) session.toBrowser({ type: 'studio_job', id, status: 'fehler', error: error.message });
+  });
+  setTimeout(() => studioJobs.delete(id), 30 * 60 * 1000).unref?.();
+  return job;
 }
 
 // Task progress goes to every open app; the finished document also to Telegram.
@@ -467,6 +494,29 @@ const httpServer = createServer(async (request, response) => {
     try {
       const body = JSON.parse(await readBody(request, 8 * 1024 * 1024));
       sendJson(response, 200, { answer: await describeImage({ dataUrl: body.image, question: body.question }) });
+    } catch (error) {
+      sendJson(response, 400, { error: error.message });
+    }
+    return;
+  }
+
+  if (pathname.startsWith('/api/studio')) {
+    if (!isAuthenticated(request)) {
+      sendJson(response, 401, { error: 'Nicht angemeldet' });
+      return;
+    }
+    try {
+      if (request.method === 'GET') {
+        const job = studioJobs.get(new URL(request.url, 'http://localhost').searchParams.get('id') || '');
+        if (!job) throw new Error('Auftrag nicht gefunden (vielleicht wurde der Server neu gestartet).');
+        sendJson(response, 200, { id: job.id, status: job.status, steps: job.steps, error: job.error, result: job.status === 'fertig' ? job.result : undefined });
+      } else if (String(request.headers['content-type'] || '').startsWith('application/json')) {
+        const body = JSON.parse(await readBody(request, 1024 * 1024));
+        if (!['build', 'edit', 'fix'].includes(body.kind)) throw new Error('Unbekannte Aktion');
+        if (body.kind !== 'build' && !body.project) throw new Error('Kein Projekt angegeben.');
+        const job = startStudioJob(body.kind, body);
+        sendJson(response, 200, { id: job.id });
+      } else sendJson(response, 405, { error: 'Nicht erlaubt' });
     } catch (error) {
       sendJson(response, 400, { error: error.message });
     }
@@ -886,6 +936,12 @@ browserWss.on('connection', (browser, request) => {
       });
     },
     cancelTasks,
+    studioMemory: {},
+    startStudio(kind, options) {
+      const job = startStudioJob(kind, options);
+      toBrowser({ type: 'studio_open', id: job.id, prompt: job.prompt, kind });
+      return job;
+    },
     showImage(image) {
       toBrowser({ type: 'image', ...image });
     },
@@ -1157,6 +1213,8 @@ browserWss.on('connection', (browser, request) => {
       // The user sent a picture; Jarvis gets the analysis and answers by voice.
       const question = String(message.question || '').slice(0, 300);
       agent.sendInjectUserMessage({ type: 'InjectUserMessage', content: `[Ich habe dir gerade ein Bild geschickt${question ? ` und gefragt: „${question}“` : ''}. Deine Bildanalyse dazu:]\n${String(message.answer || '').slice(0, 3000)}\n[Fasse das kurz und natürlich für mich zusammen.]` });
+    } else if (message.type === 'studio_current') {
+      context.studioMemory.last = message.project && typeof message.project === 'object' ? { ...sanitizeProject(message.project), plan: message.project.plan } : null;
     } else if (message.type === 'project_current') {
       context.projectMemory.last = sanitizeProject(message.project);
     } else if (message.type === 'model_current') {
