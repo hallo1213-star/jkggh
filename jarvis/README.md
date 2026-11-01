@@ -182,6 +182,42 @@ Dinge, die sich ändern können (Preise, Versionen), kennzeichnet Jarvis ehrlich
 - **Live-Charts:** *„Zeig mir den Bitcoin-Chart“*, *„Wie lief Tesla dieses Jahr?“*, *„DAX der letzten 6 Monate“* liefert einen animierten Neon-Kursverlauf mit echten Daten. Zeiträume 1 Tag bis 5 Jahre, mit Finger oder Maus über den Chart fahren für Datum und Kurs. Keine Anlageberatung.
 - **Stimme sichtbar:** Im Orb-Design atmet die Kugel im Takt der Stimme, und ein Ring aus Frequenzbalken zeigt Jarvis' Stimme live (orange) bzw. deine (grau).
 
+## Video Studio: Jarvis erstellt Videos 🎬
+
+Sag zum Beispiel **„Jarvis, erstelle mir eine 30-sekündige Werbung für meinen Jarvis“**, **„Mach ein TikTok-Video über Fitness“** oder **„Erstelle ein realistisches Video von einer futuristischen Stadt bei Nacht“**. Du kannst auch oben auf **Video** tippen und den Wunsch eintippen.
+
+**So arbeitet Jarvis:**
+1. **Konzept:** Er plant Titel, Szenen, Texte, Untertitel, den Sprechtext, die Musik und die Übergänge.
+2. **Szenen:** Jede Szene wird einzeln gestaltet. Es gibt zwei Arten:
+   - **Eigener Renderer** (Canvas, im Browser): Stadt bei Nacht, Hologramm, Benutzeroberfläche, Logo-Enthüllung, Partikel-Galaxie, Weltraum, Retro-Landschaft, Text-Animation. Alles mit Kamerafahrten, Partikeln und Licht.
+   - **KI-Bild + Kamerafahrt:** Für realistische Motive erzeugt Pollinations (kostenlos) ein KI-Bild, das im Video mit Zoom oder Schwenk animiert wird.
+3. **Ton:** eigene Musik aus einem Synthesizer (episch, Tech, ruhig), dazu Effekte genau an den Szenenwechseln und eine **deutsche Sprecherstimme** (Deepgram). Ist ein Satz länger als die Szene, wird die Szene automatisch verlängert. Während der Stimme wird die Musik leiser.
+4. **Ehrlich gekennzeichnet:** Jede Szene zeigt, wie sie entsteht (Eigener Renderer / KI-Bild / KI-Video). Jarvis behauptet nie, ein KI-Video erzeugt zu haben, wenn es der Renderer war.
+
+**Timeline und Bearbeitung:**
+- Szenen verschieben: Block ziehen, oder ◀ ▶.
+- Dauer ändern: rechten Rand des Blocks ziehen, oder den Regler nutzen.
+- Szenen hinzufügen, duplizieren und löschen.
+- Typ, Übergang (Überblenden, Schieben, Zoom, Wischen, Glitch, harter Schnitt) und Kamerafahrt wählen.
+- Großen Text, Untertitel, Sprechtext und Bildmotiv ändern, oder mit 🎲 ein neues Bild würfeln.
+- Musik und Akzentfarbe einstellen.
+- Mit KI ändern: *„Mach Szene 2 länger und die Musik ruhiger“* (eintippen oder per Sprache sagen).
+- Deine Videos werden auf dem Gerät gespeichert (📁 Projekte).
+
+**Export:**
+- MP4 in 1080p oder 720p, als 16:9 (YouTube), 9:16 (TikTok, Reels) oder 1:1.
+- Safari auf dem iPhone und Chrome oder Edge auf Windows nehmen direkt als MP4 (H.264) auf.
+- Kann ein Browser nur WebM, wandelt der Server das Video automatisch mit ffmpeg in MP4 um.
+- Das Video wird in Echtzeit aufgenommen. Lass die App so lange geöffnet und im Vordergrund.
+- Auf dem iPhone sicherst du es mit „Teilen“ direkt in Fotos.
+
+**Kosten:**
+- Renderer, Musik, KI-Bilder (Pollinations) und der MP4-Export sind kostenlos.
+- Die Sprecherstimme nutzt deinen Deepgram-Schlüssel und verbraucht dein Deepgram-Guthaben (laut Deepgram-Preisliste grob 3 Cent pro 1000 Zeichen, ein 30-Sekunden-Video hat meist unter 500 Zeichen). Jede Stimme wird gespeichert und nicht doppelt bezahlt.
+- **Echte KI-Videos (optional, kostenpflichtig):** Kostenlose Text-zu-Video-Dienste gibt es nicht zuverlässig. Wenn du willst, kannst du deinen eigenen Replicate-Schlüssel eintragen. Dann erscheint bei Bild-Szenen der Knopf „Als echtes KI-Video erzeugen“. Vor jedem Start zeigt Jarvis den Preis und wartet auf dein „Ja“. Per Sprache startet er nie etwas Kostenpflichtiges.
+  - Bei Render eintragen: `REPLICATE_API_TOKEN`, `REPLICATE_VIDEO_MODEL` (das Modell von replicate.com, z. B. `besitzer/modellname`) und `REPLICATE_VIDEO_PRICE` (den Preis, den du auf der Modellseite siehst, z. B. „ca. 0,50 € pro Clip“).
+  - Schlüssel liegen nur auf dem Server, nie im Browser.
+
 ## Jarvis-Augen: Jarvis sieht durch deine Kamera 👁️
 
 Sag **„Jarvis, schau mal“** oder tippe auf das Auge neben der Büroklammer. Die Kamera deines Handys oder Laptops öffnet sich im Vollbild, und Jarvis schaut sich das Bild an, sobald du fragst:

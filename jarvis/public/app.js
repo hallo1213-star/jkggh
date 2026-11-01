@@ -11,6 +11,7 @@ import { initPalace, openPalace } from './palace.js';
 import { chartCard, initVisuals, showWeather as showWeatherShow, startFocus } from './visuals.js';
 import { initCards, isEverydayCard, showEverydayCard } from './cards.js';
 import { handleCameraMessage, initCamera } from './camera.js';
+import { handleVideoMessage, initVideo } from './video.js';
 
 const OUTPUT_SAMPLE_RATE = 24000;
 
@@ -1293,6 +1294,14 @@ initModels({
     return true;
   }
 });
+initVideo({
+  toast,
+  send: (message) => {
+    if (state.ws?.readyState !== WebSocket.OPEN) return false;
+    state.ws.send(JSON.stringify(message));
+    return true;
+  }
+});
 initCamera({
   toast,
   send: (message) => {
@@ -1525,6 +1534,9 @@ function handleMessage(message) {
       break;
     case 'camera':
       handleCameraMessage(message);
+      break;
+    case 'video_open':
+      handleVideoMessage(message);
       break;
     case 'globe':
       handleGlobeMessage(message);

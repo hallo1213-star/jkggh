@@ -8,6 +8,7 @@ import { getNews, getWeather, lookupWikipedia, searchNews, topNews } from './kno
 import { getChart, getMarkets } from './markets.js';
 import { getIss } from './iss.js';
 import { describeRoute, planRoute } from './route.js';
+import { aiVideoConfig, editVideo, planVideo } from './video.js';
 import { STATES, calculate, convertCurrency, countdownTarget, getBundesliga, getDepartures, getHolidays, getJourneys, ingredientText, makeQr, makeQuiz, planRecipe, summarizeUrl, translate } from './everyday.js';
 import { bauplanConfig, missingSettings } from './bauplan-page.js';
 import { describeScene, designScene } from './model3d.js';
@@ -633,6 +634,49 @@ export const cloudTools = [
         hinweis: cams.length
           ? 'Die Erde fliegt dorthin, die Webcams sind als Kamera-Symbole zu sehen, rechts die Liste mit aktuellen Bildern. Was auf den Bildern zu sehen ist, weißt du nicht – beschreib nur, wo die Kameras sind.'
           : `Im Umkreis von ${radius} km sind keine Webcams verzeichnet${found.windy ? '' : ' (weltweite Webcams gibt es mit einem kostenlosen Windy-Schlüssel, siehe README)'}. Rechts ist ein Link zur Webcam-Suche.`
+      };
+    }
+  },
+  {
+    name: 'create_video',
+    description: 'Video Studio: Jarvis erstellt SELBST ein Video aus seiner Beschreibung – Konzept, Szenen, Texte, Untertitel, Sprecherstimme, Musik – und öffnet es im Video Studio mit Vorschau, Timeline und MP4-Export (16:9, 9:16, 1:1). Für „Erstelle mir eine 30-sekündige Werbung für meinen Jarvis“, „Mach ein TikTok-Video über …“, „Erstelle ein Video von einer futuristischen Stadt bei Nacht“. aendern = das offene Video per Sprache ändern („Mach Szene 2 länger“, „Andere Musik“). Lädt NIE Videos aus dem Internet und startet NIE kostenpflichtige KI-Videos (die gibt es nur per Knopf mit Bestätigung im Studio).',
+    parameters: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['neu', 'aendern', 'oeffnen'] },
+        description: { type: 'string', description: 'Bei neu: das gewünschte Video in seinen Worten. Bei aendern: die Änderung.' },
+        duration: { type: 'number', description: 'Länge in Sekunden (Standard 30)' },
+        format: { type: 'string', enum: ['16:9', '9:16', '1:1'], description: '16:9 YouTube (Standard), 9:16 TikTok/Reels, 1:1 quadratisch' },
+        voice: { type: 'boolean', description: 'Sprecherstimme (Standard true)' }
+      },
+      required: ['action']
+    },
+    label: (a) => (a.action === 'neu' ? `Video: ${a.description || ''}` : a.action === 'aendern' ? `Video ändern: ${a.description || ''}` : 'Video Studio öffnen'),
+    run: async ({ action, description, duration, format, voice }, context) => {
+      if (action === 'oeffnen') {
+        context.showVisual?.({ type: 'video_open' });
+        return { ok: true, hinweis: 'Das Video Studio ist offen.' };
+      }
+      if (action === 'aendern') {
+        const current = context.videoMemory?.last;
+        if (!current) throw new Error('Gerade ist kein Video offen. Sag mir, was für ein Video ich erstellen soll.');
+        const project = await editVideo(current, description);
+        context.videoMemory.last = project;
+        context.showVisual?.({ type: 'video_open', project, voice: true });
+        return { geaendert: true, szenen: project.scenes.length, hinweis: 'Das geänderte Video ist im Studio. Fehlende Sprechtexte werden automatisch vertont.' };
+      }
+      const project = await planVideo(description, { duration: duration || 30, format, voice: voice !== false });
+      if (context.videoMemory) context.videoMemory.last = project;
+      context.showVisual?.({ type: 'video_open', project, voice: voice !== false });
+      const kinds = new Set(project.scenes.map((s) => s.type));
+      return {
+        titel: project.title,
+        szenen: project.scenes.map((s, i) => `${i + 1}. ${s.type}${s.title ? ` „${s.title}“` : ''} (${s.duration} s)`),
+        laenge: Math.round(project.scenes.reduce((n, s) => n + s.duration, 0)),
+        format: project.format,
+        technik: `${kinds.has('image') ? 'KI-Bilder mit Kamerafahrt' : ''}${kinds.has('image') && [...kinds].some((k) => k !== 'image') ? ' und ' : ''}${[...kinds].some((k) => k !== 'image') ? 'Animationen aus Jarvis\' eigenem Renderer' : ''}`,
+        echteKiVideos: aiVideoConfig().enabled ? 'möglich per Knopf im Studio (kostenpflichtig, mit Bestätigung)' : 'nicht eingerichtet',
+        hinweis: 'Das Video ist im Video Studio geöffnet (Vorschau, Timeline, Export). Beschreib kurz das Konzept und die Szenen. Sag ehrlich, wie es gemacht ist: eigener Renderer und – falls vorhanden – animierte KI-Bilder, KEIN KI-generiertes Video. Zum Speichern: oben „Exportieren“ tippen.'
       };
     }
   },

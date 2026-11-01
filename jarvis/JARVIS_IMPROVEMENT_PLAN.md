@@ -40,6 +40,27 @@ Diese Datei hält fest, was analysiert, gebaut und getestet wurde und was noch o
   - Status aller Dienste und Modelle.
   - Schlüssel werden bewusst nur bei Render eingetragen.
 
+## Erledigt: Video Studio
+
+- [x] `video.js` (Server):
+  - Konzept und Szenen per KI (Vorlage ohne Schlüssel), Änderung per KI.
+  - Deepgram-Stimme (`aura-2-julius-de`, MP3) und Bild-Proxy für Pollinations, damit die Bilder auf demselben Server liegen und der Export funktioniert.
+  - MP4-Umwandlung mit ffmpeg (`ffmpeg-static` als optionales Paket).
+  - Optional Replicate-KI-Clips, nur mit eigenem Schlüssel, Preisangabe und `confirmed: true`.
+- [x] `public/video-renderer.js`: eigener deterministischer Canvas-Renderer:
+  - 8 animierte Szenen-Typen und KI-Bild mit Kamerafahrt (Ken Burns), KI-Clip.
+  - 6 Kamerafahrten, 6 Übergänge, Titel und Untertitel, Vignette.
+- [x] `public/video-audio.js`: Soundtrack offline gerendert: Synthesizer-Musik (3 Stile), Whoosh und Impact an Szenenwechseln, Stimme synchron, Ducking.
+- [x] `public/video.js`:
+  - Studio-Oberfläche mit Vorschau, Abspielen und Spulen.
+  - Timeline: Ziehen zum Verschieben, Rand ziehen für die Dauer, Miniaturbilder, Stimmen-Spur, Übergangs-Markierung.
+  - Inspector, Projekte (IndexedDB), Export per MediaRecorder: nur H.264 gilt als direktes MP4, sonst Server-Umwandlung. Teilen auf dem iPhone.
+- [x] Werkzeug `create_video` (neu, aendern, oeffnen). Ehrliche Kennzeichnung im Werkzeug-Ergebnis und auf jeder Szene.
+- Tests:
+  - Unit-Test `video` 15/15 (Vorlagen, Bereinigung, Längenanpassung, Bestätigungspflicht, Deepgram-Format, MP4-Umwandlung).
+  - Browser-Test: Video per Sprachbefehl, Stimme automatisch, Abspielen, Bearbeiten, Dauer ziehen, Umsortieren, Hinzufügen, Löschen, KI-Änderung, Export. Export-Ergebnis: H.264/AAC-MP4 mit Ton (geprüft mit ffprobe). Handy-Ansicht ohne Querscrollen.
+- Nicht getestet: echte Groq-Planung, echte Deepgram-Stimme, echte Pollinations-Bilder, echte Replicate-Clips, Aufnahme in Safari auf dem iPhone (H.264 direkt).
+
 ## Erledigt: Jarvis-Augen + Webcams auf der Erde
 
 - [x] **Jarvis-Augen** (`public/camera.js`, Werkzeug `camera_look`): Vollbild-Kamera mit HUD und Scan-Effekt. Auf Sprachbefehl fordert der Server ein Einzelbild an (`camera`/`camera_frame` über die WebSocket-Verbindung, Zeitlimit 30 s). Das Bild wird analysiert (`describeImage`), nicht gespeichert, und die Antwort kommt direkt als Werkzeug-Ergebnis. Dazu Front/Rück-Wechsel, Auslöser mit Frage, Schließen beim Verlassen der App. Personen werden nie identifiziert.
@@ -129,6 +150,7 @@ Diese Datei hält fest, was analysiert, gebaut und getestet wurde und was noch o
 | `TWILIO_*` | optional, kostenpflichtig | echte Anrufe |
 | `GUMROAD_ACCESS_TOKEN`, `CESIUM_ION_TOKEN`, `ELEVENLABS_*` | optional | Verkaufszahlen, schärfere Erde, andere Stimme |
 | `WINDY_WEBCAMS_KEY` | optional, kostenlos | weltweite Webcams auf der 3D-Erde |
+| `REPLICATE_API_TOKEN`, `REPLICATE_VIDEO_MODEL`, `REPLICATE_VIDEO_PRICE` | optional, kostenpflichtig | echte KI-Video-Clips im Video Studio (nur nach Bestätigung) |
 
 ## Testergebnisse (Memory Palace + Studio)
 

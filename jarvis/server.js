@@ -34,6 +34,7 @@ import { productFiles } from './bauplan-content.js';
 import { designScene, sanitizeScene } from './model3d.js';
 import { sanitizeProject, writeProject } from './projects.js';
 import { describeImage, llmLabel, llmProvider } from './llm.js';
+import { aiClipFile, aiClipStatus, aiVideoConfig, convertToMp4, editVideo, fetchImage, ffmpegPath, planVideo, sanitizeVideo, startAiClip, synthesizeVoice, voiceConfigured } from './video.js';
 import { twilioConfigured } from './phone-call.js';
 import { telegramAssistantEnabled } from './telegram-bot.js';
 import { cancelTasks, startTask } from './tasks.js';
@@ -83,6 +84,24 @@ const clientId = (request) => String(request.headers['x-forwarded-for'] || reque
 function sendJson(response, status, body, headers = {}) {
   response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...headers });
   response.end(JSON.stringify(body));
+}
+
+function readBuffer(request, limit) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    request.on('data', (chunk) => {
+      size += chunk.length;
+      if (size > limit) {
+        reject(new Error('Datei zu groß'));
+        request.destroy();
+        return;
+      }
+      chunks.push(chunk);
+    });
+    request.on('end', () => resolve(Buffer.concat(chunks)));
+    request.on('error', reject);
+  });
 }
 
 function readBody(request, limit = 2048) {
@@ -521,6 +540,56 @@ const httpServer = createServer(async (request, response) => {
         'Bilder malen (Pollinations)': yes(true, 'ohne Schlüssel')
       }
     });
+    return;
+  }
+
+  // --- Video Studio ---
+  if (pathname.startsWith('/api/video/')) {
+    if (!isAuthenticated(request)) {
+      sendJson(response, 401, { error: 'Nicht angemeldet' });
+      return;
+    }
+    const url = new URL(request.url, 'http://localhost');
+    try {
+      if (pathname === '/api/video/status' && request.method === 'GET') {
+        const ai = aiVideoConfig();
+        sendJson(response, 200, { llm: Boolean(llmProvider()), voice: voiceConfigured(), mp4Server: Boolean(ffmpegPath()), aiVideo: { enabled: ai.enabled, model: ai.model, price: ai.price } });
+      } else if (pathname === '/api/video/plan' && request.method === 'POST') {
+        const body = JSON.parse(await readBody(request, 8192));
+        sendJson(response, 200, { project: await planVideo(body.description, { duration: body.duration, format: body.format, voice: body.voice !== false }) });
+      } else if (pathname === '/api/video/edit' && request.method === 'POST') {
+        const body = JSON.parse(await readBody(request, 200_000));
+        sendJson(response, 200, { project: await editVideo(body.project, body.instruction) });
+      } else if (pathname === '/api/video/voice' && request.method === 'POST') {
+        const body = JSON.parse(await readBody(request, 8192));
+        const audio = await synthesizeVoice(body.text);
+        response.writeHead(200, { 'content-type': 'audio/mpeg', 'cache-control': 'no-store' });
+        response.end(audio);
+      } else if (pathname === '/api/video/image' && request.method === 'GET') {
+        const image = await fetchImage(url.searchParams.get('prompt'), url.searchParams.get('format'), url.searchParams.get('seed'));
+        response.writeHead(200, { 'content-type': image.type, 'cache-control': 'private, max-age=86400' });
+        response.end(image.bytes);
+      } else if (pathname === '/api/video/ai-clip' && request.method === 'POST') {
+        const body = JSON.parse(await readBody(request, 8192));
+        sendJson(response, 200, await startAiClip({ prompt: body.prompt, format: body.format, confirmed: body.confirmed === true }));
+      } else if (pathname === '/api/video/ai-clip' && request.method === 'GET') {
+        sendJson(response, 200, await aiClipStatus(url.searchParams.get('id') || ''));
+      } else if (pathname === '/api/video/ai-clip/file' && request.method === 'GET') {
+        const bytes = aiClipFile(url.searchParams.get('id') || '');
+        if (!bytes) throw new Error('Clip nicht (mehr) vorhanden.');
+        response.writeHead(200, { 'content-type': 'video/mp4', 'cache-control': 'no-store' });
+        response.end(bytes);
+      } else if (pathname === '/api/video/convert' && request.method === 'POST') {
+        const input = await readBuffer(request, 250 * 1024 * 1024);
+        const mp4 = await convertToMp4(input);
+        response.writeHead(200, { 'content-type': 'video/mp4', 'content-disposition': 'attachment; filename="jarvis-video.mp4"', 'cache-control': 'no-store' });
+        response.end(mp4);
+      } else {
+        sendJson(response, 404, { error: 'Unbekannt' });
+      }
+    } catch (error) {
+      if (!response.headersSent) sendJson(response, 400, { error: error.message });
+    }
     return;
   }
 
@@ -983,6 +1052,7 @@ browserWss.on('connection', (browser, request) => {
     globeMemory: {},
     modelMemory: {},
     projectMemory: {},
+    videoMemory: {},
     startTask(goal) {
       return startTask(goal, {
         onEvent(event) {
@@ -1290,6 +1360,12 @@ browserWss.on('connection', (browser, request) => {
         .catch((error) => toBrowser({ type: 'globe', action: 'error', message: `Ort nicht erkannt: ${error.message}` }));
     } else if (message.type === 'globe_location_error') {
       if (agentOpen) agent.sendInjectAgentMessage({ type: 'InjectAgentMessage', message: `Ich konnte deinen Standort nicht abfragen: ${String(message.message || 'keine Erlaubnis').slice(0, 120)}. Erlaube den Standortzugriff für Jarvis im Browser.` });
+    } else if (message.type === 'video_current') {
+      try {
+        context.videoMemory.last = sanitizeVideo(message.project);
+      } catch {
+        // ignore malformed projects
+      }
     } else if (message.type === 'camera_frame') {
       cameraRequests.get(String(message.id))?.({ image: typeof message.image === 'string' ? message.image : '', error: message.error });
     } else if (message.type === 'confirm_response') {

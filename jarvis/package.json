@@ -1,7 +1,7 @@
 {
   "name": "jarvis",
   "version": "0.2.0",
-  "description": "Persönlicher Sprachassistent in der Cloud mit Deepgram Voice Agent, ElevenLabs und optionaler Laptop-Steuerung",
+  "description": "Pers\u00f6nlicher Sprachassistent in der Cloud mit Deepgram Voice Agent, ElevenLabs und optionaler Laptop-Steuerung",
   "private": true,
   "type": "module",
   "scripts": {
@@ -17,5 +17,8 @@
     "nodemailer": "10.1.7",
     "qrcode": "1.5.4",
     "ws": "^8.20.0"
+  },
+  "optionalDependencies": {
+    "ffmpeg-static": "5.2.0"
   }
 }
