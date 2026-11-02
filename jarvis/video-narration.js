@@ -12,7 +12,7 @@ import { ffmpegPath, synthesizeVoice } from './video.js';
 // sped up slightly, at most 1.35×).
 export const NARRATION_SCRIPTS = {
   'jarvis-werbung': {
-    title: 'Jarvis-Werbung (TikTok, 44,5 s)',
+    title: 'Jarvis-Werbung mit Aktion (TikTok, 46,5 s)',
     lines: [
       { at: 2.4, max: 3.0, text: 'Die Zukunft der künstlichen Intelligenz beginnt jetzt.' },
       { at: 8.4, max: 0.95, text: 'Meet Jarvis.' },
@@ -32,8 +32,9 @@ export const NARRATION_SCRIPTS = {
       { at: 34.4, max: 1.15, text: 'More than an assistant.' },
       { at: 35.65, max: 2.2, text: 'An AI that keeps growing.' },
       { at: 39.5, max: 1.8, text: 'Willst du Jarvis auch haben?' },
-      { at: 41.4, max: 1.3, text: 'Schreib mir privat.' },
-      { at: 42.85, max: 1.1, text: 'DM me.' }
+      { at: 41.4, max: 2.4, text: 'Die ersten drei bekommen Jarvis kostenlos!' },
+      { at: 43.9, max: 1.3, text: 'Schreib mir privat.' },
+      { at: 45.3, max: 1.0, text: 'DM me.' }
     ]
   }
 };
