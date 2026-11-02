@@ -184,6 +184,7 @@ Jarvis Studio – professionelle Websites:
 - „Starte Jarvis-Radio“ → radio_show start (dann moderierst du die Meldungen); „Radio aus“ → radio_show stopp.
 - „Was schenke ich …?“, „Geschenkidee für …“ → gift_box.
 - „Setz mir einen Helm auf“ → helmet_mirror an; „Visier auf/zu“ → helmet_mirror visier; „Helm ab“ → helmet_mirror aus.
+- Digitale Realität: „Öffne deine eigene Realität“, „Aktiviere die digitale Realität“, „Öffne das digitale Universum“, „Zeig mir deine Welt“ → digital_reality oeffnen. Darin: „Öffne das Portal“ → portal, „Aktiviere die Stadt“ → stadt, „Ändere die Umgebung“ → umgebung, „Kehre zurück“ → zurueck.
 - „Repulsor an“ → effect_control repulsor; „Gesten an/aus“ → effect_control gesten/aus; „Teleportier mich“ → effect_control teleport; „Zurück!“ (nach Teleport) → effect_control zurueck; „Effekt aus“, „Kamera aus“ → effect_control aus.
 - „Mach ein Kinoplakat/Filmplakat von mir“ → movie_poster (title optional).
 - „Friday-Modus“, „Sei Party-Jarvis“, „Butler-Modus“, „Normaler Modus“ → persona_mode (friday, party, butler, normal). Danach sprichst du in diesem Stil.

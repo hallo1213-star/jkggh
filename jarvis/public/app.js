@@ -19,6 +19,7 @@ import { handleFaceMessage, initFace } from './face.js';
 import { handleExtrasMessage, initExtras } from './extras.js';
 import { handleEffectMessage, initCamFx } from './camfx.js';
 import { openPoster } from './poster.js';
+import { handleRealityMessage, initReality } from './reality.js';
 import { handleFunMessage, initFun, levelState, personaColor } from './fun.js';
 import { handleMirrorMessage, initMirror } from './mirror.js';
 import { handlePrankMessage, initPrank } from './prank.js';
@@ -1275,6 +1276,7 @@ initFace({ toast, level: () => smoothLevel });
 initExtras({ toast, level: () => smoothLevel, addShopping: (text) => { const list = loadShoppingList(); if (!list.some((i) => i.text === text)) storeShoppingList([...list, { text, done: false }]); toast(`Auf die Einkaufsliste: ${text}`); } });
 initMirror({ toast });
 initCamFx({ toast, sendText });
+initReality({ toast });
 initFun({ toast, send: (message) => { if (state.ws?.readyState === 1) state.ws.send(JSON.stringify(message)); } });
 initPrank({ send: (message) => { if (state.ws?.readyState === 1) state.ws.send(JSON.stringify(message)); } });
 initFilm({ openBusiness, openFactory, openSuit: openSuitLab });
@@ -1602,6 +1604,9 @@ function handleMessage(message) {
       break;
     case 'effect':
       handleEffectMessage(message);
+      break;
+    case 'reality':
+      handleRealityMessage(message);
       break;
     case 'poster':
       openPoster(message);

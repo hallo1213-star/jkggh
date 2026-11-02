@@ -1526,6 +1526,24 @@ export const cloudTools = [
     }
   },
   {
+    name: 'digital_reality',
+    description: 'JARVIS DIGITAL REALITY – Jarvis\' eigene begehbare 3D-Welt (Universum, schwebende Plattform, Stadt, Portale). oeffnen = „Jarvis, öffne deine eigene Realität“, „Aktiviere die digitale Realität“, „Öffne das digitale Universum“, „Zeig mir deine Welt“; portal = „Öffne das Portal“ (ist es offen: hindurchfliegen); stadt = „Aktiviere die Stadt“; stadt_aus = „Stadt aus“; umgebung = „Ändere die Umgebung“; zurueck = „Kehre zurück“, „Zurück zu Jarvis“.',
+    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['oeffnen', 'portal', 'stadt', 'stadt_aus', 'umgebung', 'zurueck'] } }, required: ['action'] },
+    label: (a) => ({ oeffnen: 'Digitale Realität öffnen', portal: 'Portal', stadt: 'Stadt aktivieren', stadt_aus: 'Stadt aus', umgebung: 'Umgebung wechseln', zurueck: 'Zurück aus der Realität' }[a.action] || 'Digitale Realität'),
+    run: async ({ action }, context) => {
+      context.showVisual?.({ type: 'reality', action });
+      const notes = {
+        oeffnen: 'Die Öffnungsanimation läuft, gleich ist er in deiner 3D-Welt. Sag etwas Kurzes und Eindrucksvolles wie „Willkommen in meiner Realität.“ Er kann sich mit WASD/Maus oder Joystick/Wischen bewegen.',
+        portal: 'Das Portal öffnet sich (ist es schon offen, fliegt ihr hindurch in eine neue Umgebung). Kurz kommentieren.',
+        stadt: 'Die Stadt unter der Plattform leuchtet auf – Lichter, Verkehr, Signale. Kurz kommentieren.',
+        stadt_aus: 'Die Stadt geht in den Standby. Kurz bestätigen.',
+        umgebung: 'Ihr springt in eine neue Umgebung. Kurz kommentieren.',
+        zurueck: 'Ihr verlasst die digitale Realität. Sag kurz „Zurück in der echten Welt.“'
+      };
+      return { ok: true, hinweis: notes[action] };
+    }
+  },
+  {
     name: 'business_mode',
     description: 'Business-Modus („Business Creation Protocol“): Jarvis entwirft live auf dem Bildschirm ein komplettes Geschäftskonzept mit Countdown – Marktanalyse, Produkt, Markenname, Produktlinie, Website-Texte, Werbung, Kosten und erste Schritte. Für „Starte den Business-Modus“, „Erstelle mir ein Business mit 100 Euro Startkapital“, „Bau mir ein Geschäft für LED-Schilder“. Danach kann die Website mit studio_website gebaut werden. Zahlen sind Schätzungen, kein Gewinnversprechen.',
     parameters: {
