@@ -211,6 +211,8 @@ Sag zum Beispiel **„Jarvis, erstelle mir eine 30-sekündige Werbung für meine
 - Das Video wird in Echtzeit aufgenommen. Lass die App so lange geöffnet und im Vordergrund.
 - Auf dem iPhone sicherst du es mit „Teilen“ direkt in Fotos.
 
+**Vertonen mit Jarvis-Stimme:** Oben im Video Studio auf **🎙️ Vertonen** tippen, den Sprecher-Text wählen (z. B. „Jarvis-Werbung“) und dein fertiges MP4 auswählen. Jarvis spricht jeden Text mit seiner Deepgram-Stimme genau dann, wenn er im Video erscheint. Die Musik wird dabei automatisch leiser, das Bild bleibt unverändert. Das kostet etwa 1 Cent Deepgram-Guthaben.
+
 **Kosten:**
 - Renderer, Musik, KI-Bilder (Pollinations) und der MP4-Export sind kostenlos.
 - Die Sprecherstimme nutzt deinen Deepgram-Schlüssel und verbraucht dein Deepgram-Guthaben (laut Deepgram-Preisliste grob 3 Cent pro 1000 Zeichen, ein 30-Sekunden-Video hat meist unter 500 Zeichen). Jede Stimme wird gespeichert und nicht doppelt bezahlt.

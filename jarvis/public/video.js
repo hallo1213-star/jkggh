@@ -102,6 +102,7 @@ function build() {
       <div class="vs-brand"><span class="vs-mark"></span><b>VIDEO STUDIO</b></div>
       <input class="vs-title" aria-label="Titel des Videos" maxlength="80">
       <div class="vs-top-actions">
+        <button class="vs-btn ghost" data-act="narrate" type="button">🎙️ Vertonen</button>
         <button class="vs-btn ghost" data-act="projects" type="button">📁 Projekte</button>
         <button class="vs-btn primary" data-act="export" type="button">⬇️ Exportieren</button>
         <button class="vs-icon" data-act="close" type="button" aria-label="Video Studio schließen">✕</button>
@@ -206,6 +207,7 @@ function build() {
     else if (act === 'voices') generateVoices();
     else if (act === 'export') openExport();
     else if (act === 'projects') openProjects();
+    else if (act === 'narrate') openNarration();
   });
   document.addEventListener('keydown', (event) => {
     if (overlay.hidden || /input|textarea|select/i.test(event.target.tagName)) return;
@@ -983,6 +985,76 @@ function showResult(blob, how, close, size) {
   box.append(el('h3', '', '✅ Video fertig'), video, el('p', 'vs-muted', `${size} · ${(blob.size / 1048576).toFixed(1).replace('.', ',')} MB · ${how}`), row);
   const closeResult = modal(box);
   done.addEventListener('click', () => { closeResult(); URL.revokeObjectURL(url); });
+}
+
+
+// --- narrate a finished video with Jarvis' voice (e.g. the TikTok ad) ----------------
+async function openNarration() {
+  pause();
+  let info;
+  try { info = await api('/api/video/narration-scripts'); } catch (error) { ctx.toast(error.message, 'error'); return; }
+  const box = el('div', 'vs-dialog');
+  const script = selectBox(Object.fromEntries(info.scripts.map((s) => [s.id, s.title])), info.scripts[0]?.id);
+  const lines = el('ol', 'vs-lines');
+  const showLines = () => {
+    const s = info.scripts.find((x) => x.id === script.value);
+    lines.replaceChildren(...(s?.lines || []).map((l) => { const li = el('li'); li.append(el('b', '', `${l.at.toFixed(1).replace('.', ',')} s`), document.createTextNode(` ${l.text}`)); return li; }));
+  };
+  script.addEventListener('change', showLines);
+  showLines();
+  const file = Object.assign(el('input', 'vs-input'), { type: 'file', accept: 'video/mp4,video/*' });
+  const start = el('button', 'vs-btn primary', '🎙️ Mit Jarvis-Stimme vertonen');
+  const cancel = el('button', 'vs-btn ghost', 'Abbrechen');
+  start.type = cancel.type = 'button';
+  const status = el('p', 'vs-muted', '');
+  box.append(el('h3', '', '🎙️ Video mit Jarvis-Stimme vertonen'), el('p', 'vs-muted', 'Jarvis spricht jeden Text mit seiner eigenen Stimme genau dann, wenn er im Video erscheint. Die Musik wird dabei automatisch leiser, das Bild bleibt unverändert.'), field('Sprecher-Text', script), lines, field('Dein Video (MP4)', file));
+  if (!info.voice) box.append(el('p', 'vs-warn', 'Für die Stimme fehlt DEEPGRAM_API_KEY bei Render.'));
+  if (!info.mp4Server) box.append(el('p', 'vs-warn', 'Auf dem Server ist kein ffmpeg verfügbar – Vertonen geht gerade nicht.'));
+  box.append(el('p', 'vs-muted', 'Kosten: nutzt dein Deepgram-Guthaben, ca. 350 Zeichen ≈ 1 Cent.'), status);
+  const row = el('div', 'vs-insp-actions');
+  row.append(cancel, start);
+  box.append(row);
+  const close = modal(box);
+  cancel.addEventListener('click', close);
+  start.disabled = !info.voice || !info.mp4Server;
+  start.addEventListener('click', async () => {
+    const video = file.files?.[0];
+    if (!video) { ctx.toast('Wähle zuerst dein Video aus.', 'error'); return; }
+    start.disabled = true;
+    status.textContent = `⏳ Lade Video hoch (${(video.size / 1048576).toFixed(1).replace('.', ',')} MB) und vertone … das dauert etwa eine halbe Minute.`;
+    try {
+      const response = await fetch(`/api/video/narrate?script=${encodeURIComponent(script.value)}`, { method: 'POST', headers: { 'content-type': video.type || 'video/mp4' }, body: video });
+      if (!response.ok) throw new Error((await response.json().catch(() => ({}))).error || `Fehler ${response.status}`);
+      const blob = new Blob([await response.blob()], { type: 'video/mp4' });
+      close();
+      showNarrated(blob, Number(response.headers.get('x-narration-lines')) || 0);
+    } catch (error) {
+      status.textContent = `⚠️ ${error.message}`;
+      start.disabled = false;
+    }
+  });
+}
+
+function showNarrated(blob, lines) {
+  const name = 'jarvis-werbung-mit-stimme.mp4';
+  const url = URL.createObjectURL(blob);
+  const box = el('div', 'vs-dialog');
+  const video = Object.assign(el('video', 'vs-result'), { src: url, controls: true, playsInline: true });
+  const row = el('div', 'vs-insp-actions');
+  row.append(Object.assign(el('a', 'vs-btn primary', `⬇️ ${name} speichern`), { href: url, download: name }));
+  const fileObj = new File([blob], name, { type: 'video/mp4' });
+  if (navigator.canShare?.({ files: [fileObj] })) {
+    const share = el('button', 'vs-btn', '📤 Teilen / In Fotos sichern');
+    share.type = 'button';
+    share.addEventListener('click', () => navigator.share({ files: [fileObj] }).catch(() => {}));
+    row.append(share);
+  }
+  const done = el('button', 'vs-btn ghost', 'Fertig');
+  done.type = 'button';
+  row.append(done);
+  box.append(el('h3', '', '✅ Vertont'), video, el('p', 'vs-muted', `${lines} Sätze mit Jarvis' Stimme · ${(blob.size / 1048576).toFixed(1).replace('.', ',')} MB`), row);
+  const closeIt = modal(box);
+  done.addEventListener('click', () => { closeIt(); URL.revokeObjectURL(url); });
 }
 
 // --- voice assistant ---------------------------------------------------------------------------------

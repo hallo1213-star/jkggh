@@ -34,6 +34,7 @@ import { productFiles } from './bauplan-content.js';
 import { designScene, sanitizeScene } from './model3d.js';
 import { sanitizeProject, writeProject } from './projects.js';
 import { describeImage, llmLabel, llmProvider } from './llm.js';
+import { NARRATION_SCRIPTS, narrateVideo } from './video-narration.js';
 import { aiClipFile, aiClipStatus, aiVideoConfig, convertToMp4, editVideo, fetchImage, ffmpegPath, planVideo, sanitizeVideo, startAiClip, synthesizeVoice, voiceConfigured } from './video.js';
 import { twilioConfigured } from './phone-call.js';
 import { telegramAssistantEnabled } from './telegram-bot.js';
@@ -579,6 +580,13 @@ const httpServer = createServer(async (request, response) => {
         if (!bytes) throw new Error('Clip nicht (mehr) vorhanden.');
         response.writeHead(200, { 'content-type': 'video/mp4', 'cache-control': 'no-store' });
         response.end(bytes);
+      } else if (pathname === '/api/video/narration-scripts' && request.method === 'GET') {
+        sendJson(response, 200, { voice: voiceConfigured(), mp4Server: Boolean(ffmpegPath()), scripts: Object.entries(NARRATION_SCRIPTS).map(([id, s]) => ({ id, title: s.title, lines: s.lines })) });
+      } else if (pathname === '/api/video/narrate' && request.method === 'POST') {
+        const input = await readBuffer(request, 250 * 1024 * 1024);
+        const result = await narrateVideo(input, url.searchParams.get('script') || '');
+        response.writeHead(200, { 'content-type': 'video/mp4', 'content-disposition': 'attachment; filename="jarvis-werbung-mit-stimme.mp4"', 'x-narration-lines': String(result.lines), 'cache-control': 'no-store' });
+        response.end(result.video);
       } else if (pathname === '/api/video/convert' && request.method === 'POST') {
         const input = await readBuffer(request, 250 * 1024 * 1024);
         const mp4 = await convertToMp4(input);
