@@ -20,6 +20,10 @@ import { handleFaceMessage, initFace } from './face.js';
 import { handleExtrasMessage, initExtras } from './extras.js';
 import { handleEffectMessage, initCamFx } from './camfx.js';
 import { openPoster } from './poster.js';
+import { handleFx3, initFx3 } from './fx3.js';
+import { handleFx4, initFx4 } from './fx4.js';
+import { showMindmap } from './mindmap.js';
+import { openChess } from './chess.js';
 import { handleRealityMessage, initReality } from './reality.js';
 import { handleFunMessage, initFun, levelState, personaColor } from './fun.js';
 import { handleMirrorMessage, initMirror } from './mirror.js';
@@ -1278,6 +1282,8 @@ initExtras({ toast, level: () => smoothLevel, addShopping: (text) => { const lis
 initMirror({ toast });
 initCamFx({ toast, sendText });
 initReality({ toast });
+initFx3({ toast, muteJarvis: (mute) => { if (state.connected && state.micMuted !== mute) els.micToggle.click(); } });
+initFx4({ toast });
 initFun({ toast, send: (message) => { if (state.ws?.readyState === 1) state.ws.send(JSON.stringify(message)); } });
 initPrank({ send: (message) => { if (state.ws?.readyState === 1) state.ws.send(JSON.stringify(message)); } });
 initFilm({ openBusiness, openFactory, openSuit: openSuitLab });
@@ -1604,7 +1610,21 @@ function handleMessage(message) {
       handleExtrasMessage(message);
       break;
     case 'effect':
-      handleEffectMessage(message);
+      if (['klinge', 'hologramm', 'stimme'].includes(message.action)) handleFx3(message.action);
+      else { if (message.action === 'aus') handleFx3('aus'); handleEffectMessage(message); }
+      break;
+    case 'mindmap':
+      showMindmap(message.map, message.added);
+      break;
+    case 'fireworks':
+    case 'gravity':
+    case 'blackhole':
+    case 'capsule':
+    case 'treasure':
+      handleFx4(message);
+      break;
+    case 'chess':
+      openChess(message.level);
       break;
     case 'reality':
       handleRealityMessage(message);

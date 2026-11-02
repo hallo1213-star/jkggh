@@ -1,4 +1,5 @@
 // Functions that run in the cloud and work even when the laptop is off.
+import { buildMindmap, extendMap } from './mindmap.js';
 import { giftIdeas } from './gifts.js';
 import { designSuit } from './suit.js';
 import { planBusiness, websiteBrief } from './business-plan.js';
@@ -1433,12 +1434,12 @@ export const cloudTools = [
   },
   {
     name: 'effect_control',
-    description: 'Kamera-Effekte (laufen nur auf seinem Gerät, niemand wird erkannt): repulsor = Repulsor in seiner Handfläche, Faust öffnen schießt einen Energiestrahl; gesten = Jarvis mit Handgesten steuern (wischen = Tabs wechseln, Daumen hoch = „Ja“, offene Hand halten = schließen); teleport = er löst sich in Partikel auf und wird unsichtbar; zurueck = nach dem Teleport wieder erscheinen; aus = Kamera-Effekt beenden.',
-    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['repulsor', 'gesten', 'teleport', 'zurueck', 'aus'] } }, required: ['action'] },
-    label: (a) => ({ repulsor: 'Repulsor-Hand', gesten: 'Gesten-Steuerung', teleport: 'Teleport', zurueck: 'Zurück-Teleport', aus: 'Kamera-Effekt aus' }[a.action] || 'Effekt'),
+    description: 'Kamera-/Mikrofon-Effekte (laufen nur auf seinem Gerät, niemand wird erkannt): klinge = rote Energieklinge aus seiner Faust („Energieklinge an“); hologramm = 10-Sekunden-Hologramm-Botschaft von ihm aufnehmen und speichern („Nimm eine Hologramm-Nachricht auf“); stimme = Helm-/Roboterstimme für sein Mikrofon mit Aufnahme („Gib mir eine Roboterstimme“); repulsor = Repulsor in seiner Handfläche, Faust öffnen schießt einen Energiestrahl; gesten = Jarvis mit Handgesten steuern (wischen = Tabs wechseln, Daumen hoch = „Ja“, offene Hand halten = schließen); teleport = er löst sich in Partikel auf und wird unsichtbar; zurueck = nach dem Teleport wieder erscheinen; aus = Kamera-Effekt beenden.',
+    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['repulsor', 'gesten', 'teleport', 'zurueck', 'klinge', 'hologramm', 'stimme', 'aus'] } }, required: ['action'] },
+    label: (a) => ({ repulsor: 'Repulsor-Hand', gesten: 'Gesten-Steuerung', teleport: 'Teleport', zurueck: 'Zurück-Teleport', klinge: 'Energieklinge', hologramm: 'Hologramm-Botschaft', stimme: 'Helm-Stimme', aus: 'Effekt aus' }[a.action] || 'Effekt'),
     run: async ({ action }, context) => {
       context.showVisual?.({ type: 'effect', action });
-      const notes = { repulsor: 'Kamera öffnet sich. Erklär kurz: Handfläche zeigen, Faust machen und öffnen = Schuss.', gesten: 'Gesten sind an: nach links/rechts wischen wechselt die Bereiche, Daumen hoch heißt Ja, offene Hand kurz halten schließt Fenster.', teleport: 'Er löst sich gleich in Partikel auf. Sag etwas Cooles wie „Teleport aktiviert.“', zurueck: 'Er erscheint wieder. Kurz kommentieren.', aus: 'Kurz bestätigen.' };
+      const notes = { klinge: 'Kamera öffnet sich. Erklär kurz: Faust machen – die Klinge fährt aus; schnell schwingen zischt.', hologramm: 'Kamera öffnet sich, nach einem Countdown nimmt Jarvis 10 Sekunden auf und macht ein Hologramm daraus. Sag ihm, er soll in die Kamera sprechen.', stimme: 'Sein Mikrofon klingt jetzt wie eine Helm-Stimme (am besten mit Kopfhörern, sonst pfeift es). Er kann einen Clip aufnehmen. Hinweis: Solange der Effekt läuft, ist das Gespräch mit dir pausiert.', repulsor: 'Kamera öffnet sich. Erklär kurz: Handfläche zeigen, Faust machen und öffnen = Schuss.', gesten: 'Gesten sind an: nach links/rechts wischen wechselt die Bereiche, Daumen hoch heißt Ja, offene Hand kurz halten schließt Fenster.', teleport: 'Er löst sich gleich in Partikel auf. Sag etwas Cooles wie „Teleport aktiviert.“', zurueck: 'Er erscheint wieder. Kurz kommentieren.', aus: 'Kurz bestätigen.' };
       return { ok: true, hinweis: notes[action] };
     }
   },
@@ -1542,6 +1543,74 @@ export const cloudTools = [
       };
       return { ok: true, hinweis: notes[action] };
     }
+  },
+  {
+    name: 'mindmap',
+    description: 'Gedanken-Karte: Jarvis baut animiert eine Mindmap zu einem Thema (Thema in der Mitte, Äste mit Unterpunkten) – zum Lernen, für Referate. neu = „Mach mir eine Gedanken-Karte zu …“; erweitern = „Füg … hinzu“ (optional branch = Ast, an den es soll).',
+    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['neu', 'erweitern'] }, topic: { type: 'string' }, text: { type: 'string' }, branch: { type: 'string' } }, required: ['action'] },
+    label: (a) => (a.action === 'neu' ? `Gedanken-Karte: ${a.topic || ''}` : `Gedanken-Karte: + ${a.text || ''}`),
+    run: async ({ action, topic, text, branch }, context) => {
+      const mem = context.mindmapMemory || (context.mindmapMemory = {});
+      if (action === 'neu') {
+        if (!String(topic || '').trim()) throw new Error('Zu welchem Thema soll ich die Gedanken-Karte machen?');
+        mem.last = await buildMindmap(topic);
+      } else {
+        if (!mem.last) throw new Error('Es ist noch keine Gedanken-Karte offen. Sag zum Beispiel: „Mach mir eine Gedanken-Karte zu Vulkanen.“');
+        mem.last = extendMap(mem.last, text, branch);
+      }
+      context.showVisual?.({ type: 'mindmap', map: mem.last, added: action === 'erweitern' ? String(text || '') : '' });
+      return { thema: mem.last.thema, aeste: mem.last.aeste.map((b) => `${b.text}: ${b.kinder.join(', ')}`), hinweis: action === 'neu' ? 'Die Gedanken-Karte baut sich auf dem Bildschirm auf. Nenne kurz die Hauptäste.' : 'Hinzugefügt. Kurz bestätigen.' };
+    }
+  },
+  {
+    name: 'fireworks',
+    description: 'Feuerwerk mit Animation und Knall-Sounds; beim Finale formen die Funken einen Namen/Text („Feuerwerk!“, „Schreib meinen Namen ins Feuerwerk“).',
+    parameters: { type: 'object', properties: { text: { type: 'string', description: 'Name/Text fürs Finale (kurz), falls genannt' } } },
+    label: () => 'Feuerwerk',
+    run: async ({ text }, context) => {
+      context.showVisual?.({ type: 'fireworks', text: String(text || process.env.USER_NAME || '').slice(0, 14) });
+      return { ok: true, hinweis: 'Das Feuerwerk läuft. Sag etwas Feierliches in einem kurzen Satz.' };
+    }
+  },
+  {
+    name: 'gravity',
+    description: 'Schwerkraft-Modus: an = alle Teile des Jarvis-Bildschirms fallen herunter, prallen ab und lassen sich werfen („Schwerkraft an“); aus = alles fliegt zurück („Schwerkraft aus“).',
+    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['an', 'aus'] } }, required: ['action'] },
+    label: (a) => (a.action === 'an' ? 'Schwerkraft an' : 'Schwerkraft aus'),
+    run: async ({ action }, context) => { context.showVisual?.({ type: 'gravity', action }); return { ok: true, hinweis: action === 'an' ? 'Alles fällt herunter. Sag etwas Witziges, z. B. „Ups. Das war die Schwerkraft.“' : 'Alles fliegt zurück. Kurz bestätigen.' }; }
+  },
+  {
+    name: 'black_hole',
+    description: 'Schwarzes Loch (Animation/Prank): der Bildschirm wird spiralförmig hineingesaugt und danach wieder ausgespuckt. Für „Öffne ein schwarzes Loch“.',
+    parameters: { type: 'object', properties: {} },
+    label: () => 'Schwarzes Loch',
+    run: async (args, context) => { context.showVisual?.({ type: 'blackhole' }); return { ok: true, hinweis: 'Sag dramatisch und kurz: „Achtung – Gravitationsanomalie!“' }; }
+  },
+  {
+    name: 'time_capsule',
+    description: 'Zeitkapsel: eine Nachricht für sein zukünftiges Ich wird animiert eingeschlossen und erst nach der gewählten Zeit geöffnet (auf diesem Gerät). neu = Nachricht einschließen (text = seine Nachricht wörtlich, days = in wie vielen Tagen öffnen, Standard 365); zeigen = alle Kapseln mit Countdown.',
+    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['neu', 'zeigen'] }, text: { type: 'string' }, days: { type: 'number' } }, required: ['action'] },
+    label: (a) => (a.action === 'neu' ? 'Zeitkapsel versiegeln' : 'Zeitkapseln zeigen'),
+    run: async ({ action, text, days }, context) => {
+      if (action === 'neu' && !String(text || '').trim()) throw new Error('Was soll in die Zeitkapsel? Sag mir deine Nachricht.');
+      const d = Math.min(3650, Math.max(1, Math.round(Number(days) || 365)));
+      context.showVisual?.({ type: 'capsule', action, text: String(text || '').slice(0, 1000), days: d });
+      return action === 'neu' ? { versiegelt: true, oeffnetInTagen: d, hinweis: `Die Kapsel wird versiegelt und öffnet sich in ${d} Tagen auf diesem Gerät. Verrate den Inhalt nicht nochmal.` } : { ok: true, hinweis: 'Die Kapseln mit Countdown sind auf dem Bildschirm.' };
+    }
+  },
+  {
+    name: 'treasure_hunt',
+    description: 'GPS-Schatzsuche draußen: Jarvis versteckt 3 virtuelle Schätze 100–300 m in der Nähe, Radar zeigt Richtung und Entfernung. start = neue Suche; zeigen = Radar wieder öffnen; stopp = beenden.',
+    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['start', 'zeigen', 'stopp'] } }, required: ['action'] },
+    label: (a) => ({ start: 'Schatzsuche starten', zeigen: 'Schatz-Radar', stopp: 'Schatzsuche beenden' }[a.action] || 'Schatzsuche'),
+    run: async ({ action }, context) => { context.showVisual?.({ type: 'treasure', action }); return { ok: true, hinweis: action === 'start' ? 'Das Radar öffnet sich (er muss den Standort erlauben). Sag kurz: 3 Schätze sind versteckt, und er soll auf Verkehr achten und nur auf öffentlichen Wegen gehen.' : 'Kurz bestätigen.' }; }
+  },
+  {
+    name: 'holo_chess',
+    description: 'Holo-Schach: animiertes rotes Hologramm-Schachbrett, Jarvis spielt gegen ihn. level: leicht, mittel, schwer.',
+    parameters: { type: 'object', properties: { level: { type: 'string', enum: ['leicht', 'mittel', 'schwer'] } } },
+    label: (a) => `Holo-Schach${a.level ? ` (${a.level})` : ''}`,
+    run: async ({ level }, context) => { context.showVisual?.({ type: 'chess', level: level || 'mittel' }); return { ok: true, hinweis: 'Das Schachbrett ist offen, er spielt Weiß und zieht durch Antippen (Figur, dann Zielfeld). Wünsch ihm viel Glück.' }; }
   },
   {
     name: 'business_mode',
