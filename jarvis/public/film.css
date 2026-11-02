@@ -1028,3 +1028,10 @@ body.boot-flash .boot-layer::before { content: ''; position: absolute; inset: 0;
 @media (prefers-reduced-motion: reduce) { body.boot-reveal * { animation-duration: 0.01s !important; } }
 body.theme-film .activate { top: auto; bottom: 3%; padding: 9px 18px; }
 body.theme-film .activate-sub { display: none; }
+.boot-sound { display: grid; place-items: center; padding: 0; color: #ff4d5e; position: absolute; right: calc(172px + env(safe-area-inset-right)); bottom: calc(18px + env(safe-area-inset-bottom)); pointer-events: auto; width: 38px; height: 34px; border: 1px solid rgba(255, 42, 61, 0.5); border-radius: 999px; background: rgba(10, 2, 3, 0.7); font-size: 14px; cursor: pointer; }
+.boot-layer.out .boot-sound { opacity: 0; transition: opacity 0.6s; }
+.boot-tap { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; gap: 22px; pointer-events: auto; border: 0; background: transparent; color: #fff; font: 700 13px 'Inter', sans-serif; letter-spacing: 0.4em; text-transform: uppercase; cursor: pointer; text-shadow: 0 0 14px rgba(255, 42, 61, 0.8); }
+.boot-tap[hidden] { display: none; }
+.boot-dot { width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle, #fff, #ff2a3d 60%); box-shadow: 0 0 24px 6px rgba(255, 42, 61, 0.7); animation: film-breathe 1.6s ease-in-out infinite; }
+
+.boot-sound svg { width: 18px; height: 18px; }

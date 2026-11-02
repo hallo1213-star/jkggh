@@ -2196,7 +2196,7 @@ function drawLiveEffects(cx, cy) {
 }
 
 setMode('offline');
-if (document.body.classList.contains('theme-film')) { skipIntro(); startBoot(); }
+if (document.body.classList.contains('theme-film')) { skipIntro(); startBoot({ onTap: () => { if (!els.activate.hidden && !els.activate.disabled) els.activate.click(); } }); }
 restoreHistory();
 checkSession();
 requestAnimationFrame(draw);

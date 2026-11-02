@@ -7,11 +7,15 @@ export const bootFx = { spin: 0, glow: 0 };
 let running = false;
 let done = false;
 
+import { bootSound } from './boot-sound.js';
+
 const RED = (a) => `rgba(255, 42, 61, ${a})`;
+const SOUND_KEY = 'jarvis.bootSound';
+const soundOn = () => { try { return localStorage.getItem(SOUND_KEY) !== 'off'; } catch { return true; } };
 
 export function bootRunning() { return running; }
 
-export function startBoot({ onDone = () => {} } = {}) {
+export function startBoot({ onDone = () => {}, onTap = () => {} } = {}) {
   if (running || done) return;
   if (!document.body.classList.contains('theme-film')) { done = true; onDone(); return; }
   running = true;
@@ -21,7 +25,7 @@ export function startBoot({ onDone = () => {} } = {}) {
 
   const layer = document.createElement('div');
   layer.className = 'boot-layer';
-  layer.innerHTML = '<canvas class="boot-canvas" aria-hidden="true"></canvas><p class="boot-text" aria-live="polite"></p><button type="button" class="boot-skip">Überspringen</button>';
+  layer.innerHTML = '<canvas class="boot-canvas" aria-hidden="true"></canvas><p class="boot-text" aria-live="polite"></p><button type="button" class="boot-tap" hidden><span class="boot-dot"></span><span>Tippen, um Jarvis zu starten</span></button><button type="button" class="boot-sound" aria-label="Ton der Startanimation an/aus"></button><button type="button" class="boot-skip">Überspringen</button>';
   body.append(layer);
   const canvas = layer.querySelector('canvas');
   const ctx = canvas.getContext('2d');
@@ -40,9 +44,23 @@ export function startBoot({ onDone = () => {} } = {}) {
     return r && r.width ? { x: (r.left + r.width / 2) * dpr, y: (r.top + r.height / 2) * dpr, r: (r.width / 2) * dpr } : { x: canvas.width / 2, y: canvas.height / 2, r: 200 * dpr };
   };
 
+  // sound: plays right away if the browser allows it, otherwise after one tap
+  let actx = null;
+  let sfx = null;
+  try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch { actx = null; }
+  const soundBtn = layer.querySelector('.boot-sound');
+  const SPEAKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/>';
+  const paintSound = () => { soundBtn.innerHTML = `${SPEAKER}${soundOn() ? '<path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>' : '<path d="M16 9l5 6M21 9l-5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>'}</svg>`; soundBtn.setAttribute('aria-pressed', String(soundOn())); };
+  paintSound();
+  soundBtn.addEventListener('click', () => {
+    try { localStorage.setItem(SOUND_KEY, soundOn() ? 'off' : 'on'); } catch { /* ignore */ }
+    paintSound();
+    if (!soundOn()) { sfx?.stop(); sfx = null; }
+  });
+
   const particles = [];
   const T = reduce ? { beam: 0, form: 0.1, charge: 0.4, pulse: 0.8, ui: 1.0, end: 2.2 } : { beam: 0.25, form: 1.25, charge: 2.0, pulse: 3.45, ui: 3.7, end: 5.6 };
-  const t0 = performance.now();
+  let t0 = performance.now();
   let pulsed = false; let revealed = false; let finished = false; let raf = 0;
 
   function finish() {
@@ -51,6 +69,8 @@ export function startBoot({ onDone = () => {} } = {}) {
     cancelAnimationFrame(raf);
     removeEventListener('resize', resize);
     bootFx.spin = 0; bootFx.glow = 0;
+    if (sfx) { sfx.stop(); sfx = null; }
+    setTimeout(() => actx?.close?.().catch?.(() => {}), 3000);
     body.classList.remove('booting', 'boot-core', 'boot-reveal');
     body.classList.add('jboot-finished');
     setTimeout(() => body.classList.remove('jboot-finished'), 1200);
@@ -67,7 +87,7 @@ export function startBoot({ onDone = () => {} } = {}) {
     if (r && r.width) { text.style.top = `${Math.round(r.top + r.height * 0.82 - 22)}px`; text.style.bottom = 'auto'; }
     text.classList.add('show');
   }
-  layer.querySelector('.boot-skip').addEventListener('click', finish);
+  layer.querySelector('.boot-skip').addEventListener('click', () => { if (layer.classList.contains('wait')) onTap(); finish(); });
 
   function frame(now) {
     const t = (now - t0) / 1000;
@@ -135,5 +155,28 @@ export function startBoot({ onDone = () => {} } = {}) {
     if (t >= T.end) { finish(); return; }
     raf = requestAnimationFrame(frame);
   }
-  raf = requestAnimationFrame(frame);
+  function run() {
+    t0 = performance.now();
+    if (actx && soundOn() && actx.state === 'running') {
+      try { sfx = bootSound(actx, T); } catch { sfx = null; }
+    }
+    raf = requestAnimationFrame(frame);
+  }
+
+  if (!actx || !soundOn() || actx.state === 'running') run();
+  else {
+    // The browser blocks sound until the first tap (always on iPhone): wait on the
+    // black screen; the tap starts the animation with sound and the microphone.
+    const tap = layer.querySelector('.boot-tap');
+    tap.hidden = false;
+    layer.classList.add('wait');
+    const go = () => {
+      tap.removeEventListener('click', go);
+      layer.classList.remove('wait');
+      tap.hidden = true;
+      onTap();
+      actx.resume().catch(() => {}).finally(run);
+    };
+    tap.addEventListener('click', go);
+  }
 }
