@@ -14,7 +14,8 @@ import { handleCameraMessage, initCamera } from './camera.js';
 import { handleVideoMessage, initVideo } from './video.js';
 import { handleDesignMessage, initDesign } from './design.js';
 import { handleBusinessMessage, initBusiness, openBusiness } from './business.js';
-import { filmTab, initFilm } from './film.js';
+import { filmTab, initFilm, skipIntro } from './film.js';
+import { bootFx, startBoot } from './boot.js';
 import { handleFaceMessage, initFace } from './face.js';
 import { handleExtrasMessage, initExtras } from './extras.js';
 import { handleEffectMessage, initCamFx } from './camfx.js';
@@ -2060,9 +2061,11 @@ function draw() {
 function drawFilmReactor(width, height, speaking) {
   const cx = width / 2;
   const cy = height / 2;
-  const speed = state.mode === 'thinking' || reactorFx().working ? 0.03 : state.mode === 'offline' ? 0.003 : 0.008;
+  const speed = (state.mode === 'thinking' || reactorFx().working ? 0.03 : state.mode === 'offline' ? 0.003 : 0.008) + bootFx.spin;
   if (!reduceMotion) angle += speed;
-  const [r, g, b] = palette();
+  const glowFilter = bootFx.glow > 0.01 ? `brightness(${(1 + bootFx.glow * 0.9).toFixed(3)}) saturate(${(1 + bootFx.glow * 0.25).toFixed(3)})` : '';
+  if (els.canvas.style.filter !== glowFilter) els.canvas.style.filter = glowFilter;
+  const [r, g, b] = state.mode === 'offline' && bootFx.glow > 0.01 ? [255, 38, 56] : palette();
   const color = (alpha) => `rgba(${r}, ${g}, ${b}, ${alpha})`;
   const t = performance.now() / 1000;
   const breathe = reduceMotion ? 0 : (Math.sin(t * 1.6) + 1) / 2;
@@ -2131,7 +2134,7 @@ function drawFilmReactor(width, height, speaking) {
   ctx.shadowBlur = 0;
 
   // Halo + sphere
-  const radius = 92 + smoothLevel * 30 + breathe * 4 + (speaking ? 6 : 0);
+  const radius = 92 + smoothLevel * 30 + breathe * 4 + (speaking ? 6 : 0) + bootFx.glow * (8 + Math.sin(t * 9) * 4);
   const halo = ctx.createRadialGradient(cx, cy, radius * 0.6, cx, cy, radius * 2.4);
   halo.addColorStop(0, color(0.45));
   halo.addColorStop(0.5, color(0.12));
@@ -2193,6 +2196,7 @@ function drawLiveEffects(cx, cy) {
 }
 
 setMode('offline');
+if (document.body.classList.contains('theme-film')) { skipIntro(); startBoot(); }
 restoreHistory();
 checkSession();
 requestAnimationFrame(draw);

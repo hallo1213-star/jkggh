@@ -92,6 +92,23 @@ function sideTabs() {
 
 export function filmTab(name) { setTab(name); }
 
+// The start animation replaces the old tap screen; the reactor itself becomes
+// the "tap to start" target (the microphone still needs one tap).
+export function skipIntro() {
+  introState = 'done';
+  const box = $('film-intro');
+  if (box) box.hidden = true;
+  const wrap = document.querySelector('.reactor-wrap');
+  if (wrap && !wrap.dataset.tapStart) {
+    wrap.dataset.tapStart = '1';
+    wrap.addEventListener('click', (e) => {
+      const activate = $('activate');
+      if (e.target.closest('.activate') || !activate || activate.hidden || activate.disabled) return;
+      activate.click();
+    });
+  }
+}
+
 export function initFilm({ openBusiness, openFactory, openSuit, onNormal }) {
   renderHead();
   sideTabs();

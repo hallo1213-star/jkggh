@@ -384,6 +384,10 @@ Standard ist jetzt der Look aus den Videos:
 - 🪞 „Setz mir einen Helm auf“ – Kamera an, Jarvis' Anzug-Helm sitzt auf deinem Kopf und folgt ihm; „Visier auf/zu“ klappt die Gesichtsplatte; „Helm ab“. Läuft nur auf dem Gerät, niemand wird erkannt.
 - 📞 „Anzug zu mir!“ – die Anzugteile fliegen von außerhalb heran und rasten krachend ein (Bildschirm wackelt), am Ende das realistische Foto.
 
+## Startanimation 🔴
+
+Beim Öffnen von Jarvis (Design „Jarvis wie im Video“): Oberfläche ausgeblendet → schwarzer Bildschirm → dünner roter Lichtstrahl von oben nach unten → dein bestehender Reaktor (derselbe Canvas-Code) entsteht in der Mitte, pulsiert, die Ringe drehen schneller und werden heller → rote Partikel fliegen zum Kern → roter Energieimpuls über den Bildschirm → die normale Oberfläche blendet ein, der Reaktor bleibt an seinem Platz → „Alle Systeme sind online.“ (nur wenn der Server wirklich erreichbar ist, sonst „Verbindung wird hergestellt …“). Dauer ca. 5,5 s, Knopf „Überspringen“, startet nie doppelt. Danach den Reaktor (oder „Jarvis aktivieren“) antippen, um das Mikrofon freizugeben.
+
 ## JARVIS Digital Reality 🌌
 
 „Jarvis, öffne deine eigene Realität“ (auch: „Aktiviere die digitale Realität“, „Öffne das digitale Universum“, „Zeig mir deine Welt“):
