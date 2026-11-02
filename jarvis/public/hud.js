@@ -185,6 +185,29 @@ export function hudToday({ planner, shopping, memories }) {
   box.replaceChildren(...items.map(([icon, k, v]) => { const r = el('div', 'hud-today-row'); r.append(el('span', 'hud-today-icon', icon), el('small', '', k), el('b', '', v)); return r; }));
 }
 
+// --- results with a button (like the red buttons in the video) ----------------------------
+const results = [];
+export function hudResult({ title, detail = '', button = 'Öffnen', onClick }) {
+  results.unshift({ title: String(title).slice(0, 80), detail: String(detail).slice(0, 120), button, onClick, at: Date.now() });
+  results.splice(6);
+  renderResults();
+}
+function renderResults() {
+  const box = $('hud-results');
+  if (!box) return;
+  box.hidden = !results.length;
+  box.replaceChildren(...results.map((r) => {
+    const card = el('div', 'hud-result');
+    const text = el('div');
+    text.append(el('small', '', new Date(r.at).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })), el('b', '', r.title), el('span', '', r.detail));
+    const b = el('button', '', r.button);
+    b.type = 'button';
+    b.addEventListener('click', () => r.onClick?.());
+    card.append(text, b);
+    return card;
+  }));
+}
+
 export function initHud({ send }) {
   hud.send = send;
   renderMission();

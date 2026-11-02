@@ -15,7 +15,7 @@ import { handleVideoMessage, initVideo } from './video.js';
 import { handleDesignMessage, initDesign } from './design.js';
 import { handleBusinessMessage, initBusiness, openBusiness } from './business.js';
 import { filmTab, initFilm } from './film.js';
-import { hudAction, hudBoot, hudConnected, hudPong, hudToday, hudUser, initHud, reactorFx, refreshSystem } from './hud.js';
+import { hudAction, hudBoot, hudResult, hudConnected, hudPong, hudToday, hudUser, initHud, reactorFx, refreshSystem } from './hud.js';
 
 const OUTPUT_SAMPLE_RATE = 24000;
 
@@ -1251,6 +1251,8 @@ initTasks({ toast });
 initBusiness({
   toast,
   onClose: () => filmTab('normal'),
+  result: hudResult,
+  openStudioJob: (id, prompt) => followJob(id, 'build', prompt),
   startStudio: async (prompt) => {
     const response = await fetch('/api/studio', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'build', prompt }) });
     const data = await response.json().catch(() => ({}));

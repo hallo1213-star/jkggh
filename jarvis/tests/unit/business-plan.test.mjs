@@ -14,3 +14,7 @@ let threw = false; try { normalizePlan({ name: 'X' }); } catch { threw = true; }
 assert(threw, 'incomplete concept → honest error');
 const own = await planBusiness('', { generate: async (o) => { seen = o; return reply; } });
 assert(/keine Idee vorgegeben/.test(seen.prompt) && own.idee === 'LED-Neonschilder', 'no idea → Jarvis picks one');
+assert(plan.produkte[0].bildUrl.startsWith('https://image.pollinations.ai/prompt/') && /seed=/.test(plan.produkte[0].bildUrl), 'every product gets a real AI picture');
+assert(plan.webseite.heroUrl && plan.werbung[0].bildUrl && /height=1216/.test(plan.werbung[0].bildUrl), 'hero picture and vertical ad motif');
+const again = await planBusiness('LED Schilder', { generate: async () => reply });
+assert(again.produkte[0].bildUrl === plan.produkte[0].bildUrl, 'same concept → same pictures (fixed seeds)');

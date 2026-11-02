@@ -3,6 +3,7 @@
 // Website-Texte, Werbung und Startplan. Alles kommt von der KI; Zahlen sind
 // ausdrücklich Schätzungen und werden in der App so gekennzeichnet.
 import { generateJson } from './llm.js';
+import { imageUrl } from './images.js';
 
 const SYSTEM = `Du bist JARVIS im Business-Modus: ein erfahrener Gründungsberater und Markenstratege.
 Du entwirfst realistische, kleine Online-Geschäfte, die eine Person ohne Firma mit wenig Startkapital testen kann.
@@ -23,9 +24,9 @@ const SHAPE = `{
    "nachfrage": [6 Zahlen 0-100: geschätzter Interesse-Verlauf der letzten 6 Monate]
  },
  "marke": { "farben": ["#hex", "#hex", "#hex"], "ton": "Tonalität in 3 Wörtern", "logoIdee": "1 Satz" },
- "produkte": [5 x { "name": "...", "preis": Zahl in Euro, "beschreibung": "1 Satz" }],
- "webseite": { "headline": "...", "unterzeile": "...", "button": "...", "abschnitte": ["3 Abschnittstitel"] },
- "werbung": [3 x { "kanal": "TikTok|Instagram|Google|...", "hook": "erster Satz", "text": "1–2 Sätze" }],
+ "produkte": [5 x { "name": "...", "preis": Zahl in Euro, "beschreibung": "1 Satz", "bild": "ENGLISCHE, sehr genaue Beschreibung für ein Produktfoto (Studio-Licht, Hintergrund, Stil)" }],
+ "webseite": { "headline": "...", "unterzeile": "...", "button": "...", "abschnitte": ["3 Abschnittstitel"], "heroBild": "ENGLISCHE Beschreibung für ein großes, stimmungsvolles Titelbild der Marke" },
+ "werbung": [3 x { "kanal": "TikTok|Instagram|Google|...", "hook": "erster Satz", "text": "1–2 Sätze", "bild": "ENGLISCHE Beschreibung für das Werbemotiv (Hochformat, Social Media)" }],
  "kosten": [4 x { "posten": "...", "betrag": Zahl in Euro }],
  "schritte": ["5 konkrete erste Schritte, der erste heute machbar"],
  "risiken": ["2 ehrliche Risiken"]
@@ -60,14 +61,15 @@ export function normalizePlan(raw, { idea = '', budget = 0 } = {}) {
       ton: str(r.marke?.ton, 60),
       logoIdee: str(r.marke?.logoIdee, 160)
     },
-    produkte: list(r.produkte, 5, (p) => (p && str(p.name) ? { name: str(p.name, 50), preis: num(p.preis, 0, 100000, 0), beschreibung: str(p.beschreibung, 140) } : null)),
+    produkte: list(r.produkte, 5, (p) => (p && str(p.name) ? { name: str(p.name, 50), preis: num(p.preis, 0, 100000, 0), beschreibung: str(p.beschreibung, 140), bild: str(p.bild, 400) } : null)),
     webseite: {
       headline: str(r.webseite?.headline, 70),
       unterzeile: str(r.webseite?.unterzeile, 140),
       button: str(r.webseite?.button, 30) || 'Jetzt entdecken',
-      abschnitte: list(r.webseite?.abschnitte, 3, (t) => str(t, 40))
+      abschnitte: list(r.webseite?.abschnitte, 3, (t) => str(t, 40)),
+      heroBild: str(r.webseite?.heroBild, 400)
     },
-    werbung: list(r.werbung, 3, (a) => (a && (a.text || a.hook) ? { kanal: str(a.kanal, 20) || 'Social', hook: str(a.hook, 90), text: str(a.text, 200) } : null)),
+    werbung: list(r.werbung, 3, (a) => (a && (a.text || a.hook) ? { kanal: str(a.kanal, 20) || 'Social', hook: str(a.hook, 90), text: str(a.text, 200), bild: str(a.bild, 400) } : null)),
     kosten: list(r.kosten, 4, (k) => (k && str(k.posten) ? { posten: str(k.posten, 50), betrag: num(k.betrag, 0, 1000000, 0) } : null)),
     schritte: list(r.schritte, 5, (t) => str(t, 140)),
     risiken: list(r.risiken, 2, (t) => str(t, 140)),
@@ -75,8 +77,25 @@ export function normalizePlan(raw, { idea = '', budget = 0 } = {}) {
   };
   while (plan.marke.farben.length < 3) plan.marke.farben.push(['#ff3ea5', '#a855f7', '#0b0612'][plan.marke.farben.length]);
   if (plan.markt.nachfrage.length < 2) plan.markt.nachfrage = [];
+  attachImages(plan);
   plan.startkosten = Math.round(plan.kosten.reduce((s, k) => s + k.betrag, 0));
   if (!plan.produkte.length || !plan.slogan) throw new Error('Die KI hat kein vollständiges Konzept geliefert. Bitte noch einmal versuchen.');
+  return plan;
+}
+
+// Real pictures from the free image generator (no key): one per product, a hero
+// image for the website and one motif per ad. Seeds are fixed per plan so the
+// pictures stay the same when the concept is opened again.
+export function attachImages(plan, { url = imageUrl } = {}) {
+  const base = [...`${plan.name}${plan.idee}`].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 900000, 7);
+  const look = `brand colors ${plan.marke.farben.join(' ')}`;
+  plan.produkte.forEach((p, i) => {
+    p.bildUrl = url(`${p.bild || `professional product photo of ${p.name}, ${plan.idee}`}, ${look}, high-end e-commerce product shot, centered, soft studio light, no text`, { format: 'quadrat', seed: base + i });
+  });
+  plan.webseite.heroUrl = url(`${plan.webseite.heroBild || `cinematic hero image for the brand ${plan.name}, ${plan.idee}`}, ${look}, wide cinematic shot, dramatic light, no text`, { format: 'quer', seed: base + 50 });
+  plan.werbung.forEach((a, i) => {
+    a.bildUrl = url(`${a.bild || `social media ad motif for ${plan.idee}`}, ${look}, vertical social media ad photo, eye-catching, no text`, { format: 'hoch', seed: base + 100 + i });
+  });
   return plan;
 }
 
@@ -85,9 +104,10 @@ export async function planBusiness(idea, { budget = 0, generate = generateJson }
   const money = num(budget, 0, 1000000, 0);
   const prompt = `${wish ? `Geschäftsidee des Nutzers: „${wish}“.` : 'Der Nutzer hat keine Idee vorgegeben – wähle selbst eine originelle, gut testbare Produktidee mit visuellem Wow-Effekt.'}
 ${money ? `Startkapital: ca. ${money} €. Die Startkosten müssen darunter bleiben.` : 'Startkapital: klein (unter 300 €).'}
+Bildbeschreibungen (bild, heroBild) IMMER auf Englisch, konkret und fotografisch, ohne Text im Bild.
 Liefere genau dieses JSON:
 ${SHAPE}`;
-  const raw = await generate({ system: SYSTEM, prompt, maxTokens: 2200 });
+  const raw = await generate({ system: SYSTEM, prompt, maxTokens: 3200 });
   return normalizePlan(raw, { idea: wish, budget: money });
 }
 
