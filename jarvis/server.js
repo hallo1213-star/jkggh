@@ -1274,7 +1274,7 @@ browserWss.on('connection', (browser, request) => {
         return { state: 'failed', result: { ok: false, fehler: error.message, ...(fallbackFor(name, error.message, (tool) => Boolean(findCloudTool(tool))) || {}) } };
       }
     }
-    if (!findLaptopTool(name)) return { state: 'failed', result: { ok: false, fehler: GROUP_NAMES.has(name) || name === 'jarvis_effekt' ? `Unbekannter Effekt. Versuch es sofort nochmal mit einem dieser Namen als name: ${[...EFFECT_TOOLS].join(', ')}. Kamera-Effekte (laser, malen, klon, zeitlupe, cyborg, anzug_ar …) laufen über name = effect_control mit args {action}.` : `Unbekannte Funktion: ${name}` } };
+    if (!findLaptopTool(name)) return { state: 'failed', result: { ok: false, fehler: GROUP_NAMES.has(name) || name === 'jarvis_effekt' ? `Effekt nicht erkannt (erhalten: ${JSON.stringify(args).slice(0, 120)}). Versuch es SOFORT still nochmal mit einem gültigen name aus der Liste dieser Funktion, ohne es dem Nutzer zu erklären. Kamera-Effekte: name effect_control, args {action}.` : `Unbekannte Funktion: ${name}` } };
     const reply = await callLaptop(id, name, args, session);
     if (reply.denied) return { state: 'denied', result: { ok: false, abgelehnt: true, hinweis: 'Der Nutzer hat die Aktion nicht bestätigt. Sie wurde nicht ausgeführt.' } };
     if (!reply.ok) return { state: 'failed', result: { ok: false, fehler: reply.error } };
@@ -1290,7 +1290,11 @@ browserWss.on('connection', (browser, request) => {
     }
     // one shared function for all show features → run the real tool
     let name = callName;
-    ({ name, args } = unwrapEffect(callName, args));
+    const callArgs = args;
+    let unknown = false; let guessed = false;
+    ({ name, args, unknown, guessed } = unwrapEffect(callName, args));
+    if (unknown || guessed) console.warn(`[effekt] ${callName} ${guessed ? 'geraten → Auswahl' : 'unbekannt'}: ${JSON.stringify(callArgs).slice(0, 300)}`);
+    if (unknown) args = callArgs;
     const tool = findCloudTool(name) || findLaptopTool(name);
     const label = tool?.label(args) ?? name;
     toBrowser({ type: 'action', id, label, state: 'running', laptop: !findCloudTool(name) });

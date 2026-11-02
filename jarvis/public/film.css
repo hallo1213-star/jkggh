@@ -1280,3 +1280,12 @@ body.gravity-on .topbar, body.gravity-on .hud { overflow: visible; }
 .esc-msg { margin: 0; font-size: 13px; color: #ffd0d4; }
 .esc-msg.bad { color: #ff5c6c; font-weight: 700; }
 @media (prefers-reduced-motion: reduce) { .esc.esc-alarm, .agent-card, .esc-card { animation: none !important; } }
+.fx5-menu { background: radial-gradient(circle at 50% 30%, #1a0306, #030101 70%); }
+.fx5-pick { display: grid; align-content: center; justify-items: center; gap: 14px; padding: 24px 16px; overflow-y: auto; }
+.fx5-pick-kicker { margin: 0; font-size: 11px; letter-spacing: 0.3em; color: #c9a0a5; }
+.fx5-pick h2 { margin: 0; font-size: clamp(22px, 5vw, 32px); text-align: center; }
+.fx5-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; width: min(720px, 100%); }
+.fx5-grid button { display: grid; justify-items: center; gap: 6px; padding: 16px 8px; border: 1px solid rgba(255, 42, 61, 0.4); border-radius: 14px; background: rgba(13, 3, 4, 0.9); color: #fff; font: 700 14px 'Inter', sans-serif; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; animation: biz-pop 0.35s ease both; }
+.fx5-grid button:hover { transform: translateY(-2px); box-shadow: 0 0 20px rgba(255, 42, 61, 0.4); border-color: #ff2a3d; }
+.fx5-grid span { font-size: 28px; }
+.fx5-pick-hint { margin: 0; font-size: 13px; color: #c9a0a5; }

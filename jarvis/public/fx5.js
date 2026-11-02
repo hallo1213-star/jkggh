@@ -342,6 +342,19 @@ async function slowmo() {
   setTimeout(go, 800);
 }
 
+// Picker for "Schalte die Kamera an" without a specific effect.
+const MENU = [['laser', '👁️', 'Laser-Augen'], ['malen', '✍️', 'Luft-Malen'], ['klon', '👥', 'Klone'], ['zeitlupe', '⏱️', 'Matrix-Moment'], ['cyborg', '🤖', 'Cyborg'], ['anzug_ar', '🦾', 'Anzug auf dir'], ['klinge', '⚔️', 'Energieklinge'], ['repulsor', '✋', 'Repulsor'], ['teleport', '✨', 'Teleport'], ['hologramm', '📡', 'Hologramm']];
+function menu() {
+  stop();
+  document.dispatchEvent(new CustomEvent('jarvis-overlay', { detail: 'fx5' }));
+  const root = el('div', 'fx5 fx5-menu');
+  root.innerHTML = `<div class="fx5-pick"><p class="fx5-pick-kicker">JARVIS · KAMERA-EFFEKTE</p><h2>Was willst du ausprobieren?</h2><div class="fx5-grid">${MENU.map(([a, i, t]) => `<button type="button" data-a="${a}"><span>${i}</span>${t}</button>`).join('')}</div><p class="fx5-pick-hint">Oder sag es einfach, z. B. „Laser-Augen“.</p></div><div class="fx5-bar"><button type="button" class="fx5-close">Schließen</button></div>`;
+  document.body.append(root);
+  cur = { kind: 'menu', root, raf: 0 };
+  root.querySelector('.fx5-close').addEventListener('click', stop);
+  root.querySelectorAll('[data-a]').forEach((b) => b.addEventListener('click', () => { tone(900, 0.08, 'triangle', 0.06); stop(); deps.runEffect?.(b.dataset.a); }));
+}
+
 export function initFx5(options) { deps = { ...deps, ...options }; }
 export function handleFx5(action) {
   if (action === 'anzug_ar') bodySuit();
@@ -351,6 +364,7 @@ export function handleFx5(action) {
   else if (action === 'malen') airDraw();
   else if (action === 'klon') clones();
   else if (action === 'zeitlupe') slowmo();
+  else if (action === 'menu') menu();
   else if (action === 'aus') stop();
 }
-export const FX5_ACTIONS = ['anzug_ar', 'laser', 'cyborg', 'upgrade', 'malen', 'klon', 'zeitlupe'];
+export const FX5_ACTIONS = ['menu', 'anzug_ar', 'laser', 'cyborg', 'upgrade', 'malen', 'klon', 'zeitlupe'];

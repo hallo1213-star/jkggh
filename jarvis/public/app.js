@@ -1286,7 +1286,7 @@ initCamFx({ toast, sendText });
 initReality({ toast });
 initFx3({ toast, muteJarvis: (mute) => { if (state.connected && state.micMuted !== mute) els.micToggle.click(); } });
 initFx4({ toast });
-initFx5({ toast });
+initFx5({ toast, runEffect: (action) => handleMessage({ type: 'effect', action }) });
 initFun({ toast, send: (message) => { if (state.ws?.readyState === 1) state.ws.send(JSON.stringify(message)); } });
 initPrank({ send: (message) => { if (state.ws?.readyState === 1) state.ws.send(JSON.stringify(message)); } });
 initFilm({ openBusiness, openFactory, openSuit: openSuitLab });

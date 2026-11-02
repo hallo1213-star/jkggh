@@ -13,7 +13,7 @@ export const EFFECTS = {
   face_control: 'Gesicht: {action: zeigen („Zeig dein Gesicht“) | verstecken („Gesicht weg“) | neu}.',
   persona_mode: '„Friday-Modus“, „Party-Jarvis“, „Butler-Modus“, „Normaler Modus“ → {mode: friday|party|butler|normal}; danach sprichst du in diesem Stil.',
   digital_reality: 'Digitale Realität: {action: oeffnen („Öffne deine eigene Realität“, „Zeig mir deine Welt“, „Öffne das digitale Universum“) | portal („Öffne das Portal“) | stadt („Aktiviere die Stadt“) | stadt_aus | umgebung („Ändere die Umgebung“) | zurueck („Kehre zurück“)}.',
-  effect_control: 'Kamera/Mikro-Effekte: {action: klinge („Energieklinge an“) | hologramm („Hologramm-Nachricht aufnehmen“) | stimme („Roboterstimme/Helm-Stimme“) | repulsor („Repulsor an“) | gesten („Gesten an“) | teleport („Teleportier mich“) | zurueck („Zurück!“ nach Teleport) | anzug_ar („Zieh MIR den Anzug an“) | laser („Laser-Augen“) | cyborg („Mach mich zum Cyborg“) | upgrade („Upgrade!“) | malen („In die Luft malen“) | klon („Klon mich“) | zeitlupe („Matrix-Moment!“) | aus („Effekt aus“, „Kamera aus“)}.',
+  effect_control: 'Kamera/Mikro-Effekte: {action: menu („Schalte die Kamera an“ ohne bestimmten Effekt → Auswahl) | klinge („Energieklinge an“) | hologramm („Hologramm-Nachricht aufnehmen“) | stimme („Roboterstimme/Helm-Stimme“) | repulsor („Repulsor an“) | gesten („Gesten an“) | teleport („Teleportier mich“) | zurueck („Zurück!“ nach Teleport) | anzug_ar („Zieh MIR den Anzug an“) | laser („Laser-Augen“) | cyborg („Mach mich zum Cyborg“) | upgrade („Upgrade!“) | malen („In die Luft malen“) | klon („Klon mich“) | zeitlupe („Matrix-Moment!“) | aus („Effekt aus“, „Kamera aus“)}.',
   helmet_mirror: '„Setz mir einen Helm auf“ → {action: an | visier („Visier auf/zu“) | aus („Helm ab“)}.',
   movie_poster: '„Mach ein Kinoplakat von mir“ → {title?, tagline?}.',
   drone_control: 'Drohne: {action: start | news („hol mir die Nachrichten“) | stopp („Drohne lande“)}.',
@@ -64,7 +64,7 @@ export const effectFunction = (cloudTools) => effectFunctions(cloudTools)[0];
 // sometimes picks the wrong bundle or names the effect instead of the tool
 // ("malen" instead of effect_control) – any listed show feature is accepted,
 // but never anything else (mail, calls etc. stay unreachable).
-const CAMERA_ACTIONS = ['repulsor', 'gesten', 'teleport', 'zurueck', 'klinge', 'hologramm', 'stimme', 'anzug_ar', 'laser', 'cyborg', 'upgrade', 'malen', 'klon', 'zeitlupe'];
+const CAMERA_ACTIONS = ['menu', 'repulsor', 'gesten', 'teleport', 'zurueck', 'klinge', 'hologramm', 'stimme', 'anzug_ar', 'laser', 'cyborg', 'upgrade', 'malen', 'klon', 'zeitlupe'];
 const ALIASES = {
   luft_malen: ['effect_control', { action: 'malen' }], luftmalen: ['effect_control', { action: 'malen' }], air_draw: ['effect_control', { action: 'malen' }], zeichnen: ['effect_control', { action: 'malen' }],
   laser_augen: ['effect_control', { action: 'laser' }], laseraugen: ['effect_control', { action: 'laser' }],
@@ -73,6 +73,7 @@ const ALIASES = {
   anzug: ['effect_control', { action: 'anzug_ar' }], anzug_auf_mir: ['effect_control', { action: 'anzug_ar' }], energieklinge: ['effect_control', { action: 'klinge' }],
   geheimcode: ['secret_code', { action: 'verschluesseln' }], geheimagent: ['secret_code', { action: 'verschluesseln' }], verschluesseln: ['secret_code', { action: 'verschluesseln' }], entschluesseln: ['secret_code', { action: 'entschluesseln' }],
   escape: ['escape_room', { action: 'start' }], escaperoom: ['escape_room', { action: 'start' }], tipp: ['escape_room', { action: 'tipp' }],
+  kamera: ['effect_control', { action: 'menu' }], kamera_an: ['effect_control', { action: 'menu' }], camera: ['effect_control', { action: 'menu' }], kamera_effekte: ['effect_control', { action: 'menu' }], effekte: ['effect_control', { action: 'menu' }], auswahl: ['effect_control', { action: 'menu' }],
   schach: ['holo_chess', {}], feuerwerk: ['fireworks', {}], schwarzes_loch: ['black_hole', {}], schatzsuche: ['treasure_hunt', { action: 'start' }]
 };
 const norm = (x) => String(x || '').trim().toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[\s-]+/g, '_');
@@ -86,6 +87,8 @@ export function unwrapEffect(name, args) {
   if (ALIASES[inner]) return { name: ALIASES[inner][0], args: { ...ALIASES[inner][1], ...innerArgs } };
   const act = norm(innerArgs.action);
   if (!inner && CAMERA_ACTIONS.includes(act)) return { name: 'effect_control', args: { ...innerArgs, action: act } };
+  // camera bundle with nothing recognisable ("Schalte die Kamera an") → effect picker
+  if (name === 'jarvis_kamera' && !EFFECT_TOOLS.has(inner)) return { name: 'effect_control', args: { action: 'menu' }, guessed: true };
   return { name, args: innerArgs, unknown: true };
 }
 
@@ -100,7 +103,7 @@ const SHORT_LIST = {
   face_control: 'Gesicht {action: zeigen|verstecken|neu}',
   persona_mode: 'Modus {mode: friday|party|butler|normal}',
   digital_reality: 'Digitale Realität/eigene Welt {action: oeffnen|portal|stadt|stadt_aus|umgebung|zurueck}',
-  effect_control: 'Kamera/Mikro {action: klinge|hologramm|stimme (Roboterstimme)|repulsor|gesten|teleport|zurueck|anzug_ar (Anzug auf MEINEN Körper)|laser (Laser-Augen)|cyborg|upgrade|malen (Luft-Malen)|klon|zeitlupe (Matrix-Moment)|aus}',
+  effect_control: 'Kamera/Mikro {action: menu (Auswahl, z. B. „Kamera an“)|klinge|hologramm|stimme (Roboterstimme)|repulsor|gesten|teleport|zurueck|anzug_ar (Anzug auf MEINEN Körper)|laser (Laser-Augen)|cyborg|upgrade|malen (Luft-Malen)|klon|zeitlupe (Matrix-Moment)|aus}',
   helmet_mirror: 'Helm auf meinen Kopf {action: an|visier|aus}',
   movie_poster: 'Kinoplakat von mir {title?}',
   drone_control: 'Drohne {action: start|news|stopp}',
