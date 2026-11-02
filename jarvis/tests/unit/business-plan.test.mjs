@@ -1,0 +1,16 @@
+import { planBusiness, normalizePlan, websiteBrief } from '../../business-plan.js';
+const assert = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) process.exitCode = 1; };
+let seen;
+const reply = { idee: 'LED-Neonschilder', name: 'Neonyx<script>', slogan: 'Dein Name. Leuchtend.', zielgruppe: 'Gamer und Teens', markt: { zusammenfassung: 'Wachsend.', trends: ['Room-Setups', 'TikTok', 'Geschenke', 'zu viel'], wettbewerb: ['Etsy-Shops'], chance: '140', nachfrage: [20, 35, '50', 60, 70, 82] }, marke: { farben: ['#ff3ea5', 'red', '#a855f7'], ton: 'laut, jung, frech' }, produkte: [{ name: 'Name-Schild', preis: '39,90 €', beschreibung: 'Dein Name.' }, { name: '' }], webseite: { headline: 'Leuchte.', button: '' }, werbung: [{ kanal: 'TikTok', hook: 'POV', text: 'Zimmer-Upgrade' }], kosten: [{ posten: 'Muster', betrag: 60 }, { posten: 'Shop', betrag: 0 }], schritte: ['Heute: 3 Muster bestellen'], risiken: ['Lieferzeit'] };
+const plan = await planBusiness('LED Schilder', { budget: 100, generate: async (o) => { seen = o; return reply; } });
+assert(/LED Schilder/.test(seen.prompt) && /100 €/.test(seen.prompt), 'idea and budget go to the AI');
+assert(plan.name === 'Neonyxscript', 'brand name stripped of markup');
+assert(plan.markt.chance === 100 && plan.markt.trends.length === 3 && plan.markt.nachfrage[2] === 50, 'numbers clamped, lists capped');
+assert(plan.marke.farben.length === 3 && plan.marke.farben.every((c) => /^#[0-9a-f]{6}$/i.test(c)), 'invalid colours replaced');
+assert(plan.produkte.length === 1 && plan.produkte[0].preis === 39.9, 'empty products dropped, prices parsed');
+assert(plan.startkosten === 60 && plan.webseite.button === 'Jetzt entdecken', 'start costs summed, defaults filled');
+assert(/Neonyxscript/.test(websiteBrief(plan)) && /39.9 €/.test(websiteBrief(plan)), 'website brief carries brand and products');
+let threw = false; try { normalizePlan({ name: 'X' }); } catch { threw = true; }
+assert(threw, 'incomplete concept → honest error');
+const own = await planBusiness('', { generate: async (o) => { seen = o; return reply; } });
+assert(/keine Idee vorgegeben/.test(seen.prompt) && own.idee === 'LED-Neonschilder', 'no idea → Jarvis picks one');

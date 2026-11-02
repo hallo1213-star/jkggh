@@ -14,11 +14,12 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/film.css">
 </head>
 <body class="login-page">
-  <script>try { const t = localStorage.getItem('jarvis.theme') || 'neon'; document.body.classList.add(t === 'orb' ? 'theme-orb' : t === 'hud' ? 'theme-hud' : 'theme-neon'); } catch { document.body.classList.add('theme-neon'); }</script>
+  <script>try { const t = localStorage.getItem('jarvis.look') || 'film'; document.body.classList.add({ orb: 'theme-orb', hud: 'theme-hud', neon: 'theme-neon' }[t] || 'theme-film'); } catch { document.body.classList.add('theme-film'); }</script>
   <div class="grid-bg" aria-hidden="true"></div>
   <main class="login-card">
     <span class="login-mark" aria-hidden="true"></span>

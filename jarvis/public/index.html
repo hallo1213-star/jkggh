@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#07030c">
+  <meta name="theme-color" content="#050203">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,20 +14,31 @@
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css">
+  <link rel="stylesheet" href="/film.css">
 </head>
 <body>
-  <script>try { const t = localStorage.getItem('jarvis.theme') || 'neon'; document.body.classList.add(t === 'orb' ? 'theme-orb' : t === 'hud' ? 'theme-hud' : 'theme-neon'); } catch { document.body.classList.add('theme-neon'); }</script>
+  <script>try { const t = localStorage.getItem('jarvis.look') || 'film'; document.body.classList.add({ orb: 'theme-orb', hud: 'theme-hud', neon: 'theme-neon' }[t] || 'theme-film'); } catch { document.body.classList.add('theme-film'); }</script>
   <div class="grid-bg" aria-hidden="true"></div>
 
+  <div class="film-intro" id="film-intro" aria-hidden="true">
+    <div class="film-intro-reactor"><span class="r1"></span><span class="r2"></span><span class="r3"></span><span class="core"></span></div>
+    <p class="film-intro-caption" id="film-intro-caption">Tippen, um Jarvis zu starten</p>
+  </div>
   <div class="hud-toasts" id="hud-toasts" aria-live="polite"></div>
   <header class="topbar">
     <div class="brand">
       <span class="brand-mark" aria-hidden="true"></span>
       <h1>J.A.R.V.I.S.</h1>
       <span class="brand-sub">Persönlicher Assistent</span>
+      <span class="film-sub">Voice System</span>
     </div>
+    <nav class="film-tabs" id="film-tabs" aria-label="Bereiche">
+      <button type="button" data-tab="normal" aria-pressed="true">Normal</button>
+      <button type="button" data-tab="business" aria-pressed="false">Business</button>
+      <button type="button" data-tab="websites" aria-pressed="false">Websites</button>
+    </nav>
     <div class="topbar-right">
       <span class="chip" id="laptop-chip" title="Laptop-Verbindung"><span class="dot"></span><span id="laptop-chip-text">Laptop aus</span></span>
       <span class="chip" id="status-chip"><span class="dot"></span><span id="status-chip-text">Offline</span></span>
@@ -87,6 +98,7 @@
         </button>
       </div>
       <p class="status-line" id="status-line">Bereit zur Aktivierung</p>
+      <p class="film-hint" id="film-hint">Sag „Hey Jarvis“ … oder tipp hier.</p>
       <div class="hud-telemetry" id="hud-telemetry" aria-label="Telemetrie"></div>
       <div class="hud-boot" id="hud-boot" hidden aria-live="polite"></div>
       <div class="controls">
@@ -150,6 +162,10 @@
     </section>
 
     <section class="panel panel-chat" aria-labelledby="chat-title">
+      <div class="film-head" id="film-head">
+        <p class="film-greet" id="film-greet"></p>
+        <p class="film-headline" id="film-headline"></p>
+      </div>
       <h2 id="chat-title"><span>Gespräch</span><span class="panel-tag">DE</span></h2>
       <div class="transcript" id="transcript">
         <p class="empty">Sag zum Beispiel: „Wie wird das Wetter morgen?“, „Erinnere mich in 20 Minuten an die Wäsche“ oder – wenn der Laptop an ist – „Öffne Spotify auf dem Laptop“.</p>

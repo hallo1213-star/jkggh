@@ -2,6 +2,7 @@
 // the browser microphone to Deepgram Voice Agent, runs cloud functions and
 // forwards computer-control functions to the laptop connector when it is online.
 // The API keys stay in this process and never reach the browser.
+import { planBusiness, websiteBrief } from './business-plan.js';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { dirname, extname, join, normalize, sep } from 'node:path';
@@ -562,6 +563,22 @@ const httpServer = createServer(async (request, response) => {
         'Bilder malen (Pollinations)': yes(true, 'ohne Schlüssel')
       }
     });
+    return;
+  }
+
+  // --- Business-Modus: komplettes Geschäftskonzept von der KI ---
+  if (pathname === '/api/business/plan' && request.method === 'POST') {
+    if (!isAuthenticated(request) || !String(request.headers['content-type'] || '').startsWith('application/json')) {
+      sendJson(response, 401, { error: 'Nicht angemeldet' });
+      return;
+    }
+    try {
+      const body = JSON.parse(await readBody(request, 8192));
+      const plan = await planBusiness(body.idea, { budget: body.budget });
+      sendJson(response, 200, { plan, brief: websiteBrief(plan) });
+    } catch (error) {
+      sendJson(response, 400, { error: error.message });
+    }
     return;
   }
 

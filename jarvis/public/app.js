@@ -13,6 +13,8 @@ import { initCards, isEverydayCard, showEverydayCard } from './cards.js';
 import { handleCameraMessage, initCamera } from './camera.js';
 import { handleVideoMessage, initVideo } from './video.js';
 import { handleDesignMessage, initDesign } from './design.js';
+import { handleBusinessMessage, initBusiness, openBusiness } from './business.js';
+import { filmTab, initFilm } from './film.js';
 import { hudAction, hudBoot, hudConnected, hudPong, hudToday, hudUser, initHud, reactorFx, refreshSystem } from './hud.js';
 
 const OUTPUT_SAMPLE_RATE = 24000;
@@ -468,6 +470,7 @@ function rememberTurn(role, content) {
 }
 
 function restoreHistory() {
+  if (document.body.classList.contains('theme-film')) return; // the video look starts clean
   const recent = loadHistory().slice(-10);
   if (!recent.length) return;
   clearEmpty(els.transcript);
@@ -1229,20 +1232,33 @@ async function openSettings() {
 document.getElementById('settings-button').addEventListener('click', openSettings);
 document.getElementById('settings-close').addEventListener('click', () => { document.getElementById('settings-modal').hidden = true; });
 
-// Design: pink-violet Neon HUD (default), cyan Iron-Man HUD or bright Orb.
-const THEMES = [['neon', 'Neon-HUD (pink-violett)'], ['hud', 'Iron-Man (cyan)'], ['orb', 'Orb (hell)']];
+// Design: "Jarvis" like the videos (default: red main screen + pink business
+// mode), pink-violet Neon HUD, cyan Iron-Man HUD or bright Orb.
+const THEMES = [['film', 'Jarvis (wie im Video)'], ['neon', 'Neon-HUD (pink-violett)'], ['hud', 'Iron-Man (cyan)'], ['orb', 'Orb (hell)']];
 function applyTheme(name) {
+  document.body.classList.toggle('theme-film', name === 'film');
   document.body.classList.toggle('theme-orb', name === 'orb');
   document.body.classList.toggle('theme-neon', name === 'neon');
-  try { localStorage.setItem('jarvis.theme', name); } catch { /* ignore */ }
+  try { localStorage.setItem('jarvis.look', name); } catch { /* ignore */ }
 }
-const currentTheme = () => (document.body.classList.contains('theme-neon') ? 'neon' : document.body.classList.contains('theme-orb') ? 'orb' : 'hud');
+const currentTheme = () => (document.body.classList.contains('theme-film') ? 'film' : document.body.classList.contains('theme-neon') ? 'neon' : document.body.classList.contains('theme-orb') ? 'orb' : 'hud');
 document.getElementById('theme-button').addEventListener('click', () => {
   const next = THEMES[(THEMES.findIndex(([n]) => n === currentTheme()) + 1) % THEMES.length];
   applyTheme(next[0]);
   toast(`Design: ${next[1]}`);
 });
 initTasks({ toast });
+initBusiness({
+  toast,
+  onClose: () => filmTab('normal'),
+  startStudio: async (prompt) => {
+    const response = await fetch('/api/studio', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ kind: 'build', prompt }) });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || 'Jarvis Studio konnte nicht starten.');
+    followJob(data.id, 'build', prompt);
+  }
+});
+initFilm({ openBusiness });
 initPalace({ toast });
 initVisuals({ toast, chime: (f) => chime(f) });
 initCards({
@@ -1557,6 +1573,12 @@ function handleMessage(message) {
     case 'design_open':
       handleDesignMessage(message);
       break;
+    case 'business_start':
+    case 'business_result':
+    case 'business_error':
+      filmTab('business');
+      handleBusinessMessage(message);
+      break;
     case 'globe':
       handleGlobeMessage(message);
       break;
@@ -1833,6 +1855,12 @@ function readLevel(analyser) {
 }
 
 function palette() {
+  if (document.body.classList.contains('theme-film')) {
+    if (state.mode === 'error') return [255, 150, 60];
+    if (state.mode === 'offline' || state.micMuted) return [150, 30, 42];
+    if (state.mode === 'thinking' || state.mode === 'connecting') return [255, 70, 70];
+    return [255, 38, 56];
+  }
   if (document.body.classList.contains('theme-neon')) {
     if (state.mode === 'error') return [255, 77, 106];
     if (state.mode === 'thinking' || state.mode === 'connecting') return [168, 85, 247];
@@ -1854,6 +1882,12 @@ function draw() {
   const raw = speaking ? readLevel(state.outputAnalyser) : state.micMuted ? 0 : readLevel(state.inputAnalyser);
   smoothLevel += (raw - smoothLevel) * 0.2;
   if (document.body.classList.contains('theme-orb')) drawOrbSpectrum(speaking);
+  if (document.body.classList.contains('theme-film')) {
+    drawFilmReactor(width, height, speaking);
+    if (speaking && state.mode !== 'speaking' && state.mode !== 'error') setMode('speaking');
+    requestAnimationFrame(draw);
+    return;
+  }
   const speed = state.mode === 'thinking' ? 0.04 : state.mode === 'offline' ? 0.004 : 0.012;
   if (!reduceMotion) angle += speed;
   const [r, g, b] = palette();
@@ -1947,6 +1981,88 @@ function draw() {
   drawLiveEffects(cx, cy);
   if (speaking && state.mode !== 'speaking' && state.mode !== 'error') setMode('speaking');
   requestAnimationFrame(draw);
+}
+
+// Reactor like in the videos: a glowing red sphere with thin rings. It breathes
+// with the microphone, swells with Jarvis' real voice and spins faster while
+// he works; orbiting markers show running tools, a ring flash shows results.
+function drawFilmReactor(width, height, speaking) {
+  const cx = width / 2;
+  const cy = height / 2;
+  const speed = state.mode === 'thinking' || reactorFx().working ? 0.03 : state.mode === 'offline' ? 0.003 : 0.008;
+  if (!reduceMotion) angle += speed;
+  const [r, g, b] = palette();
+  const color = (alpha) => `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  const t = performance.now() / 1000;
+  const breathe = reduceMotion ? 0 : (Math.sin(t * 1.6) + 1) / 2;
+  ctx.clearRect(0, 0, width, height);
+  ctx.lineCap = 'round';
+
+  // Thin outer circles and slow arcs
+  ctx.strokeStyle = color(0.22);
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.arc(cx, cy, 252, 0, Math.PI * 2); ctx.stroke();
+  ctx.strokeStyle = color(0.14);
+  ctx.beginPath(); ctx.arc(cx, cy, 200, 0, Math.PI * 2); ctx.stroke();
+  for (const [radius, len, dir, alpha, lw] of [[252, 1.1, 1, 0.85, 3], [252, 0.35, 1, 0.6, 3], [226, 0.8, -1.4, 0.45, 1.5], [200, 1.6, 0.7, 0.5, 2]]) {
+    ctx.strokeStyle = color(alpha);
+    ctx.lineWidth = lw;
+    const start = angle * dir * 2 + radius;
+    ctx.beginPath(); ctx.arc(cx, cy, radius, start, start + len); ctx.stroke();
+    ctx.beginPath(); ctx.arc(cx, cy, radius, start + Math.PI, start + Math.PI + len * 0.5); ctx.stroke();
+  }
+  // Fine ticks on a quarter of the ring
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(-angle);
+  for (let i = 0; i < 40; i += 1) {
+    const a = (i / 160) * Math.PI * 2;
+    ctx.strokeStyle = color(i % 5 === 0 ? 0.6 : 0.25);
+    ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(Math.cos(a) * 238, Math.sin(a) * 238); ctx.lineTo(Math.cos(a) * 244, Math.sin(a) * 244); ctx.stroke();
+  }
+  ctx.restore();
+
+  // Voice ring: wobbles with the real audio level
+  ctx.beginPath();
+  for (let i = 0; i <= 160; i += 1) {
+    const a = (i / 160) * Math.PI * 2;
+    const wobble = Math.sin(a * 7 + t * 6) * Math.sin(a * 3 - t * 4);
+    const radius = 150 + smoothLevel * 30 * wobble + smoothLevel * 14;
+    const x = cx + Math.cos(a) * radius;
+    const y = cy + Math.sin(a) * radius;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.strokeStyle = color(0.55 + smoothLevel * 0.4);
+  ctx.lineWidth = 1.5;
+  ctx.shadowColor = color(0.9);
+  ctx.shadowBlur = 14;
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Halo + sphere
+  const radius = 92 + smoothLevel * 30 + breathe * 4 + (speaking ? 6 : 0);
+  const halo = ctx.createRadialGradient(cx, cy, radius * 0.6, cx, cy, radius * 2.4);
+  halo.addColorStop(0, color(0.45));
+  halo.addColorStop(0.5, color(0.12));
+  halo.addColorStop(1, color(0));
+  ctx.fillStyle = halo;
+  ctx.beginPath(); ctx.arc(cx, cy, radius * 2.4, 0, Math.PI * 2); ctx.fill();
+  const sphere = ctx.createRadialGradient(cx - radius * 0.18, cy - radius * 0.2, radius * 0.05, cx, cy, radius);
+  sphere.addColorStop(0, `rgba(255, ${235 - (state.mode === 'offline' ? 120 : 0)}, 235, 1)`);
+  sphere.addColorStop(0.22, `rgba(255, ${Math.min(255, g + 90)}, ${Math.min(255, b + 90)}, 1)`);
+  sphere.addColorStop(0.6, color(1));
+  sphere.addColorStop(1, `rgba(${Math.round(r * 0.35)}, ${Math.round(g * 0.2)}, ${Math.round(b * 0.25)}, 1)`);
+  ctx.fillStyle = sphere;
+  ctx.shadowColor = color(1);
+  ctx.shadowBlur = 50;
+  ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = color(0.9);
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(cx, cy, radius + 10, 0, Math.PI * 2); ctx.stroke();
+
+  drawLiveEffects(cx, cy);
 }
 
 // Real status on the reactor: orbiting markers while Jarvis runs tools, a

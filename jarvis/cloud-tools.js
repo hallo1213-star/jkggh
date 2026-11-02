@@ -1,4 +1,5 @@
 // Functions that run in the cloud and work even when the laptop is off.
+import { planBusiness, websiteBrief } from './business-plan.js';
 import { normalizeUrl, searchUrls } from './laptop/tools.js';
 import { DIFFICULTIES, GAME_TYPES, encodeGame, sanitizeGame } from './public/game-config.js';
 import { describeEmail, gmailConfigured, listEmails, readEmail, sendEmail } from './gmail.js';
@@ -1236,6 +1237,29 @@ export const cloudTools = [
       const url = imageUrl(plan.prompt, { format });
       context.showImage({ url, title: plan.title, description: String(description).slice(0, 300) });
       return { erstellt: true, titel: plan.title, hinweis: 'Das Bild wird gerade gemalt und erscheint in ein paar Sekunden in der App. Sag kurz, was du gemalt hast. Er kann es speichern oder eine andere Version wünschen.' };
+    }
+  },
+  {
+    name: 'business_mode',
+    description: 'Business-Modus („Business Creation Protocol“): Jarvis entwirft live auf dem Bildschirm ein komplettes Geschäftskonzept mit Countdown – Marktanalyse, Produkt, Markenname, Produktlinie, Website-Texte, Werbung, Kosten und erste Schritte. Für „Starte den Business-Modus“, „Erstelle mir ein Business mit 100 Euro Startkapital“, „Bau mir ein Geschäft für LED-Schilder“. Danach kann die Website mit studio_website gebaut werden. Zahlen sind Schätzungen, kein Gewinnversprechen.',
+    parameters: {
+      type: 'object',
+      properties: {
+        idea: { type: 'string', description: 'Seine Geschäftsidee in seinen Worten; leer lassen, wenn Jarvis selbst eine wählen soll' },
+        budget: { type: 'number', description: 'Startkapital in Euro, falls genannt' }
+      }
+    },
+    label: (a) => `Business-Modus${a.idea ? `: ${a.idea}` : ''}`,
+    run: async ({ idea, budget }, context) => {
+      context.showVisual?.({ type: 'business_start', idea: String(idea || '').slice(0, 300), budget: Number(budget) || 0 });
+      try {
+        const plan = await planBusiness(idea, { budget });
+        context.showVisual?.({ type: 'business_result', plan, brief: websiteBrief(plan) });
+        return { marke: plan.name, idee: plan.idee, slogan: plan.slogan, produkte: plan.produkte.map((p) => `${p.name} (${p.preis} €)`), startkosten: `${plan.startkosten} € (Schätzung)`, ersterSchritt: plan.schritte[0], hinweis: 'Das Konzept ist im Business-Modus auf dem Bildschirm. Fasse es in 2–3 Sätzen zusammen und biete an, die Website dafür zu bauen (studio_website). Keine Gewinnversprechen; Zahlen sind Schätzungen.' };
+      } catch (error) {
+        context.showVisual?.({ type: 'business_error', error: error.message });
+        throw error;
+      }
     }
   },
   {

@@ -353,9 +353,18 @@ Solange Impressum oder Links fehlen, ist die Seite als **Entwurf** markiert und 
 - Die Widerrufsbelehrung auf der Seite ist ein Muster. Lass sie am besten mit einem Rechtstext-Generator prüfen.
 - Gumroad wickelt Zahlung und Umsatzsteuer ab.
 
-## Design: Neon-HUD (Standard), Iron-Man oder Orb 🎨
+## Design: „Jarvis wie im Video“ (Standard) 🎬
 
-Standard ist jetzt das **Neon-HUD** in Pink-Violett: dunkler Hintergrund, leuchtender Reaktor in der Mitte, HUD-Panels mit abgeschrägten Ecken, Scanlines und weiche Übergänge – auch in Einstellungen, Planer, Einkaufsliste, Studios und Video Studio. Mit dem **Paletten-Knopf** oben rechts (oder in den Einstellungen) wechselst du zu **Iron-Man (cyan)** oder **Orb (hell)**. Deine Wahl wird gespeichert.
+Standard ist jetzt der Look aus den Videos:
+- **Startbildschirm**: schwarz mit rotem Reaktor – antippen, Jarvis antwortet „Ja, Boss?“ und „Ich höre zu …“.
+- **Hauptseite** (rot-schwarz): links Begrüßung, große Überschrift, die Jarvis' echten Zustand zeigt („Ich höre zu. Erzähl mir den Plan.“ / „Verstanden. Ich fang an.“) und das Gespräch als Karten; in der Mitte der rote Reaktor (reagiert auf Mikrofon und Jarvis' Stimme); rechts **Aufträge** (jeder Schritt mit echtem Ergebnis) und **Vorgänge**. Oben die Tabs **Normal · Business · Websites**.
+- **Business-Modus** (pink, „Business Creation Protocol“): sag „Starte den Business-Modus“ (optional mit Idee und Startkapital) oder tippe auf „Business“. Roter Missions-Countdown, dann baut Jarvis mit 60-Sekunden-Uhr ein komplettes Konzept auf: Marktanalyse, Produkt, Marke, Website-Vorschau, Produktlinie, Werbung, Startplan. Mit „Website bauen“ entsteht die echte Website im Studio. Alle Zahlen sind KI-Schätzungen, die Uhr zeigt die echte Zeit.
+- Andere Funktionen (Planer, Einkauf, Spiele, Erde, Geld-Modus …) sind in diesem Look ausgeblendet, funktionieren aber weiter per Sprache. Der alte Gesprächsverlauf wird hier nicht angezeigt (nichts gelöscht).
+- Die anderen Designs (Neon-HUD, Iron-Man, Orb) sind in den Einstellungen wählbar.
+
+## Design: Neon-HUD, Iron-Man oder Orb 🎨
+
+Wählbar ist außerdem das **Neon-HUD** in Pink-Violett: dunkler Hintergrund, leuchtender Reaktor in der Mitte, HUD-Panels mit abgeschrägten Ecken, Scanlines und weiche Übergänge – auch in Einstellungen, Planer, Einkaufsliste, Studios und Video Studio. Mit dem **Paletten-Knopf** oben rechts (oder in den Einstellungen) wechselst du zu **Iron-Man (cyan)** oder **Orb (hell)**. Deine Wahl wird gespeichert.
 
 **Alles im HUD ist echt – keine Fantasiezahlen:**
 - **Reaktor**: reagiert auf Zuhören, Denken und Jarvis' echte Stimme; kreisende Marker, solange Werkzeuge laufen; kurzer Blitz bei Erfolg (cyan) oder Fehler (rot).
