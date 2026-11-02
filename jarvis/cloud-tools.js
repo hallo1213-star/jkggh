@@ -1,4 +1,5 @@
 // Functions that run in the cloud and work even when the laptop is off.
+import { giftIdeas } from './gifts.js';
 import { designSuit } from './suit.js';
 import { planBusiness, websiteBrief } from './business-plan.js';
 import { normalizeUrl, searchUrls } from './laptop/tools.js';
@@ -1280,13 +1281,13 @@ export const cloudTools = [
   },
   {
     name: 'suit_control',
-    description: 'Jarvis\' eigener Anzug: uebernehmen = den gerade entworfenen Anzug als SEINEN Anzug übernehmen (nachdem er „ja“ gesagt hat); anziehen = „Zieh deinen Anzug an“ (Anzieh-Animation, danach steht Jarvis im Anzug auf dem Startbildschirm); ausziehen = „Zieh den Anzug aus“, „Anzug ablegen“ (Auszieh-Animation, wieder normal); status = ob er einen Anzug hat/trägt.',
+    description: 'Jarvis\' eigener Anzug: uebernehmen = den gerade entworfenen Anzug als SEINEN Anzug übernehmen (nachdem er „ja“ gesagt hat); anziehen = „Zieh deinen Anzug an“ (Anzieh-Animation, danach steht Jarvis im Anzug auf dem Startbildschirm); rufen = „Anzug zu mir!“ (die Teile fliegen von außen heran und rasten ein – danach trägt er ihn ebenfalls); ausziehen = „Zieh den Anzug aus“, „Anzug ablegen“ (Auszieh-Animation, wieder normal); status = ob er einen Anzug hat/trägt.',
     parameters: {
       type: 'object',
-      properties: { action: { type: 'string', enum: ['uebernehmen', 'anziehen', 'ausziehen', 'status'] } },
+      properties: { action: { type: 'string', enum: ['uebernehmen', 'anziehen', 'rufen', 'ausziehen', 'status'] } },
       required: ['action']
     },
-    label: (a) => ({ uebernehmen: 'Anzug übernehmen', anziehen: 'Anzug anziehen', ausziehen: 'Anzug ausziehen', status: 'Anzug-Status' }[a.action] || 'Anzug'),
+    label: (a) => ({ uebernehmen: 'Anzug übernehmen', anziehen: 'Anzug anziehen', rufen: 'Anzug rufen', ausziehen: 'Anzug ausziehen', status: 'Anzug-Status' }[a.action] || 'Anzug'),
     run: async ({ action }, context) => {
       const mem = context.suitMemory || {};
       if (action === 'status') return { hatAnzug: Boolean(mem.owned), name: mem.owned || null, traegtIhn: Boolean(mem.worn) };
@@ -1297,10 +1298,10 @@ export const cloudTools = [
         return { uebernommen: mem.last.name, hinweis: 'Der Anzug gehört jetzt dir (Jarvis). Sag kurz danke und dass er ihn mit „Zieh deinen Anzug an“ anziehen lassen kann.' };
       }
       if (!mem.owned) throw new Error('Ich habe noch keinen eigenen Anzug. Sag: „Designe dir einen Anzug“ und dann „Ja, benutz ihn“.');
-      if (action === 'anziehen') {
+      if (action === 'anziehen' || action === 'rufen') {
         if (mem.worn) return { schonAn: true, hinweis: 'Du trägst den Anzug schon.' };
         mem.worn = true;
-        context.showVisual?.({ type: 'suit', action: 'on' });
+        context.showVisual?.({ type: 'suit', action: action === 'rufen' ? 'call' : 'on' });
         return { angezogen: mem.owned, hinweis: 'Die Anzieh-Animation läuft. Sag einen kurzen, coolen Satz (z. B. „Anzug aktiviert. Alle Systeme bereit.“). Danach redest du ganz normal weiter – du trägst jetzt deinen Anzug.' };
       }
       if (!mem.worn) return { schonAus: true, hinweis: 'Du trägst den Anzug gerade nicht.' };
@@ -1347,6 +1348,87 @@ export const cloudTools = [
       if (action === 'abbrechen') return { abgebrochen: true, hinweis: 'Sag erleichtert/cool: „Selbstzerstörung abgebrochen.“' };
       pranks.selfDestruct = setTimeout(() => context.say?.('Sag jetzt locker und mit Humor: „Spaß, Boss. Ich bin noch da.“'), 12500);
       return { gestartet: true, hinweis: 'Es ist nur ein Spaß. Sag jetzt NUR dramatisch und kurz: „Selbstzerstörung aktiviert. Zehn Sekunden.“ – verrate den Spaß NICHT, das kommt automatisch am Ende.' };
+    }
+  },
+  {
+    name: 'drone_control',
+    description: 'Drohnen-Begleiter: start = eine Drohne fliegt über den Bildschirm und folgt Finger/Maus („Drohne, starte“); news = die Drohne holt die aktuellen Nachrichten und bringt sie als Karte („Drohne, hol mir die Nachrichten“); stopp = Drohne landet („Drohne, lande“).',
+    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['start', 'news', 'stopp'] } }, required: ['action'] },
+    label: (a) => ({ start: 'Drohne starten', news: 'Drohne holt Nachrichten', stopp: 'Drohne landen' }[a.action] || 'Drohne'),
+    run: async ({ action }, context) => {
+      if (action !== 'news') { context.showVisual?.({ type: 'drone', action }); return { ok: true, hinweis: action === 'start' ? 'Drohne ist gestartet und folgt seinem Finger. Kurz bestätigen.' : 'Drohne gelandet.' }; }
+      context.showVisual?.({ type: 'drone', action: 'fetch' });
+      const news = await getNews({ limit: 4 });
+      context.showVisual?.({ type: 'drone', action: 'deliver', items: news.meldungen.slice(0, 4).map((m) => ({ titel: m.titel, link: m.link })) });
+      return { meldungen: news.meldungen.slice(0, 4).map((m) => m.titel), hinweis: 'Die Drohne bringt die Nachrichten als Karte. Fasse die wichtigsten 2–3 kurz zusammen.' };
+    }
+  },
+  {
+    name: 'appointment_rocket',
+    description: 'Termin-Rakete: zeigt seinen echten nächsten Termin (oder einen genannten) als Raketenstart mit Countdown; bei 0 hebt die Rakete ab. Für „Zeig mir meinen nächsten Termin als Rakete“.',
+    parameters: { type: 'object', properties: { title: { type: 'string', description: 'Optional: bestimmter Termin (Teil des Titels)' } } },
+    label: () => 'Termin-Rakete',
+    run: async ({ title }, context) => {
+      const planner = sanitizePlanner(context.getStore('planner'));
+      const list = upcomingAppointments(planner, { days: 365 }).filter((a) => !title || String(a.title).toLowerCase().includes(String(title).toLowerCase()));
+      const now = localNow();
+      const next = list.find((a) => a.date > now.date || !a.time || a.time >= now.time);
+      if (!next) throw new Error(title ? `Ich finde keinen kommenden Termin mit „${title}“.` : 'Im Planer steht kein kommender Termin. Sag zum Beispiel: „Ich hab Freitag um 15 Uhr Zahnarzt.“');
+      context.showVisual?.({ type: 'rocket', appointment: { title: next.title, date: next.date, time: next.time || '' } });
+      return { termin: next.title, datum: next.date, uhrzeit: next.time || 'ganztägig', hinweis: 'Die Rakete mit Countdown ist auf dem Bildschirm. Sag kurz, wann der Termin ist und wie lange es noch dauert.' };
+    }
+  },
+  {
+    name: 'shield',
+    description: 'Schutzschild = Fokus-Modus mit Animation: hoch = blaues Energie-Schild über dem Bildschirm, Töne aus, Lern-/Fokus-Timer läuft („Schild hoch“, optional Minuten); runter = Schild zerbricht, Fokus vorbei („Schild runter“).',
+    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['hoch', 'runter'] }, minutes: { type: 'number', description: 'Fokuszeit in Minuten (Standard 25)' } }, required: ['action'] },
+    label: (a) => (a.action === 'hoch' ? `Schutzschild hoch${a.minutes ? ` (${a.minutes} min)` : ''}` : 'Schutzschild runter'),
+    run: async ({ action, minutes }, context) => {
+      const total = Math.min(180, Math.max(1, Math.round(Number(minutes) || 25)));
+      context.showVisual?.({ type: 'shield', action, minutes: total });
+      return action === 'hoch'
+        ? { aktiv: true, minuten: total, hinweis: 'Schild ist oben: Töne aus, Fokus-Timer läuft. Sag kurz „Schild aktiv. Ich halte dir den Rücken frei.“ und störe danach nicht.' }
+        : { aktiv: false, hinweis: 'Schild ist unten. Kurz bestätigen.' };
+    }
+  },
+  {
+    name: 'radio_show',
+    description: 'Jarvis-Radio: Radiostudio mit ON-AIR-Lampe und Equalizer, Jarvis moderiert die echten Nachrichten des Tages wie ein Radiosprecher. start = „Starte Jarvis-Radio“; stopp = „Radio aus“.',
+    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['start', 'stopp'] } }, required: ['action'] },
+    label: (a) => (a.action === 'start' ? 'Jarvis-Radio' : 'Radio aus'),
+    run: async ({ action }, context) => {
+      if (action === 'stopp') { context.showVisual?.({ type: 'radio', action: 'stop' }); return { ok: true, hinweis: 'Radio aus. Kurz verabschieden.' }; }
+      const news = await getNews({ limit: 5 });
+      const items = news.meldungen.slice(0, 5).map((m) => ({ titel: m.titel }));
+      context.showVisual?.({ type: 'radio', action: 'start', items, source: news.quelle });
+      return { meldungen: items.map((m) => m.titel), quelle: news.quelle, hinweis: 'Du bist jetzt Radiomoderator: Begrüße locker („Hier ist Jarvis-Radio, die News für dich!“), lies die 5 Meldungen jeweils in 1 Satz – nichts dazuerfinden – und verabschiede dich mit „Das war Jarvis-Radio“.' };
+    }
+  },
+  {
+    name: 'gift_box',
+    description: 'Geschenk-Box: animiertes Geschenkpaket öffnet sich und zeigt 5 passende Geschenkideen mit Preis und Bild; antippen setzt sie auf die Einkaufsliste. Für „Was schenke ich meiner Mutter zum Geburtstag?“, „Geschenkidee für meinen Freund, 20 Euro“.',
+    parameters: { type: 'object', properties: { recipient: { type: 'string' }, occasion: { type: 'string' }, budget: { type: 'number' }, interests: { type: 'string' } } },
+    label: (a) => `Geschenk-Box${a.recipient ? `: ${a.recipient}` : ''}`,
+    run: async (args, context) => {
+      context.showVisual?.({ type: 'gift', action: 'start' });
+      try {
+        const gifts = await giftIdeas(args);
+        context.showVisual?.({ type: 'gift', action: 'open', gifts });
+        return { ideen: gifts.ideen.map((g) => `${g.name}${g.preis ? ` (~${g.preis} €)` : ''}`), hinweis: 'Die Geschenk-Box ist offen. Nenne kurz die 2 besten Ideen und warum. Preise sind ungefähre Schätzungen.' };
+      } catch (error) {
+        context.showVisual?.({ type: 'gift', action: 'error', error: error.message });
+        throw error;
+      }
+    }
+  },
+  {
+    name: 'helmet_mirror',
+    description: 'Helm-Spiegel: Kamera an, auf SEINEM EIGENEN Gesicht erscheint Jarvis\' Anzug-Helm, der den Kopfbewegungen folgt (nur auf dem Gerät, niemand wird erkannt). an = „Setz mir einen Helm auf“; visier = „Visier auf/zu“; aus = „Helm ab“, „Spiegel aus“.',
+    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['an', 'visier', 'aus'] } }, required: ['action'] },
+    label: (a) => ({ an: 'Helm-Spiegel', visier: 'Visier', aus: 'Helm-Spiegel aus' }[a.action] || 'Helm-Spiegel'),
+    run: async ({ action }, context) => {
+      context.showVisual?.({ type: 'mirror', action });
+      return { ok: true, hinweis: action === 'an' ? 'Die Kamera öffnet sich (er muss sie erlauben), dann sitzt der Helm auf seinem Kopf. Sag etwas Cooles wie „Steht dir, Boss.“' : 'Kurz bestätigen.' };
     }
   },
   {

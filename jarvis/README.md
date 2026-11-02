@@ -373,6 +373,16 @@ Standard ist jetzt der Look aus den Videos:
 - **Realistisch**: Jarvis' Anzug wird als fotorealistisches KI-Foto gezeigt. Beim Anziehen formt sich die echte Rüstung hinter einer Scan-Linie aus einem Hologramm (mit Funken und Reaktor-Zündung), beim Ausziehen umgekehrt. Ohne Bild (Generator nicht erreichbar) gibt es automatisch die gezeichnete Version.
 - **Flug-Modus**: „Flieg nach Paris“ (nur im Anzug) – Düsen zünden, Abheben, Flug durch die Wolken, dann fliegt die 3D-Erde zum Ziel mit echtem Wetter und Infos.
 
+## Drohne, Termin-Rakete, Schild, Radio, Geschenk-Box, Helm-Spiegel, Anzug-Ruf
+
+- 🛸 „Drohne, starte!“ – eine Drohne summt über den Bildschirm und folgt Finger/Maus; „Drohne, hol mir die Nachrichten“ – sie fliegt los und bringt die echten Schlagzeilen als Karte; „Drohne, lande“.
+- 🚀 „Zeig mir meinen nächsten Termin als Rakete“ – dein echter nächster Termin als Startrampe mit Live-Countdown; bei 0 (oder per „Testlauf“) hebt die Rakete ab.
+- 🛡️ „Schild hoch“ – Energie-Schild aus Sechsecken, Fokus-Timer läuft, App-Töne aus; Antippen erzeugt Einschläge. „Schild runter“ – das Schild zerbricht.
+- 📻 „Starte Jarvis-Radio“ – Studio mit ON-AIR-Lampe, Mikrofon und Equalizer im Takt seiner Stimme; Jarvis moderiert die echten Tagesschau-Meldungen. „Radio aus“.
+- 🎁 „Was schenke ich meiner Mama? 30 Euro“ – Geschenkpaket wackelt, Schleife geht auf, 5 Ideen mit Bild und Preis (Schätzung) steigen heraus; „+ Einkaufsliste“ übernimmt sie.
+- 🪞 „Setz mir einen Helm auf“ – Kamera an, Jarvis' Anzug-Helm sitzt auf deinem Kopf und folgt ihm; „Visier auf/zu“ klappt die Gesichtsplatte; „Helm ab“. Läuft nur auf dem Gerät, niemand wird erkannt.
+- 📞 „Anzug zu mir!“ – die Anzugteile fliegen von außerhalb heran und rasten krachend ein (Bildschirm wackelt), am Ende das realistische Foto.
+
 ## Gesicht 🙂 und Selbstzerstörung 💥
 
 - „Zeig dein Gesicht“: Statt Reaktor/Anzug erscheint Jarvis' fotorealistisches Gesicht (immer dasselbe; „Neues Gesicht“ für ein anderes). Der Mund bewegt sich mit seiner echten Stimme, die Augen blinzeln, der Kopf bewegt sich leicht. Die Gesichtspunkte erkennt einmalig MediaPipe (wird bei Bedarf geladen). „Gesicht weg“ → zurück zu Anzug oder Reaktor. Anzug und Gesicht sind unabhängig.

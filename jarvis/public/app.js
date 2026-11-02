@@ -16,6 +16,8 @@ import { handleDesignMessage, initDesign } from './design.js';
 import { handleBusinessMessage, initBusiness, openBusiness } from './business.js';
 import { filmTab, initFilm } from './film.js';
 import { handleFaceMessage, initFace } from './face.js';
+import { handleExtrasMessage, initExtras } from './extras.js';
+import { handleMirrorMessage, initMirror } from './mirror.js';
 import { handlePrankMessage, initPrank } from './prank.js';
 import { handleFactoryMessage, initFactory, openFactory } from './factory.js';
 import { handleSuitMessage, initSuit, openSuitLab, ownedSuit, suitState } from './suit.js';
@@ -1267,6 +1269,8 @@ initBusiness({
 initFactory({ toast, showProject, result: hudResult, onClose: () => filmTab('normal') });
 initSuit({ toast, result: hudResult, onClose: () => filmTab('normal'), send: (message) => { if (state.ws?.readyState === 1) state.ws.send(JSON.stringify(message)); } });
 initFace({ toast, level: () => smoothLevel });
+initExtras({ toast, level: () => smoothLevel, addShopping: (text) => { const list = loadShoppingList(); if (!list.some((i) => i.text === text)) storeShoppingList([...list, { text, done: false }]); toast(`Auf die Einkaufsliste: ${text}`); } });
+initMirror({ toast });
 initPrank({ send: (message) => { if (state.ws?.readyState === 1) state.ws.send(JSON.stringify(message)); } });
 initFilm({ openBusiness, openFactory, openSuit: openSuitLab });
 initPalace({ toast });
@@ -1359,6 +1363,7 @@ initGlobe({
 });
 
 function chime(frequencies = [880, 1320]) {
+  if (document.body.classList.contains('shield-on')) return; // shield = focus, no sounds
   if (!state.audio) return;
   const now = state.audio.currentTime;
   frequencies.forEach((frequency, index) => {
@@ -1582,6 +1587,16 @@ function handleMessage(message) {
       break;
     case 'design_open':
       handleDesignMessage(message);
+      break;
+    case 'drone':
+    case 'rocket':
+    case 'shield':
+    case 'radio':
+    case 'gift':
+      handleExtrasMessage(message);
+      break;
+    case 'mirror':
+      handleMirrorMessage(message);
       break;
     case 'face':
       handleFaceMessage(message);

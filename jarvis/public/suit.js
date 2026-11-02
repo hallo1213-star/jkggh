@@ -109,6 +109,23 @@ export function suitSvg(suit, { id = 's' } = {}) {
 </svg>`;
 }
 
+// Helmet only (for the helmet mirror): part 'shell' = helmet, 'face' = face plate + eyes.
+export function helmetSvg(suit, { part = 'shell' } = {}) {
+  const c = suit.farben || {};
+  const main = HEX.test(c.haupt) ? c.haupt : '#b3121f';
+  const accent = HEX.test(c.akzent) ? c.akzent : '#d4a64a';
+  const glow = HEX.test(c.leuchten) ? c.leuchten : '#7ff3ff';
+  const helm = HELMETS[suit.helm] || HELMETS.klassisch;
+  const defs = `<defs><linearGradient id="hm" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${shade(main, 0.4)}"/><stop offset=".5" stop-color="${main}"/><stop offset="1" stop-color="${shade(main, -0.5)}"/></linearGradient><linearGradient id="ha" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${shade(accent, 0.45)}"/><stop offset=".55" stop-color="${accent}"/><stop offset="1" stop-color="${shade(accent, -0.45)}"/></linearGradient><filter id="hg" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="1.6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+  const eyes = helm.visor
+    ? `<path d="M122 48 Q150 40 178 48 L176 62 Q150 55 124 62 Z" fill="${glow}" filter="url(#hg)"/>`
+    : `<path d="M132 54 L146 57 L145 61 L133 59 Z" fill="${glow}" filter="url(#hg)"/><path d="M168 54 L154 57 L155 61 L167 59 Z" fill="${glow}" filter="url(#hg)"/>`;
+  const body = part === 'face'
+    ? `<path d="${helm.face}" fill="url(#ha)"/>${eyes}<path d="M140 79 L160 79" stroke="${shade(main, -0.7)}" stroke-width="2"/>`
+    : `<path d="${helm.base} ${helm.face}" fill="url(#hm)" fill-rule="evenodd"/><path d="${helm.base}" fill="none" stroke="${shade(main, 0.5)}" stroke-width="1" opacity=".5"/><path d="${helm.face}" fill="none" stroke="${shade(main, -0.6)}" stroke-width="1.5" opacity=".8"/>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="108 4 84 98" width="420" height="490">${defs}${body}</svg>`;
+}
+
 // --- lab overlay ----------------------------------------------------------------------
 function build() {
   if (ui) return ui;
@@ -371,6 +388,37 @@ export async function suitOn() {
   setTimeout(() => { setWorn(true); applyWorn(); }, img ? 3400 : 500 + 7 * 330 + 300);
   await done;
 }
+// "Anzug zu mir!": the parts fly in from outside the screen, each one slams into
+// place and shakes the screen; at the end the realistic photo takes over.
+export async function suitCall() {
+  const own = ownedSuit();
+  if (!own) { deps.toast('Jarvis hat noch keinen Anzug. Sag: „Designe dir einen Anzug.“', 'error'); return; }
+  if (document.querySelector('.suit-fx')) return;
+  document.dispatchEvent(new CustomEvent('jarvis-overlay', { detail: 'fx' }));
+  const img = await within(loadPhoto(own), 1500);
+  const fx = el('div', 'suit-fx call');
+  fx.style.setProperty('--g', own.farben?.leuchten || '#7ff3ff');
+  fx.innerHTML = `<div class="suit-fx-flash"></div><div class="suit-fx-ring"></div><div class="suit-fx-fig assembling call">${suitSvg(own, { id: 'call' })}</div>${img ? '<div class="suit-fx-pic final-photo"><img class="real" alt=""></div>' : ''}<p class="suit-fx-text">ANZUG WIRD GERUFEN</p>`;
+  if (img) fx.querySelector('.final-photo img').src = img.src;
+  document.body.append(fx);
+  const fig = fx.querySelector('.suit-fx-fig');
+  requestAnimationFrame(() => fx.classList.add('run'));
+  sound('charge');
+  const order = ['beine', 'arme', 'brust', 'schultern', 'helm', 'reaktor', 'antrieb'];
+  order.forEach((part, i) => setTimeout(() => {
+    fig.querySelector(`[data-part="${part}"]`)?.classList.add('in');
+    setTimeout(() => {
+      if (part === 'reaktor') { sound('ignite'); fx.classList.add('ignite'); } else sound('clank');
+      fx.classList.remove('hit'); void fx.offsetWidth; fx.classList.add('hit');
+    }, 430);
+  }, 500 + i * 520));
+  const end = 500 + order.length * 520 + 400;
+  setTimeout(() => { fx.classList.add('final', 'photo-in'); fx.querySelector('.suit-fx-text').textContent = `${own.name} · ONLINE`; }, end);
+  setTimeout(() => { setWorn(true); applyWorn(); }, end + 300);
+  setTimeout(() => fx.classList.add('out'), end + 1500);
+  setTimeout(() => fx.remove(), end + 2300);
+}
+
 export async function suitOff() {
   const own = ownedSuit();
   if (!own || document.querySelector('.suit-fx')) return;
@@ -419,6 +467,7 @@ export function handleSuitMessage(message) {
   else if (message.action === 'design') renderDesign(message.suit, { askButtons: true });
   else if (message.action === 'own') { if (!ui || ui.root.hidden) renderDesign(message.suit, { askButtons: false }); adopt(message.suit); }
   else if (message.action === 'fly') { deps.onClose(); suitFly(message.place); }
+  else if (message.action === 'call') { deps.onClose(); suitCall(); }
   else if (message.action === 'on' || message.action === 'off') {
     document.dispatchEvent(new CustomEvent('jarvis-overlay', { detail: 'fx' }));
     deps.onClose();
