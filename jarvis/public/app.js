@@ -12,6 +12,7 @@ import { chartCard, initVisuals, showWeather as showWeatherShow, startFocus } fr
 import { initCards, isEverydayCard, showEverydayCard } from './cards.js';
 import { handleCameraMessage, initCamera } from './camera.js';
 import { handleVideoMessage, initVideo } from './video.js';
+import { handleDesignMessage, initDesign } from './design.js';
 
 const OUTPUT_SAMPLE_RATE = 24000;
 
@@ -1294,6 +1295,14 @@ initModels({
     return true;
   }
 });
+initDesign({
+  toast,
+  send: (message) => {
+    if (state.ws?.readyState !== WebSocket.OPEN) return false;
+    state.ws.send(JSON.stringify(message));
+    return true;
+  }
+});
 initVideo({
   toast,
   send: (message) => {
@@ -1537,6 +1546,9 @@ function handleMessage(message) {
       break;
     case 'video_open':
       handleVideoMessage(message);
+      break;
+    case 'design_open':
+      handleDesignMessage(message);
       break;
     case 'globe':
       handleGlobeMessage(message);

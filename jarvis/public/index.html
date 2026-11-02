@@ -89,6 +89,10 @@
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 1 7l11 5 9-4.1V15h2V7L12 2Zm-7 9.2v4.3C5 18 8.1 20 12 20s7-2 7-4.5v-4.3l-7 3.2-7-3.2Z"/></svg>
           <span>Kunden</span>
         </button>
+        <button class="ctrl" id="design-button" type="button">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0 0 20c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2h2.4A5.6 5.6 0 0 0 23 10C23 5.6 18 2 12 2Zm-5.5 10a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm3-4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Zm3 4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3Z"/></svg>
+          <span>Design</span>
+        </button>
         <button class="ctrl" id="studio-button" type="button">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v14H3V4Zm2 2v10h14V6H5Zm3 14h8v2H8v-2Z"/></svg>
           <span>Studio</span>
@@ -300,6 +304,8 @@
         <button class="ctrl" id="studio-full" type="button">Vollbild</button>
         <button class="ctrl" id="studio-reload" type="button">Neu laden</button>
         <select class="ctrl model-list" id="studio-versions" aria-label="Versionen"></select>
+        <button class="ctrl" id="studio-upgrade" type="button">✨ Hochwertiger</button>
+        <button class="ctrl" id="studio-code" type="button">Code</button>
         <button class="ctrl" id="studio-zip" type="button">Export (ZIP)</button>
         <button class="ctrl" id="studio-dash" type="button">Meine Websites</button>
         <button class="icon-btn" id="studio-close" type="button" aria-label="Studio schließen">✕</button>
@@ -307,6 +313,8 @@
     </header>
     <div class="studio-stage" id="studio-stage" data-device="desktop"><iframe id="studio-frame" title="Website-Vorschau" sandbox="allow-scripts"></iframe></div>
     <p class="studio-qa" id="studio-qa"></p>
+    <p class="studio-review" id="studio-review" hidden></p>
+    <div class="studio-codeview" id="studio-codeview" hidden><div class="studio-code-tabs" id="studio-code-tabs"></div><pre id="studio-code-pre"></pre></div>
     <form class="studio-prompt globe-search" id="studio-prompt"><input type="text" maxlength="600" placeholder="z. B. „Erstelle einen modernen Online-Shop für eine Luxus-Kleidungsmarke“ – danach: „Mach es dunkler“" aria-label="Website beschreiben oder ändern"></form>
     <div class="studio-progress" id="studio-progress" hidden></div>
     <div class="studio-dashboard" id="studio-dashboard" hidden>

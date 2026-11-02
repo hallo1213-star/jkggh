@@ -9,7 +9,8 @@ const els = {
   overlay: $('studio-overlay'), frame: $('studio-frame'), stage: $('studio-stage'), title: $('studio-title'), meta: $('studio-meta'),
   close: $('studio-close'), prompt: $('studio-prompt'), devices: document.querySelectorAll('[data-device]'), full: $('studio-full'),
   reload: $('studio-reload'), zip: $('studio-zip'), versions: $('studio-versions'), dash: $('studio-dash'), dashPanel: $('studio-dashboard'),
-  dashList: $('studio-dash-list'), dashClose: $('studio-dash-close'), progress: $('studio-progress'), qa: $('studio-qa'), newBtn: $('studio-new')
+  dashList: $('studio-dash-list'), dashClose: $('studio-dash-close'), progress: $('studio-progress'), qa: $('studio-qa'), newBtn: $('studio-new'),
+  upgrade: $('studio-upgrade'), code: $('studio-code'), review: $('studio-review'), codeview: $('studio-codeview'), codeTabs: $('studio-code-tabs'), codePre: $('studio-code-pre')
 };
 
 const CSP = "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com data:; img-src https://image.pollinations.ai data: blob:; media-src data: blob:; connect-src 'none'";
@@ -69,6 +70,32 @@ function render(fixAllowed = false) {
   els.versions.replaceChildren(...current.versions.map((ver, i) => new Option(`V${i + 1} · ${ver.note || 'Version'}`, String(i))).reverse());
   els.versions.value = String(current.active);
   send({ type: 'studio_current', project: asProject() });
+  showReview(v.review);
+  if (!els.codeview.hidden) renderCode();
+}
+
+function showReview(review) {
+  if (!review) { els.review.hidden = true; return; }
+  els.review.hidden = false;
+  els.review.dataset.state = review.ok ? (review.issues.length ? 'warn' : 'ok') : 'bad';
+  els.review.textContent = review.issues.length ? `Design-Prüfung: ${review.issues.map((i) => `${i.level === 'fehler' ? '✖' : '•'} ${i.text}`).join('  ')}` : `✓ Design-Prüfung bestanden${review.contrast ? ` (Textkontrast ${String(review.contrast).replace('.', ',')}:1)` : ''}`;
+}
+
+// Read-only code view of the current version.
+let codeFile = 'index.html';
+function renderCode() {
+  const files = version()?.files || [];
+  if (!files.some((f) => f.path === codeFile)) codeFile = files[0]?.path || '';
+  els.codeTabs.replaceChildren(...files.map((f) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ctrl';
+    b.textContent = `${f.path} · ${(f.content.length / 1024).toFixed(1).replace('.', ',')} KB`;
+    b.setAttribute('aria-pressed', String(f.path === codeFile));
+    b.addEventListener('click', () => { codeFile = f.path; renderCode(); });
+    return b;
+  }), Object.assign(document.createElement('button'), { type: 'button', className: 'ctrl', textContent: 'Kopieren', onclick: () => navigator.clipboard?.writeText(files.find((f) => f.path === codeFile)?.content || '').then(() => notify('Code kopiert')).catch(() => {}) }));
+  els.codePre.textContent = files.find((f) => f.path === codeFile)?.content || '';
 }
 
 window.addEventListener('message', (event) => {
@@ -137,12 +164,12 @@ async function runJob(kind, body, note) {
 export async function followJob(id, kind, prompt, note) {
   openStudio();
   try {
-    const result = await poll(id, note, kind === 'build' ? `Neue Website: ${prompt || ''}` : kind === 'fix' ? 'Automatische Reparatur' : `Änderung: ${prompt || ''}`);
+    const result = await poll(id, note, kind === 'build' ? `Neue Website: ${prompt || ''}` : kind === 'fix' ? 'Automatische Reparatur' : kind === 'upgrade' ? 'Design hochwertiger machen' : `Änderung: ${prompt || ''}`);
     if (kind === 'build' || !current) {
       current = { id: Math.random().toString(36).slice(2, 10), title: result.title, versions: [], active: 0 };
       qaRound = 0;
     }
-    current.versions.push({ at: Date.now(), note: kind === 'build' ? 'Erstellt' : kind === 'fix' ? 'Automatisch repariert' : String(prompt || note || 'Änderung').slice(0, 40), files: result.files, plan: result.plan || version()?.plan });
+    current.versions.push({ at: Date.now(), note: kind === 'build' ? 'Erstellt' : kind === 'fix' ? 'Automatisch repariert' : kind === 'upgrade' || result.upgraded ? 'Hochwertiger gestaltet' : String(prompt || note || 'Änderung').slice(0, 40), files: result.files, plan: result.plan || version()?.plan, review: result.designReview || null });
     current.versions = current.versions.slice(-15);
     current.active = current.versions.length - 1;
     await saveProject(current);
@@ -197,6 +224,15 @@ export function initStudio({ toast, send: sender }) {
   }));
   els.full.addEventListener('click', () => (els.stage.requestFullscreen ? els.stage.requestFullscreen() : els.stage.classList.toggle('studio-fake-full')));
   els.reload.addEventListener('click', render);
+  els.upgrade.addEventListener('click', () => {
+    if (!current) { notify('Erstelle zuerst eine Website.', 'error'); return; }
+    runJob('upgrade', { prompt: 'Design hochwertiger machen', project: asProject() }, 'Hochwertiger gestaltet');
+  });
+  els.code.addEventListener('click', () => {
+    els.codeview.hidden = !els.codeview.hidden;
+    els.code.setAttribute('aria-pressed', String(!els.codeview.hidden));
+    if (!els.codeview.hidden) renderCode();
+  });
   els.zip.addEventListener('click', () => {
     if (!current) return;
     const readme = { path: 'README.md', content: `# ${current.title}\n\nErstellt mit Jarvis Studio.\n\n## Starten\n- Einfach \`index.html\` im Browser öffnen, oder\n- im Ordner \`npx serve\` ausführen und die angezeigte Adresse öffnen.\n\n## Veröffentlichen\nDen Ordner z. B. bei Netlify (Drag & Drop), GitHub Pages oder Cloudflare Pages hochladen.\n\nHinweis: Warenkorb und Kasse sind eine Demo ohne echte Zahlung. Für echte Zahlungen z. B. Stripe oder einen Shop-Dienst anbinden.\n` };

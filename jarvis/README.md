@@ -182,6 +182,33 @@ Dinge, die sich ändern können (Preise, Versionen), kennzeichnet Jarvis ehrlich
 - **Live-Charts:** *„Zeig mir den Bitcoin-Chart“*, *„Wie lief Tesla dieses Jahr?“*, *„DAX der letzten 6 Monate“* liefert einen animierten Neon-Kursverlauf mit echten Daten. Zeiträume 1 Tag bis 5 Jahre, mit Finger oder Maus über den Chart fahren für Datum und Kurs. Keine Anlageberatung.
 - **Stimme sichtbar:** Im Orb-Design atmet die Kugel im Takt der Stimme, und ein Ring aus Frequenzbalken zeigt Jarvis' Stimme live (orange) bzw. deine (grau).
 
+## JARVIS DESIGN STUDIO 🎨
+
+Oben auf **Design** tippen (oder einfach sagen, was du willst). Du beschreibst dein Design, und **Jarvis wählt automatisch das passende Studio**:
+
+| Du sagst z. B. | Jarvis nimmt |
+|---|---|
+| „Erstelle mir eine Website für meinen Friseursalon“, „Designe ein futuristisches Dashboard“, „Online-Shop mit Login“ | **Website** (Jarvis Studio): mehrere Seiten, Navigation, Animationen, Handy/Tablet/PC, Warenkorb, Login-/Registrierungsseiten (Demo) und Dashboards mit Diagrammen |
+| „Erstelle eine moderne Modemarke“, „Logo für mein Gaming-Team“, „Poster für meine Party“, „App-Icon“ | **Grafik & Marke**: echte Vektorgrafiken (SVG) |
+| „Baue mir ein 3D-Haus mit Pool“, „Ein futuristisches Zimmer“ | **3D-Studio** (Three.js) |
+| „Programmier ein Snake-Spiel“, „Eine To-do-App“ | **Werkstatt** |
+| „Ein Bild von …“ | **Bild** (KI-Bild) |
+
+**Grafik & Marke:**
+- Arten: Markenidentität (Logo, Logo quer, App-Icon, Social-Media-Post, Banner), Logo (dazu quer und einfarbig), App-Icon, Poster, Werbebanner, Social-Media-Post, Story, Produktverpackung (Vorder- und Seitenansicht).
+- Stil: automatisch passend, Jarvis-Stil, Luxus, Minimalistisch, Verspielt, Retro oder Tech. Bei Poster, Banner, Post, Story und Verpackung geht optional ein KI-Foto im Hintergrund.
+- Jarvis zeichnet alles selbst als SVG mit Farbpalette und Schriftpaar (Google Fonts, werden eingebettet).
+- **Prüfung:** Struktur, Sicherheit, erlaubte Schriften, Textkontrast, Text innerhalb der Fläche, Bild nicht leer. Bei Fehlern repariert Jarvis einmal automatisch.
+- **✨ Hochwertiger:** ein echter Design-Durchgang (Hierarchie, Raster, Farben, Typografie, Tiefe), nicht nur neue Farben. Alle Versionen bleiben wählbar.
+- **Export:** einzeln als SVG, PNG oder PNG 2×, oder alles als ZIP mit SVGs, PNGs und Markenleitfaden (Farben, Schriften, Übersicht). Mit **Code** siehst du den SVG-Code.
+- Sicherheit: Ein strenger Filter entfernt aus jeder Grafik Skripte, Event-Handler, eingebettete Inhalte und externe Links. Websites laufen in der abgeschotteten Vorschau ohne Zugriff auf deine Daten.
+
+**Website-Verbesserungen im Jarvis Studio:**
+- Jarvis wählt den Stil selbst, zum Beispiel Luxus edel, Bäckerei warm und Shop verkaufsstark. Der **Jarvis-Stil** (Schwarz, Pink-Violett, Cyan, Reaktor, HUD) ist Standard bei Technik, KI, Gaming und Dashboards.
+- **Design-Prüfung** nach jedem Bau: Kontrast, fließende Schriftgrößen, Handy-Regeln, Fokus-Zustände, „Bewegung reduzieren“, Alternativtexte. Schwere Probleme korrigiert Jarvis automatisch.
+- **✨ Hochwertiger** (oder „Mach das Design hochwertiger“): Abstands-System, Typo-Skala, verfeinerte Palette, neu gestaltete Komponenten, Scroll-Animationen, bessere Handy-Ansicht.
+- **Code**: alle Dateien ansehen und kopieren.
+
 ## Video Studio: Jarvis erstellt Videos 🎬
 
 Sag zum Beispiel **„Jarvis, erstelle mir eine 30-sekündige Werbung für meinen Jarvis“**, **„Mach ein TikTok-Video über Fitness“** oder **„Erstelle ein realistisches Video von einer futuristischen Stadt bei Nacht“**. Du kannst auch oben auf **Video** tippen und den Wunsch eintippen.

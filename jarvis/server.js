@@ -35,11 +35,12 @@ import { designScene, sanitizeScene } from './model3d.js';
 import { sanitizeProject, writeProject } from './projects.js';
 import { describeImage, llmLabel, llmProvider } from './llm.js';
 import { NARRATION_SCRIPTS, narrateVideo } from './video-narration.js';
+import { GRAPHIC_UPGRADE, STYLES, TYPES as GRAPHIC_TYPES, classifyDesign, designGraphics, editGraphics, sanitizeSet } from './graphics.js';
 import { aiClipFile, aiClipStatus, aiVideoConfig, convertToMp4, editVideo, fetchImage, ffmpegPath, planVideo, sanitizeVideo, startAiClip, synthesizeVoice, voiceConfigured } from './video.js';
 import { twilioConfigured } from './phone-call.js';
 import { telegramAssistantEnabled } from './telegram-bot.js';
 import { cancelTasks, startTask } from './tasks.js';
-import { buildSite, editSite, fixSite } from './studio.js';
+import { UPGRADE_WISH, buildSite, designReview, editSite, fixSite, upgradeSite } from './studio.js';
 import { getChart } from './markets.js';
 import { getIss } from './iss.js';
 import { startTelegramAssistant } from './telegram-bot.js';
@@ -246,7 +247,26 @@ function startStudioJob(kind, { prompt, project, problems }) {
     for (const session of sessions) session.toBrowser({ type: 'studio_job', id, status: 'läuft', step, prompt: job.prompt });
   };
   const base = project ? sanitizeProject(project) : null;
-  const run = kind === 'build' ? buildSite(prompt, { onProgress }) : kind === 'fix' ? fixSite({ ...base, plan: project.plan }, problems) : editSite({ ...base, plan: project?.plan }, prompt, { onProgress });
+  const upgrade = kind === 'upgrade' || (kind === 'edit' && UPGRADE_WISH.test(String(prompt || '')));
+  const first = kind === 'build' ? buildSite(prompt, { onProgress })
+    : kind === 'fix' ? fixSite({ ...base, plan: project.plan }, problems)
+      : upgrade ? (onProgress('Design-Aufwertung: Abstände, Typografie, Farben, Komponenten, Animationen'), upgradeSite({ ...base, plan: project?.plan }, kind === 'upgrade' ? '' : prompt, { onProgress }))
+        : editSite({ ...base, plan: project?.plan }, prompt, { onProgress });
+  // Design review on the result; serious problems are corrected once automatically.
+  const run = first.then(async (result) => {
+    let review = designReview(result);
+    if (!review.ok && kind !== 'fix') {
+      onProgress(`Design-Prüfung: ${review.issues.filter((i) => i.level === 'fehler').length} Problem(e) – Jarvis korrigiert`);
+      try {
+        const fixed = await fixSite({ ...result, plan: result.plan }, review.issues.filter((i) => i.level === 'fehler').map((i) => i.text));
+        result = { ...fixed, plan: result.plan };
+        review = designReview(result);
+      } catch {
+        // keep the first result; the review shows what is still open
+      }
+    }
+    return { ...result, designReview: review, upgraded: upgrade };
+  });
   run.then((result) => {
     job.status = 'fertig';
     job.result = result;
@@ -544,6 +564,48 @@ const httpServer = createServer(async (request, response) => {
     return;
   }
 
+  // --- Design Studio: graphics & brand identities, routing of design wishes ---
+  if (pathname === '/api/graphics' && request.method === 'POST') {
+    if (!isAuthenticated(request)) {
+      sendJson(response, 401, { error: 'Nicht angemeldet' });
+      return;
+    }
+    try {
+      const body = JSON.parse(await readBody(request, 1_500_000));
+      let set;
+      if (body.action === 'neu') set = await designGraphics(body.brief, { type: body.type, style: body.style, photo: body.photo === true });
+      else if (['aendern', 'hochwertiger', 'reparieren'].includes(body.action)) {
+        const base = sanitizeSet(body.set);
+        const wish = body.action === 'hochwertiger' ? `${GRAPHIC_UPGRADE}${body.wish ? ` Zusätzlich: ${body.wish}` : ''}` : body.action === 'reparieren' ? `Behebe diese Probleme, die die automatische Prüfung gefunden hat: ${(body.problems || []).map((p) => String(p).slice(0, 200)).slice(0, 10).join('; ')}` : body.wish;
+        set = await editGraphics(base, wish);
+      } else throw new Error('Unbekannte Aktion');
+      sendJson(response, 200, { set });
+    } catch (error) {
+      sendJson(response, 400, { error: error.message });
+    }
+    return;
+  }
+  if (pathname === '/api/design/options' && request.method === 'GET') {
+    if (!isAuthenticated(request)) {
+      sendJson(response, 401, { error: 'Nicht angemeldet' });
+      return;
+    }
+    sendJson(response, 200, { types: Object.fromEntries(Object.entries(GRAPHIC_TYPES).map(([k, v]) => [k, { label: v.label, photo: Boolean(v.photo), assets: v.assets.length }])), styles: Object.keys(STYLES), ai: Boolean(llmProvider()) });
+    return;
+  }
+  if (pathname === '/api/design/classify' && request.method === 'POST') {
+    if (!isAuthenticated(request)) {
+      sendJson(response, 401, { error: 'Nicht angemeldet' });
+      return;
+    }
+    try {
+      sendJson(response, 200, classifyDesign(JSON.parse(await readBody(request, 4000)).text));
+    } catch (error) {
+      sendJson(response, 400, { error: error.message });
+    }
+    return;
+  }
+
   // --- Video Studio ---
   if (pathname.startsWith('/api/video/')) {
     if (!isAuthenticated(request)) {
@@ -627,7 +689,7 @@ const httpServer = createServer(async (request, response) => {
         sendJson(response, 200, { id: job.id, status: job.status, steps: job.steps, error: job.error, result: job.status === 'fertig' ? job.result : undefined });
       } else if (String(request.headers['content-type'] || '').startsWith('application/json')) {
         const body = JSON.parse(await readBody(request, 1024 * 1024));
-        if (!['build', 'edit', 'fix'].includes(body.kind)) throw new Error('Unbekannte Aktion');
+        if (!['build', 'edit', 'fix', 'upgrade'].includes(body.kind)) throw new Error('Unbekannte Aktion');
         if (body.kind !== 'build' && !body.project) throw new Error('Kein Projekt angegeben.');
         const job = startStudioJob(body.kind, body);
         sendJson(response, 200, { id: job.id });
@@ -1061,6 +1123,7 @@ browserWss.on('connection', (browser, request) => {
     modelMemory: {},
     projectMemory: {},
     videoMemory: {},
+    designMemory: {},
     startTask(goal) {
       return startTask(goal, {
         onEvent(event) {
@@ -1368,6 +1431,12 @@ browserWss.on('connection', (browser, request) => {
         .catch((error) => toBrowser({ type: 'globe', action: 'error', message: `Ort nicht erkannt: ${error.message}` }));
     } else if (message.type === 'globe_location_error') {
       if (agentOpen) agent.sendInjectAgentMessage({ type: 'InjectAgentMessage', message: `Ich konnte deinen Standort nicht abfragen: ${String(message.message || 'keine Erlaubnis').slice(0, 120)}. Erlaube den Standortzugriff für Jarvis im Browser.` });
+    } else if (message.type === 'design_current') {
+      try {
+        context.designMemory.last = sanitizeSet(message.set);
+      } catch {
+        // ignore malformed sets
+      }
     } else if (message.type === 'video_current') {
       try {
         context.videoMemory.last = sanitizeVideo(message.project);

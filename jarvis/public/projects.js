@@ -76,7 +76,7 @@ export function makeZip(files) {
   let offset = 0;
   for (const file of files) {
     const name = encoder.encode(file.path);
-    const data = encoder.encode(file.content);
+    const data = file.content instanceof Uint8Array ? file.content : encoder.encode(file.content);
     const crc = crc32(data);
     const local = new DataView(new ArrayBuffer(30));
     local.setUint32(0, 0x04034b50, true); local.setUint16(4, 20, true); local.setUint16(6, 0x0800, true);

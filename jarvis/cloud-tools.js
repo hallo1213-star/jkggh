@@ -9,6 +9,7 @@ import { getChart, getMarkets } from './markets.js';
 import { getIss } from './iss.js';
 import { describeRoute, planRoute } from './route.js';
 import { aiVideoConfig, editVideo, planVideo } from './video.js';
+import { GRAPHIC_UPGRADE, TYPES as GRAPHIC_TYPES, designGraphics, editGraphics } from './graphics.js';
 import { STATES, calculate, convertCurrency, countdownTarget, getBundesliga, getDepartures, getHolidays, getJourneys, ingredientText, makeQr, makeQuiz, planRecipe, summarizeUrl, translate } from './everyday.js';
 import { bauplanConfig, missingSettings } from './bauplan-page.js';
 import { describeScene, designScene } from './model3d.js';
@@ -635,6 +636,36 @@ export const cloudTools = [
           ? 'Die Erde fliegt dorthin, die Webcams sind als Kamera-Symbole zu sehen, rechts die Liste mit aktuellen Bildern. Was auf den Bildern zu sehen ist, weißt du nicht – beschreib nur, wo die Kameras sind.'
           : `Im Umkreis von ${radius} km sind keine Webcams verzeichnet${found.windy ? '' : ' (weltweite Webcams gibt es mit einem kostenlosen Windy-Schlüssel, siehe README)'}. Rechts ist ein Link zur Webcam-Suche.`
       };
+    }
+  },
+  {
+    name: 'design_graphic',
+    description: 'JARVIS DESIGN STUDIO – Grafik & Marke: Jarvis gestaltet SELBST echte Vektorgrafiken (SVG) und zeigt sie im Design Studio mit Prüfung und Export (SVG/PNG/ZIP): Logos, App-Icons, Poster, Werbebanner, Social-Media-Posts, Storys, Produktverpackungen und komplette Markenidentitäten (Logo, Icon, Farben, Schriften, Post, Banner). Für „Erstelle mir ein Logo für …“, „Designe ein Poster für …“, „Erstelle eine moderne Modemarke“, „Mach ein App-Icon“. aendern = das offene Design ändern; hochwertiger = professionell aufwerten („Mach das Design hochwertiger“). Websites → studio_website, 3D → create_3d_model, Spiele/Apps → create_project, Fotos/Bilder → create_image.',
+    parameters: {
+      type: 'object',
+      properties: {
+        action: { type: 'string', enum: ['neu', 'aendern', 'hochwertiger'] },
+        description: { type: 'string', description: 'Bei neu: was gestaltet werden soll, in seinen Worten. Bei aendern: die Änderung.' },
+        type: { type: 'string', enum: Object.keys(GRAPHIC_TYPES), description: 'brand = komplette Markenidentität, logo, app_icon, poster, banner, social_post, story, packaging' },
+        style: { type: 'string', enum: ['auto', 'jarvis', 'luxus', 'minimal', 'verspielt', 'retro', 'tech'], description: 'Nur wenn er einen Stil nennt; sonst auto' },
+        photo: { type: 'boolean', description: 'KI-Foto als Hintergrund (nur Poster, Banner, Post, Story, Verpackung)' }
+      },
+      required: ['action']
+    },
+    label: (a) => (a.action === 'neu' ? `Design: ${a.description || ''}` : a.action === 'hochwertiger' ? 'Design hochwertiger machen' : `Design ändern: ${a.description || ''}`),
+    run: async ({ action, description, type, style, photo }, context) => {
+      if (action === 'neu') {
+        const set = await designGraphics(description, { type: type || 'logo', style: style || 'auto', photo: photo === true });
+        if (context.designMemory) context.designMemory.last = set;
+        context.showVisual?.({ type: 'design_open', set });
+        return { name: set.name, art: set.typeLabel, konzept: set.concept, dateien: set.assets.filter((a) => a.svg).map((a) => a.label), farben: set.palette, schriften: `${set.fonts.title}, ${set.fonts.text}`, pruefung: set.qa.ok ? 'bestanden' : set.qa.issues.map((i) => i.text).slice(0, 3), hinweis: 'Das Design ist im Design Studio zu sehen (Export als SVG, PNG oder ZIP). Beschreib kurz Idee, Farben und Schrift. Es sind echte Vektorgrafiken, die Jarvis selbst gezeichnet hat.' };
+      }
+      const current = context.designMemory?.last;
+      if (!current) throw new Error('Gerade ist kein Design offen. Sag mir, was ich gestalten soll.');
+      const set = await editGraphics(current, action === 'hochwertiger' ? `${GRAPHIC_UPGRADE}${description ? ` Zusätzlich: ${description}` : ''}` : description);
+      context.designMemory.last = set;
+      context.showVisual?.({ type: 'design_open', set, replace: true, note: action === 'hochwertiger' ? 'Hochwertiger gestaltet' : String(description || 'Geändert').slice(0, 40) });
+      return { geaendert: set.changed, konzept: set.concept, hinweis: 'Die neue Version ist im Design Studio (alte Versionen bleiben wählbar).' };
     }
   },
   {
