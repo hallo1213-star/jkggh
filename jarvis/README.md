@@ -370,6 +370,13 @@ Standard ist jetzt der Look aus den Videos:
 - „Zieh deinen Anzug an“ → Anzieh-Animation (Teile fliegen heran, Reaktor zündet). Danach steht Jarvis im Anzug auf dem Startbildschirm; der Brust-Reaktor reagiert auf seine Stimme, die Augen leuchten beim Sprechen. Du redest ganz normal weiter.
 - „Zieh den Anzug aus“ → Auszieh-Animation, Jarvis ist wieder normal.
 - Der Anzug bleibt gespeichert (auch nach Neustart, auf diesem Gerät).
+- **Realistisch**: Jarvis' Anzug wird als fotorealistisches KI-Foto gezeigt. Beim Anziehen formt sich die echte Rüstung hinter einer Scan-Linie aus einem Hologramm (mit Funken und Reaktor-Zündung), beim Ausziehen umgekehrt. Ohne Bild (Generator nicht erreichbar) gibt es automatisch die gezeichnete Version.
+- **Flug-Modus**: „Flieg nach Paris“ (nur im Anzug) – Düsen zünden, Abheben, Flug durch die Wolken, dann fliegt die 3D-Erde zum Ziel mit echtem Wetter und Infos.
+
+## Gesicht 🙂 und Selbstzerstörung 💥
+
+- „Zeig dein Gesicht“: Statt Reaktor/Anzug erscheint Jarvis' fotorealistisches Gesicht (immer dasselbe; „Neues Gesicht“ für ein anderes). Der Mund bewegt sich mit seiner echten Stimme, die Augen blinzeln, der Kopf bewegt sich leicht. Die Gesichtspunkte erkennt einmalig MediaPipe (wird bei Bedarf geladen). „Gesicht weg“ → zurück zu Anzug oder Reaktor. Anzug und Gesicht sind unabhängig.
+- „Selbstzerstörung aktivieren“: reiner Spaß – roter Alarm, Sirene, wackelnder Bildschirm, Countdown von 10, Explosion, dann „Spaß, Boss. 😏“. „Abbrechen“ stoppt ihn.
 
 ## Design: Neon-HUD, Iron-Man oder Orb 🎨
 

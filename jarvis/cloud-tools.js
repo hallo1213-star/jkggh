@@ -1310,6 +1310,46 @@ export const cloudTools = [
     }
   },
   {
+    name: 'suit_fly',
+    description: 'Flug-Modus: Jarvis fliegt in seinem Anzug zu einem Ort – Start-Animation mit Düsen, Flug durch die Wolken, dann fliegt die 3D-Erde dorthin und zeigt echtes Wetter, Uhrzeit und Infos. Nur wenn er den Anzug trägt. Für „Flieg nach Paris“, „Jarvis, flieg zum Eiffelturm“.',
+    parameters: { type: 'object', properties: { place: { type: 'string', description: 'Zielort' } }, required: ['place'] },
+    label: (a) => `Flug nach ${a.place}`,
+    run: async ({ place }, context) => {
+      if (!context.suitMemory?.worn) throw new Error('Zum Fliegen muss ich erst meinen Anzug anziehen. Sag: „Zieh deinen Anzug an.“');
+      const target = await geocodePlace(place);
+      if (context.globeMemory) context.globeMemory.place = target;
+      context.showVisual?.({ type: 'suit', action: 'fly', place: target });
+      const [details] = await Promise.all([placeDetails(target, '').catch(() => null), new Promise((r) => setTimeout(r, 4300))]);
+      context.showGlobe({ action: 'fly', place: target, topic: null });
+      if (details) setTimeout(() => context.showGlobe({ action: 'panels', place: target, left: details.left, right: details.right }), 1200);
+      return { ziel: target.label, aktuell: details?.weather || 'Wetter gerade nicht verfügbar', info: details?.summary ? details.summary.zusammenfassung.slice(0, 300) : undefined, hinweis: 'Die Start-Animation läuft, danach fliegt die Erde zum Ziel. Sag beim Start etwas Kurzes wie „Düsen an. Abflug nach …“ und beschreib nach der Landung in 1–2 Sätzen Wetter und Ort.' };
+    }
+  },
+  {
+    name: 'face_control',
+    description: 'Jarvis\' realistisches Gesicht: zeigen = „Zeig dein Gesicht“ (statt Reaktor/Anzug erscheint sein Gesicht, der Mund bewegt sich mit seiner Stimme); verstecken = „Gesicht weg“, „Zurück zum Reaktor/Anzug“; neu = „Gib dir ein neues Gesicht“. Der Anzug bleibt davon unberührt.',
+    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['zeigen', 'verstecken', 'neu'] } }, required: ['action'] },
+    label: (a) => ({ zeigen: 'Gesicht zeigen', verstecken: 'Gesicht ausblenden', neu: 'Neues Gesicht' }[a.action] || 'Gesicht'),
+    run: async ({ action }, context) => {
+      context.showVisual?.({ type: 'face', action });
+      return { ok: true, hinweis: action === 'verstecken' ? 'Gesicht ausgeblendet. Kurz bestätigen.' : 'Dein Gesicht ist jetzt auf dem Bildschirm (das Bild lädt ein paar Sekunden). Sag kurz etwas Persönliches, z. B. „Schön, dich zu sehen.“' };
+    }
+  },
+  {
+    name: 'self_destruct',
+    description: 'SPASS-Prank „Selbstzerstörung“: roter Alarm, Sirene, Countdown von 10, Explosion-Effekt – am Ende „Spaß, Boss“. Es passiert NICHTS Echtes. start = „Selbstzerstörung aktivieren“; abbrechen = „Abbrechen!“, „Stopp die Selbstzerstörung“.',
+    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['start', 'abbrechen'] } }, required: ['action'] },
+    label: (a) => (a.action === 'start' ? 'Selbstzerstörung (Spaß)' : 'Selbstzerstörung abgebrochen'),
+    run: async ({ action }, context) => {
+      const pranks = context.pranks || {};
+      clearTimeout(pranks.selfDestruct);
+      context.showVisual?.({ type: 'prank', action });
+      if (action === 'abbrechen') return { abgebrochen: true, hinweis: 'Sag erleichtert/cool: „Selbstzerstörung abgebrochen.“' };
+      pranks.selfDestruct = setTimeout(() => context.say?.('Sag jetzt locker und mit Humor: „Spaß, Boss. Ich bin noch da.“'), 12500);
+      return { gestartet: true, hinweis: 'Es ist nur ein Spaß. Sag jetzt NUR dramatisch und kurz: „Selbstzerstörung aktiviert. Zehn Sekunden.“ – verrate den Spaß NICHT, das kommt automatisch am Ende.' };
+    }
+  },
+  {
     name: 'business_mode',
     description: 'Business-Modus („Business Creation Protocol“): Jarvis entwirft live auf dem Bildschirm ein komplettes Geschäftskonzept mit Countdown – Marktanalyse, Produkt, Markenname, Produktlinie, Website-Texte, Werbung, Kosten und erste Schritte. Für „Starte den Business-Modus“, „Erstelle mir ein Business mit 100 Euro Startkapital“, „Bau mir ein Geschäft für LED-Schilder“. Danach kann die Website mit studio_website gebaut werden. Zahlen sind Schätzungen, kein Gewinnversprechen.',
     parameters: {

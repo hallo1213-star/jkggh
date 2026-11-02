@@ -45,6 +45,9 @@ export function normalizeSuit(raw, { wish = '' } = {}) {
   };
   const seed = [...suit.name].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 900000, 11);
   suit.bildUrl = imageUrl(`${suit.bild || 'futuristic high-tech armored exosuit'}, full body front view, standing heroic pose, colors ${suit.farben.haupt} and ${suit.farben.akzent}, glowing ${suit.farben.leuchten} chest reactor and eyes, cinematic dark studio, rim light, highly detailed, no text`, { format: 'hoch', seed });
+  // Photo-realistic picture for the main screen and the suit-up animation
+  // (front view, centered, black background so it blends into the app).
+  suit.foto = { seed, prompt: `photorealistic full body photo of a futuristic high-tech armored exosuit, ${suit.bild || 'sleek metallic armor plates'}, main color ${suit.farben.haupt}, accents ${suit.farben.akzent}, glowing ${suit.farben.leuchten} round reactor in the center of the chest and glowing eyes, standing straight facing the camera, symmetrical front view, arms at the sides, whole body visible from head to feet, centered, pure black background, dramatic cinematic studio lighting, rim light, polished metal reflections, ultra detailed, 8k, no text` };
   return suit;
 }
 

@@ -15,6 +15,8 @@ import { handleVideoMessage, initVideo } from './video.js';
 import { handleDesignMessage, initDesign } from './design.js';
 import { handleBusinessMessage, initBusiness, openBusiness } from './business.js';
 import { filmTab, initFilm } from './film.js';
+import { handleFaceMessage, initFace } from './face.js';
+import { handlePrankMessage, initPrank } from './prank.js';
 import { handleFactoryMessage, initFactory, openFactory } from './factory.js';
 import { handleSuitMessage, initSuit, openSuitLab, ownedSuit, suitState } from './suit.js';
 import { hudAction, hudBoot, hudResult, hudConnected, hudPong, hudToday, hudUser, initHud, reactorFx, refreshSystem } from './hud.js';
@@ -1264,6 +1266,8 @@ initBusiness({
 });
 initFactory({ toast, showProject, result: hudResult, onClose: () => filmTab('normal') });
 initSuit({ toast, result: hudResult, onClose: () => filmTab('normal'), send: (message) => { if (state.ws?.readyState === 1) state.ws.send(JSON.stringify(message)); } });
+initFace({ toast, level: () => smoothLevel });
+initPrank({ send: (message) => { if (state.ws?.readyState === 1) state.ws.send(JSON.stringify(message)); } });
 initFilm({ openBusiness, openFactory, openSuit: openSuitLab });
 initPalace({ toast });
 initVisuals({ toast, chime: (f) => chime(f) });
@@ -1578,6 +1582,12 @@ function handleMessage(message) {
       break;
     case 'design_open':
       handleDesignMessage(message);
+      break;
+    case 'face':
+      handleFaceMessage(message);
+      break;
+    case 'prank':
+      handlePrankMessage(message);
       break;
     case 'factory':
       filmTab('apps');
@@ -1901,6 +1911,7 @@ function draw() {
   const speaking = isSpeaking();
   const raw = speaking ? readLevel(state.outputAnalyser) : state.micMuted ? 0 : readLevel(state.inputAnalyser);
   smoothLevel += (raw - smoothLevel) * 0.2;
+  if (document.body.classList.contains('suit-photo')) document.body.style.setProperty('--voice', smoothLevel.toFixed(3));
   if (document.body.classList.contains('theme-orb')) drawOrbSpectrum(speaking);
   if (document.body.classList.contains('theme-film')) {
     drawFilmReactor(width, height, speaking);

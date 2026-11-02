@@ -20,6 +20,28 @@ function setWorn(on) { try { localStorage.setItem(WORN_KEY, String(on)); } catch
 export function suitState() { const s = ownedSuit(); return { type: 'suit_state', owned: s ? s.name : null, worn: suitWorn() }; }
 function sync() { deps.send(suitState()); }
 
+// --- realistic photo of the suit (same-origin, so it can be used everywhere) ----------------
+export function suitPhotoUrl(suit) {
+  if (!suit?.foto?.prompt) return '';
+  return `/api/video/image?format=9%3A16&seed=${encodeURIComponent(suit.foto.seed)}&prompt=${encodeURIComponent(suit.foto.prompt)}`;
+}
+const photos = new Map(); // url → Promise<HTMLImageElement|null>
+function loadPhoto(suit) {
+  const url = suitPhotoUrl(suit);
+  if (!url) return Promise.resolve(null);
+  if (!photos.has(url)) {
+    photos.set(url, new Promise((resolve) => {
+      const img = new Image();
+      img.decoding = 'async';
+      img.onload = () => resolve(img);
+      img.onerror = () => { photos.delete(url); resolve(null); };
+      img.src = url;
+    }));
+  }
+  return photos.get(url);
+}
+const within = (promise, ms) => Promise.race([promise, new Promise((r) => setTimeout(() => r(null), ms))]);
+
 // --- sounds ------------------------------------------------------------------------------
 let audio = null;
 function sound(kind) {
@@ -186,8 +208,8 @@ function renderDesign(suit, { askButtons = true } = {}) {
   img.referrerPolicy = 'no-referrer';
   img.addEventListener('load', () => render.classList.add('ready'));
   img.addEventListener('error', () => render.classList.add('failed'));
-  img.src = suit.bildUrl;
-  render.append(img, el('small', '', 'KI-RENDER'));
+  img.src = suitPhotoUrl(suit) || suit.bildUrl;
+  render.append(img, el('small', '', 'KI-FOTO'));
   side.append(parts, stats, abil);
   box.append(fig, side, render);
   ui.stage.replaceChildren(box);
@@ -222,6 +244,7 @@ function ask(side) {
 function adopt(suit) {
   if (!suit) return;
   setOwned(suit);
+  loadPhoto(suit);
   sound('stamp');
   const stamp = el('div', 'suit-stamp', 'ÜBERNOMMEN');
   ui?.stage.append(stamp);
@@ -240,13 +263,80 @@ function applyWorn() {
   if (on && wrap) {
     if (!stage) { stage = el('div', 'suit-stage-main'); stage.id = 'suit-stage'; wrap.prepend(stage); }
     stage.innerHTML = suitSvg(own, { id: 'main' });
-  } else stage?.remove();
+    document.body.classList.remove('suit-photo');
+    loadPhoto(own).then((img) => {
+      if (!img || !document.body.classList.contains('suit-on') || !stage.isConnected) return;
+      const photo = el('div', 'suit-photo-box');
+      const pic = img.cloneNode();
+      pic.className = 'suit-photo';
+      pic.alt = own.name;
+      const glow = el('span', 'suit-photo-glow');
+      glow.style.setProperty('--g', own.farben?.leuchten || '#7ff3ff');
+      photo.append(pic, glow);
+      stage.append(photo);
+      document.body.classList.add('suit-photo');
+    });
+  } else { stage?.remove(); document.body.classList.remove('suit-photo'); }
   const intro = document.querySelector('.film-intro');
   let introSuit = document.getElementById('film-intro-suit');
   if (on && intro) {
     if (!introSuit) { introSuit = el('div', 'film-intro-suit'); introSuit.id = 'film-intro-suit'; intro.prepend(introSuit); }
     introSuit.innerHTML = suitSvg(own, { id: 'intro' });
+    loadPhoto(own).then((img) => { if (img && introSuit.isConnected) { const pic = img.cloneNode(); pic.className = 'suit-photo'; pic.alt = own.name; introSuit.replaceChildren(pic); introSuit.classList.add('photo'); } });
   } else introSuit?.remove();
+}
+
+// Realistic version: the photo of the suit forms out of a hologram – a scan line
+// runs over the body, below it the armour is real, above it still a projection.
+function photoCinematic(kind, own, img) {
+  return new Promise((resolve) => {
+    const glow = own.farben?.leuchten || '#7ff3ff';
+    const fx = el('div', `suit-fx photo ${kind}`);
+    fx.style.setProperty('--g', glow);
+    fx.innerHTML = `<div class="suit-fx-flash"></div><div class="suit-fx-ring"></div><div class="suit-fx-pic"><img class="holo" alt=""><img class="real" alt=""><span class="suit-fx-line"></span><span class="suit-fx-core"></span></div><canvas class="suit-fx-sparks"></canvas><p class="suit-fx-text">${kind === 'on' ? 'ANZUG WIRD ANGELEGT' : 'ANZUG WIRD ABGELEGT'}</p>`;
+    fx.querySelectorAll('img').forEach((i) => { i.src = img.src; });
+    document.body.append(fx);
+    const pic = fx.querySelector('.suit-fx-pic');
+    const text = fx.querySelector('.suit-fx-text');
+    const canvas = fx.querySelector('.suit-fx-sparks');
+    const ctx = canvas.getContext('2d');
+    canvas.width = innerWidth; canvas.height = innerHeight;
+    const sparks = [];
+    requestAnimationFrame(() => fx.classList.add('run'));
+    sound(kind === 'on' ? 'charge' : 'down');
+    const T0 = performance.now() + 450;
+    const DUR = 2900;
+    let clanks = 0;
+    let ignited = false;
+    const frame = (now) => {
+      const k = Math.min(1, Math.max(0, (now - T0) / DUR));
+      const eased = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
+      // on: real armour grows from the feet up; off: it vanishes from the head down
+      const cut = kind === 'on' ? 100 - eased * 100 : eased * 100;
+      pic.style.setProperty('--cut', `${cut}%`);
+      const rect = pic.getBoundingClientRect();
+      const lineY = rect.top + rect.height * (cut / 100);
+      if (k > 0 && k < 1) {
+        for (let i = 0; i < 4; i += 1) sparks.push({ x: rect.left + rect.width * (0.25 + Math.random() * 0.5), y: lineY, vx: (Math.random() - 0.5) * 6, vy: -Math.random() * 4 - 1, life: 1 });
+        if (Math.floor(k * 9) > clanks) { clanks = Math.floor(k * 9); sound('clank'); }
+      }
+      if (kind === 'on' && !ignited && k >= 0.92) { ignited = true; fx.classList.add('ignite'); sound('ignite'); }
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (const p of sparks) {
+        p.x += p.vx; p.y += p.vy; p.vy += 0.25; p.life -= 0.03;
+        if (p.life <= 0) continue;
+        ctx.fillStyle = `rgba(255, ${180 + Math.random() * 60}, 120, ${p.life})`;
+        ctx.fillRect(p.x, p.y, 2.5, 2.5);
+      }
+      for (let i = sparks.length - 1; i >= 0; i -= 1) if (sparks[i].life <= 0) sparks.splice(i, 1);
+      if (k < 1 || sparks.length) requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+    const end = 450 + DUR;
+    setTimeout(() => { text.textContent = kind === 'on' ? `${own.name} · ONLINE` : 'ANZUG ABGELEGT'; fx.classList.add('final'); }, end);
+    setTimeout(() => { fx.classList.add('out'); resolve(); }, end + 1100);
+    setTimeout(() => fx.remove(), end + 1900);
+  });
 }
 
 function cinematic(kind, own) {
@@ -276,29 +366,59 @@ export async function suitOn() {
   if (!own) { deps.toast('Jarvis hat noch keinen Anzug. Sag: „Designe dir einen Anzug.“', 'error'); return; }
   if (document.querySelector('.suit-fx')) return;
   document.dispatchEvent(new CustomEvent('jarvis-overlay', { detail: 'fx' }));
-  const done = cinematic('on', own);
-  setTimeout(() => { setWorn(true); applyWorn(); }, 500 + 7 * 330 + 300);
+  const img = await within(loadPhoto(own), 2500);
+  const done = img ? photoCinematic('on', own, img) : cinematic('on', own);
+  setTimeout(() => { setWorn(true); applyWorn(); }, img ? 3400 : 500 + 7 * 330 + 300);
   await done;
 }
 export async function suitOff() {
   const own = ownedSuit();
   if (!own || document.querySelector('.suit-fx')) return;
   document.dispatchEvent(new CustomEvent('jarvis-overlay', { detail: 'fx' }));
-  const done = cinematic('off', own);
+  const img = await within(loadPhoto(own), 1500);
+  const done = img ? photoCinematic('off', own, img) : cinematic('off', own);
   setTimeout(() => { setWorn(false); applyWorn(); }, 400);
   await done;
+}
+
+// --- flight: thrusters, lift-off, through the clouds; then the globe takes over -----------
+export async function suitFly(place) {
+  const own = ownedSuit();
+  if (!own) return;
+  document.dispatchEvent(new CustomEvent('jarvis-overlay', { detail: 'fx' }));
+  const img = await within(loadPhoto(own), 1200);
+  const fx = el('div', 'suit-fly');
+  fx.style.setProperty('--g', own.farben?.leuchten || '#7ff3ff');
+  const who = el('div', 'suit-fly-suit');
+  if (img) { const pic = img.cloneNode(); pic.alt = own.name; who.append(pic); } else who.innerHTML = suitSvg(own, { id: 'fly' });
+  who.append(el('span', 'suit-fly-jet l'), el('span', 'suit-fly-jet r'));
+  const clouds = el('div', 'suit-fly-clouds');
+  for (let i = 0; i < 14; i += 1) { const c = el('span'); c.style.setProperty('--x', `${Math.random() * 100}%`); c.style.setProperty('--d', `${0.5 + Math.random() * 0.7}s`); c.style.setProperty('--s', `${0.6 + Math.random() * 1.4}`); c.style.animationDelay = `${-Math.random()}s`; clouds.append(c); }
+  const hud = el('div', 'suit-fly-hud');
+  hud.append(el('small', '', 'FLUG-MODUS · KURS GESETZT'), el('b', '', `ZIEL: ${String(place?.name || place?.label || '').toUpperCase().slice(0, 40)}`));
+  fx.append(clouds, who, hud);
+  document.body.append(fx);
+  sound('charge');
+  requestAnimationFrame(() => fx.classList.add('run'));
+  setTimeout(() => { fx.classList.add('liftoff'); sound('ignite'); }, 1200);
+  setTimeout(() => fx.classList.add('clouds'), 1900);
+  setTimeout(() => fx.classList.add('out'), 3900);
+  setTimeout(() => fx.remove(), 4800);
 }
 
 // --- public ---------------------------------------------------------------------------
 export function initSuit(options) {
   deps = { ...deps, ...options };
   applyWorn();
+  const own = ownedSuit();
+  if (own) loadPhoto(own);
 }
 export function openSuitLab() { renderHome(); }
 export function handleSuitMessage(message) {
   if (message.action === 'design_start') renderBuilding(message.description || '');
   else if (message.action === 'design') renderDesign(message.suit, { askButtons: true });
   else if (message.action === 'own') { if (!ui || ui.root.hidden) renderDesign(message.suit, { askButtons: false }); adopt(message.suit); }
+  else if (message.action === 'fly') { deps.onClose(); suitFly(message.place); }
   else if (message.action === 'on' || message.action === 'off') {
     document.dispatchEvent(new CustomEvent('jarvis-overlay', { detail: 'fx' }));
     deps.onClose();

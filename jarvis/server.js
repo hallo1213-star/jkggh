@@ -1232,6 +1232,10 @@ browserWss.on('connection', (browser, request) => {
     showVisual(message) {
       toBrowser(message);
     },
+    say(text) {
+      if (agentOpen) agent.sendInjectAgentMessage({ type: 'InjectAgentMessage', message: String(text).slice(0, 300) });
+    },
+    pranks: {},
     showMarkets(markets) {
       toBrowser({ type: 'markets', markets });
     },
@@ -1465,6 +1469,8 @@ browserWss.on('connection', (browser, request) => {
         .catch((error) => toBrowser({ type: 'globe', action: 'error', message: `Ort nicht erkannt: ${error.message}` }));
     } else if (message.type === 'globe_location_error') {
       if (agentOpen) agent.sendInjectAgentMessage({ type: 'InjectAgentMessage', message: `Ich konnte deinen Standort nicht abfragen: ${String(message.message || 'keine Erlaubnis').slice(0, 120)}. Erlaube den Standortzugriff für Jarvis im Browser.` });
+    } else if (message.type === 'prank_abort') {
+      clearTimeout(context.pranks?.selfDestruct);
     } else if (message.type === 'suit_state') {
       context.suitMemory.owned = message.owned ? String(message.owned).slice(0, 30) : null;
       context.suitMemory.worn = Boolean(message.owned) && message.worn === true;
