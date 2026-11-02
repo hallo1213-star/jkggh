@@ -2,7 +2,7 @@
 // the browser microphone to Deepgram Voice Agent, runs cloud functions and
 // forwards computer-control functions to the laptop connector when it is online.
 // The API keys stay in this process and never reach the browser.
-import { EFFECT_TOOLS, effectFunction, unwrapEffect } from './effects-hub.js';
+import { EFFECT_TOOLS, effectFunctions, unwrapEffect } from './effects-hub.js';
 import { designSuit } from './suit.js';
 import { planBusiness, websiteBrief } from './business-plan.js';
 import { createServer } from 'node:http';
@@ -80,7 +80,7 @@ const contentTypes = {
 };
 const functionDefinitions = [
   ...cloudTools.filter(({ name }) => !EFFECT_TOOLS.has(name)).map(({ name, description, parameters, confirm }) => ({ name, description, parameters, ...(confirm ? { defer_until_eot: true } : {}) })),
-  effectFunction(cloudTools),
+  ...effectFunctions(cloudTools),
   ...laptopFunctions
 ];
 if (functionDefinitions.length > 128) console.warn(`Achtung: ${functionDefinitions.length} Funktionen – die Sprach-KI erlaubt höchstens 128.`);

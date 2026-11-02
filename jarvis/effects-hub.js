@@ -37,27 +37,70 @@ export const EFFECTS = {
 };
 export const EFFECT_TOOLS = new Set(Object.keys(EFFECTS));
 
-export function effectFunction(cloudTools) {
-  const names = cloudTools.map((t) => t.name).filter((n) => EFFECT_TOOLS.has(n));
-  return {
-    name: EFFECT_FUNCTION,
-    description: `Startet Jarvis' Show-, Anzug-, Kamera-, Spiel- und Animationsfunktionen. Wähle die passende Funktion als "name" und gib ihre Angaben in "args". Funktionen:\n${names.map((n) => `- ${n}: ${EFFECTS[n]}`).join('\n')}`,
-    parameters: {
-      type: 'object',
-      properties: {
-        name: { type: 'string', enum: names, description: 'Welche Funktion' },
-        args: { type: 'object', description: 'Angaben für diese Funktion (siehe Liste), z. B. {"action":"anziehen"}', additionalProperties: true }
-      },
-      required: ['name']
-    }
-  };
+// Three bundles, each with its own short list (function descriptions ≤ 1024 chars).
+export const GROUPS = {
+  jarvis_anzug_welt: { title: 'Anzug, Gesicht, Modi, eigene Welt, Business, App-Fabrik, Level', tools: ['suit_design', 'suit_control', 'suit_fly', 'face_control', 'persona_mode', 'digital_reality', 'business_mode', 'app_factory', 'level_status', 'day_recap'] },
+  jarvis_kamera: { title: 'Kamera-/Mikrofon-Effekte, Helm, Kinoplakat, Drohne, Satellit, Schatzsuche', tools: ['effect_control', 'helmet_mirror', 'movie_poster', 'drone_control', 'satellite_zoom', 'treasure_hunt'] },
+  jarvis_show: { title: 'Show, Spiele und Spaß', tools: ['fireworks', 'gravity', 'black_hole', 'mindmap', 'time_capsule', 'holo_chess', 'appointment_rocket', 'shield', 'radio_show', 'gift_box', 'random_toss', 'self_destruct', 'ufo_prank'] }
+};
+export const GROUP_NAMES = new Set(Object.keys(GROUPS));
+
+export function effectFunctions(cloudTools) {
+  const have = new Set(cloudTools.map((t) => t.name));
+  return Object.entries(GROUPS).map(([fn, g]) => {
+    const names = g.tools.filter((n) => have.has(n));
+    return {
+      name: fn,
+      description: `${g.title}. name = Funktion, args = Angaben:\n${names.map((n) => `${n}: ${SHORT_LIST[n]}`).join('\n')}`,
+      parameters: { type: 'object', properties: { name: { type: 'string', enum: names }, args: { type: 'object', description: 'Angaben laut Liste, z. B. {"action":"anziehen"}', additionalProperties: true } }, required: ['name'] }
+    };
+  });
 }
+export const effectFunction = (cloudTools) => effectFunctions(cloudTools)[0];
 
 // Turns a jarvis_effekt call into the real tool name + arguments.
 export function unwrapEffect(name, args) {
-  if (name !== EFFECT_FUNCTION) return { name, args };
+  if (name !== EFFECT_FUNCTION && !GROUP_NAMES.has(name)) return { name, args };
+  const allowed = GROUPS[name] ? new Set(GROUPS[name].tools) : EFFECT_TOOLS;
   const inner = String(args?.name || '');
   const innerArgs = args?.args && typeof args.args === 'object' ? args.args : typeof args?.args === 'string' ? (() => { try { return JSON.parse(args.args); } catch { return {}; } })() : {};
   // only the listed show features can be reached this way – never mail, calls etc.
-  return EFFECT_TOOLS.has(inner) ? { name: inner, args: innerArgs } : { name: EFFECT_FUNCTION, args: innerArgs, unknown: true };
+  return allowed.has(inner) ? { name: inner, args: innerArgs } : { name, args: innerArgs, unknown: true };
+}
+
+// The detailed list goes into the system prompt (function descriptions may
+// have at most 1024 characters).
+const SHORT_LIST = {
+  business_mode: 'Business erstellen {idea?, budget?} – danach Website anbieten',
+  app_factory: 'App in 60 s bauen {description}',
+  suit_design: 'Anzug entwerfen {description?} – danach fragen, ob du ihn benutzen sollst',
+  suit_control: 'Anzug {action: uebernehmen|anziehen|rufen („Anzug zu mir“)|ausziehen|status}',
+  suit_fly: 'im Anzug fliegen {place}',
+  face_control: 'Gesicht {action: zeigen|verstecken|neu}',
+  persona_mode: 'Modus {mode: friday|party|butler|normal}',
+  digital_reality: 'Digitale Realität/eigene Welt {action: oeffnen|portal|stadt|stadt_aus|umgebung|zurueck}',
+  effect_control: 'Kamera/Mikro {action: klinge (Energieklinge)|hologramm (Hologramm-Nachricht)|stimme (Roboter-/Helm-Stimme)|repulsor|gesten|teleport|zurueck|aus}',
+  helmet_mirror: 'Helm auf meinen Kopf {action: an|visier|aus}',
+  movie_poster: 'Kinoplakat von mir {title?}',
+  drone_control: 'Drohne {action: start|news|stopp}',
+  appointment_rocket: 'nächster Termin als Rakete {}',
+  shield: 'Schutzschild/Fokus {action: hoch|runter, minutes?}',
+  radio_show: 'Jarvis-Radio {action: start|stopp} – danach Meldungen moderieren',
+  gift_box: 'Geschenkideen {recipient?, occasion?, budget?}',
+  mindmap: 'Gedanken-Karte {action: neu, topic} | {action: erweitern, text, branch?}',
+  fireworks: 'Feuerwerk {text? = Name im Finale}',
+  gravity: 'Schwerkraft {action: an|aus}',
+  black_hole: 'schwarzes Loch {}',
+  time_capsule: 'Zeitkapsel {action: neu, text, days?} | {action: zeigen}',
+  treasure_hunt: 'Schatzsuche {action: start|zeigen|stopp}',
+  holo_chess: 'Schach {level?: leicht|mittel|schwer}',
+  self_destruct: 'Prank Selbstzerstörung {action: start|abbrechen}',
+  ufo_prank: 'Prank UFO-Alarm {}',
+  random_toss: 'Münze/Würfel {kind: muenze|wuerfel, count?} – Ergebnis sagen',
+  day_recap: 'Tagesrückblick {}',
+  satellite_zoom: 'Satellit zoomt auf mich {}',
+  level_status: 'Jarvis-Level {}'
+};
+export function effectsGuide() {
+  return `Effekte (über jarvis_effekt, name {args}):\n${Object.keys(EFFECTS).map((n) => `- ${n}: ${SHORT_LIST[n] || EFFECTS[n]}`).join('\n')}`;
 }
