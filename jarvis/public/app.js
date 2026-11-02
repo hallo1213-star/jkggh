@@ -17,6 +17,9 @@ import { handleBusinessMessage, initBusiness, openBusiness } from './business.js
 import { filmTab, initFilm } from './film.js';
 import { handleFaceMessage, initFace } from './face.js';
 import { handleExtrasMessage, initExtras } from './extras.js';
+import { handleEffectMessage, initCamFx } from './camfx.js';
+import { openPoster } from './poster.js';
+import { handleFunMessage, initFun, levelState, personaColor } from './fun.js';
 import { handleMirrorMessage, initMirror } from './mirror.js';
 import { handlePrankMessage, initPrank } from './prank.js';
 import { handleFactoryMessage, initFactory, openFactory } from './factory.js';
@@ -1271,6 +1274,8 @@ initSuit({ toast, result: hudResult, onClose: () => filmTab('normal'), send: (me
 initFace({ toast, level: () => smoothLevel });
 initExtras({ toast, level: () => smoothLevel, addShopping: (text) => { const list = loadShoppingList(); if (!list.some((i) => i.text === text)) storeShoppingList([...list, { text, done: false }]); toast(`Auf die Einkaufsliste: ${text}`); } });
 initMirror({ toast });
+initCamFx({ toast, sendText });
+initFun({ toast, send: (message) => { if (state.ws?.readyState === 1) state.ws.send(JSON.stringify(message)); } });
 initPrank({ send: (message) => { if (state.ws?.readyState === 1) state.ws.send(JSON.stringify(message)); } });
 initFilm({ openBusiness, openFactory, openSuit: openSuitLab });
 initPalace({ toast });
@@ -1474,7 +1479,7 @@ function connect() {
   setMode('connecting');
   els.reconnect.hidden = true;
 
-  ws.onopen = () => hudBoot('link', true) || ws.send(JSON.stringify({ type: 'start', sampleRate: state.audio.sampleRate, shoppingList: shopping.load(), shoppingListUpdatedAt: shopping.loadTime(), customers: customers.load(), customersUpdatedAt: customers.loadTime(), memories: memories.load(), memoriesUpdatedAt: memories.loadTime(), history: loadHistory().slice(-16), stores: Object.fromEntries(Object.entries(personalStores).map(([name, store]) => [name, { items: store.load(), updatedAt: store.loadTime() }])) })) || ws.send(JSON.stringify(suitState()));
+  ws.onopen = () => hudBoot('link', true) || ws.send(JSON.stringify({ type: 'start', sampleRate: state.audio.sampleRate, shoppingList: shopping.load(), shoppingListUpdatedAt: shopping.loadTime(), customers: customers.load(), customersUpdatedAt: customers.loadTime(), memories: memories.load(), memoriesUpdatedAt: memories.loadTime(), history: loadHistory().slice(-16), stores: Object.fromEntries(Object.entries(personalStores).map(([name, store]) => [name, { items: store.load(), updatedAt: store.loadTime() }])) })) || ws.send(JSON.stringify(suitState())) || ws.send(JSON.stringify(levelState()));
   ws.onmessage = ({ data }) => {
     if (typeof data !== 'string') {
       playChunk(data);
@@ -1594,6 +1599,19 @@ function handleMessage(message) {
     case 'radio':
     case 'gift':
       handleExtrasMessage(message);
+      break;
+    case 'effect':
+      handleEffectMessage(message);
+      break;
+    case 'poster':
+      openPoster(message);
+      break;
+    case 'persona':
+    case 'recap':
+    case 'toss':
+    case 'satzoom':
+    case 'level':
+      handleFunMessage(message);
       break;
     case 'mirror':
       handleMirrorMessage(message);
@@ -1902,6 +1920,8 @@ function palette() {
   }
   if (document.body.classList.contains('theme-film')) {
     if (state.mode === 'error') return [255, 150, 60];
+    const persona = personaColor();
+    if (persona) return state.mode === 'offline' || state.micMuted ? persona.map((v) => Math.round(v * 0.55)) : persona;
     if (state.mode === 'offline' || state.micMuted) return [150, 30, 42];
     if (state.mode === 'thinking' || state.mode === 'connecting') return [255, 70, 70];
     return [255, 38, 56];
@@ -2057,6 +2077,25 @@ function drawFilmReactor(width, height, speaking) {
     ctx.beginPath(); ctx.arc(cx, cy, radius, start, start + len); ctx.stroke();
     ctx.beginPath(); ctx.arc(cx, cy, radius, start + Math.PI, start + Math.PI + len * 0.5); ctx.stroke();
   }
+  // Extra rings unlocked by Jarvis' level (2, 4, 8 …) and arcs from level 3
+  const level = Number(document.body.dataset.level) || 1;
+  const extra = [2, 4, 8].filter((l) => level >= l).length;
+  for (let i = 0; i < extra; i += 1) {
+    const rr = 261 + i * 8;
+    ctx.strokeStyle = color(0.18 + i * 0.05); ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.arc(cx, cy, rr, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = color(0.7); ctx.lineWidth = 2.5;
+    const st = -angle * (1.5 + i) + i;
+    ctx.beginPath(); ctx.arc(cx, cy, rr, st, st + 0.5); ctx.stroke();
+  }
+  if (level >= 3) {
+    for (let i = 0; i < 3; i += 1) {
+      const st = angle * 3 + (i * Math.PI * 2) / 3;
+      ctx.strokeStyle = level >= 5 ? `rgba(255, 210, 120, ${0.55 + smoothLevel * 0.4})` : color(0.55);
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(cx, cy, 176, st, st + 0.35); ctx.stroke();
+    }
+  }
   // Fine ticks on a quarter of the ring
   ctx.save();
   ctx.translate(cx, cy);
@@ -2107,6 +2146,16 @@ function drawFilmReactor(width, height, speaking) {
   ctx.strokeStyle = color(0.9);
   ctx.lineWidth = 2;
   ctx.beginPath(); ctx.arc(cx, cy, radius + 10, 0, Math.PI * 2); ctx.stroke();
+  if (level >= 5) { ctx.strokeStyle = 'rgba(255, 205, 110, 0.85)'; ctx.lineWidth = 3; ctx.shadowColor = 'rgba(255, 190, 80, 0.9)'; ctx.shadowBlur = 16; ctx.beginPath(); ctx.arc(cx, cy, radius + 18, 0, Math.PI * 2); ctx.stroke(); ctx.shadowBlur = 0; }
+  if (level >= 6) {
+    for (let i = 0; i < 14; i += 1) {
+      const a = t * (0.6 + (i % 4) * 0.2) + i * 2.1;
+      const rr = radius + 34 + Math.sin(t * 2 + i) * 14;
+      ctx.fillStyle = `rgba(255, ${190 + (i % 3) * 20}, 120, ${0.5 + 0.4 * Math.sin(t * 5 + i)})`;
+      ctx.fillRect(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr, 3, 3);
+    }
+  }
+  if (level >= 10) { ctx.strokeStyle = 'rgba(255, 220, 140, 0.6)'; ctx.lineWidth = 1.5; for (const dir of [1, -1]) { const st = angle * 4 * dir; ctx.beginPath(); ctx.arc(cx, cy, 232, st, st + Math.PI * 0.6); ctx.stroke(); } }
 
   drawLiveEffects(cx, cy);
 }

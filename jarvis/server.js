@@ -1060,7 +1060,7 @@ browserWss.on('connection', (browser, request) => {
   session.updatePrompt = () => {
     if (!agentOpen || !settingsApplied) return;
     try {
-      agent.sendUpdatePrompt({ type: 'UpdatePrompt', prompt: buildPrompt({ laptopConnected: laptopConnected(), memories: memoryStore.items }) });
+      agent.sendUpdatePrompt({ type: 'UpdatePrompt', prompt: buildPrompt({ laptopConnected: laptopConnected(), memories: memoryStore.items, mode: session.personaMode }) });
     } catch (error) {
       console.warn(`Konnte Laptop-Status nicht ans Gespräch melden: ${error.message}`);
     }
@@ -1236,6 +1236,11 @@ browserWss.on('connection', (browser, request) => {
       if (agentOpen) agent.sendInjectAgentMessage({ type: 'InjectAgentMessage', message: String(text).slice(0, 300) });
     },
     pranks: {},
+    level: { level: 1, xp: 0, next: 50 },
+    setPersonaMode(mode) {
+      session.personaMode = mode && mode !== 'normal' ? mode : null;
+      session.updatePrompt?.();
+    },
     showMarkets(markets) {
       toBrowser({ type: 'markets', markets });
     },
@@ -1471,6 +1476,8 @@ browserWss.on('connection', (browser, request) => {
       if (agentOpen) agent.sendInjectAgentMessage({ type: 'InjectAgentMessage', message: `Ich konnte deinen Standort nicht abfragen: ${String(message.message || 'keine Erlaubnis').slice(0, 120)}. Erlaube den Standortzugriff für Jarvis im Browser.` });
     } else if (message.type === 'prank_abort') {
       clearTimeout(context.pranks?.selfDestruct);
+    } else if (message.type === 'level_state') {
+      context.level = { level: Math.max(1, Number(message.level) || 1), xp: Math.max(0, Number(message.xp) || 0), next: Math.max(1, Number(message.next) || 50) };
     } else if (message.type === 'suit_state') {
       context.suitMemory.owned = message.owned ? String(message.owned).slice(0, 30) : null;
       context.suitMemory.worn = Boolean(message.owned) && message.worn === true;

@@ -1432,6 +1432,100 @@ export const cloudTools = [
     }
   },
   {
+    name: 'effect_control',
+    description: 'Kamera-Effekte (laufen nur auf seinem Gerät, niemand wird erkannt): repulsor = Repulsor in seiner Handfläche, Faust öffnen schießt einen Energiestrahl; gesten = Jarvis mit Handgesten steuern (wischen = Tabs wechseln, Daumen hoch = „Ja“, offene Hand halten = schließen); teleport = er löst sich in Partikel auf und wird unsichtbar; zurueck = nach dem Teleport wieder erscheinen; aus = Kamera-Effekt beenden.',
+    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['repulsor', 'gesten', 'teleport', 'zurueck', 'aus'] } }, required: ['action'] },
+    label: (a) => ({ repulsor: 'Repulsor-Hand', gesten: 'Gesten-Steuerung', teleport: 'Teleport', zurueck: 'Zurück-Teleport', aus: 'Kamera-Effekt aus' }[a.action] || 'Effekt'),
+    run: async ({ action }, context) => {
+      context.showVisual?.({ type: 'effect', action });
+      const notes = { repulsor: 'Kamera öffnet sich. Erklär kurz: Handfläche zeigen, Faust machen und öffnen = Schuss.', gesten: 'Gesten sind an: nach links/rechts wischen wechselt die Bereiche, Daumen hoch heißt Ja, offene Hand kurz halten schließt Fenster.', teleport: 'Er löst sich gleich in Partikel auf. Sag etwas Cooles wie „Teleport aktiviert.“', zurueck: 'Er erscheint wieder. Kurz kommentieren.', aus: 'Kurz bestätigen.' };
+      return { ok: true, hinweis: notes[action] };
+    }
+  },
+  {
+    name: 'movie_poster',
+    description: 'Kinoplakat: Jarvis macht ein Selfie, schneidet ihn aus (nur auf dem Gerät) und baut animiert ein Filmplakat mit Explosionen, Titel und Credits – zum Speichern. Für „Mach ein Kinoplakat von mir“.',
+    parameters: { type: 'object', properties: { title: { type: 'string', description: 'Filmtitel, falls er einen nennt' }, tagline: { type: 'string' } } },
+    label: (a) => `Kinoplakat${a.title ? `: ${a.title}` : ''}`,
+    run: async ({ title, tagline }, context) => {
+      context.showVisual?.({ type: 'poster', title: String(title || '').slice(0, 40), tagline: String(tagline || '').slice(0, 80) });
+      return { ok: true, hinweis: 'Die Kamera öffnet sich, in 3 Sekunden wird das Selfie gemacht, dann baut sich das Plakat auf. Sag ihm, er soll in die Kamera schauen und posen.' };
+    }
+  },
+  {
+    name: 'persona_mode',
+    description: 'Persönlichkeits-Wechsel mit Animation: friday (freundlich-frech), party (locker), butler (sehr höflich), normal (zurück). Ändert wirklich, wie Jarvis spricht, und die Farbe der App.',
+    parameters: { type: 'object', properties: { mode: { type: 'string', enum: ['friday', 'party', 'butler', 'normal'] } }, required: ['mode'] },
+    label: (a) => `Modus: ${a.mode}`,
+    run: async ({ mode }, context) => {
+      context.setPersonaMode?.(mode);
+      context.showVisual?.({ type: 'persona', mode });
+      return { modus: mode, hinweis: mode === 'normal' ? 'Du bist wieder der normale Jarvis. Sag das kurz.' : 'Du sprichst ab jetzt in diesem Modus. Stell dich kurz im neuen Stil vor (1 Satz).' };
+    }
+  },
+  {
+    name: 'day_recap',
+    description: 'Tagesrückblick als Film-Abspann: zeigt alle heute wirklich erledigten Aktionen und eine Statistik. Für „Was haben wir heute gemacht?“, „Tagesrückblick“.',
+    parameters: { type: 'object', properties: {} },
+    label: () => 'Tagesrückblick',
+    run: async (args, context) => {
+      context.showVisual?.({ type: 'recap' });
+      return { ok: true, hinweis: 'Der Abspann mit den heutigen Aktionen läuft auf dem Bildschirm. Sag einen kurzen, filmreifen Satz wie „Was für ein Tag, Boss.“ – zähle keine Aktionen auf, die du nicht kennst.' };
+    }
+  },
+  {
+    name: 'ufo_prank',
+    description: 'SPASS-Prank „UFO-Alarm“: Radar, Stadt bei Nacht, ein UFO mit Scheinwerfer fliegt über den Bildschirm, Warnungen – am Ende „Nur ein Wetterballon“. Nichts davon ist echt.',
+    parameters: { type: 'object', properties: {} },
+    label: () => 'UFO-Alarm (Spaß)',
+    run: async (args, context) => {
+      clearTimeout(context.pranks?.ufo);
+      context.showVisual?.({ type: 'prank', action: 'ufo' });
+      if (context.pranks) context.pranks.ufo = setTimeout(() => context.say?.('Sag jetzt locker: „Entwarnung, Boss. Das war nur ein Wetterballon.“'), 11000);
+      return { gestartet: true, hinweis: 'Nur ein Spaß. Sag jetzt NUR aufgeregt und kurz: „Achtung! Unbekanntes Flugobjekt über der Stadt!“ – verrate den Spaß NICHT, das kommt automatisch.' };
+    }
+  },
+  {
+    name: 'random_toss',
+    description: '3D-Münzwurf oder Würfeln mit echtem Zufall. kind: muenze oder wuerfel; count = Anzahl Würfel (1–3).',
+    parameters: { type: 'object', properties: { kind: { type: 'string', enum: ['muenze', 'wuerfel'] }, count: { type: 'integer' } }, required: ['kind'] },
+    label: (a) => (a.kind === 'muenze' ? 'Münzwurf' : 'Würfeln'),
+    run: async ({ kind, count }, context) => {
+      const { randomInt } = await import('node:crypto');
+      if (kind === 'muenze') {
+        const result = randomInt(2) ? 'Kopf' : 'Zahl';
+        context.showVisual?.({ type: 'toss', kind, result });
+        return { ergebnis: result, hinweis: 'Die Münze fliegt gerade (ca. 2 Sekunden). Sag das Ergebnis erst kurz spannend an.' };
+      }
+      const n = Math.min(3, Math.max(1, Number(count) || 1));
+      const dice = Array.from({ length: n }, () => randomInt(1, 7));
+      context.showVisual?.({ type: 'toss', kind, dice });
+      return { wuerfel: dice, summe: dice.reduce((a, b) => a + b, 0), hinweis: 'Die Würfel rollen gerade. Sag das Ergebnis.' };
+    }
+  },
+  {
+    name: 'satellite_zoom',
+    description: 'Satelliten-Zoom: die Kamera startet im All und zoomt filmisch bis auf seinen Standort (nur mit seiner Standort-Erlaubnis; Satellitenbilder sind Archivbilder). Für „Zoom auf mich“.',
+    parameters: { type: 'object', properties: {} },
+    label: () => 'Satelliten-Zoom',
+    run: async (args, context) => {
+      context.showVisual?.({ type: 'satzoom' });
+      context.showGlobe({ action: 'standort' });
+      return { ok: true, hinweis: 'Der Zoom startet, sobald er den Standort erlaubt. Sag etwas wie „Satellit ausgerichtet. Ziel wird erfasst.“ Die Bilder sind keine Live-Aufnahmen.' };
+    }
+  },
+  {
+    name: 'level_status',
+    description: 'Jarvis-Level: wie viele Erfahrungspunkte und welches Level Jarvis durch erledigte Aufgaben hat. Für „Welches Level bist du?“.',
+    parameters: { type: 'object', properties: {} },
+    label: () => 'Level anzeigen',
+    run: async (args, context) => {
+      context.showVisual?.({ type: 'level', action: 'show' });
+      const l = context.level || { level: 1, xp: 0, next: 50 };
+      return { level: l.level, xp: l.xp, naechstesLevelBei: l.next, hinweis: 'Sag Level und wie viele Punkte bis zum nächsten Level fehlen. Punkte gibt es nur für wirklich erledigte Aufgaben.' };
+    }
+  },
+  {
     name: 'business_mode',
     description: 'Business-Modus („Business Creation Protocol“): Jarvis entwirft live auf dem Bildschirm ein komplettes Geschäftskonzept mit Countdown – Marktanalyse, Produkt, Markenname, Produktlinie, Website-Texte, Werbung, Kosten und erste Schritte. Für „Starte den Business-Modus“, „Erstelle mir ein Business mit 100 Euro Startkapital“, „Bau mir ein Geschäft für LED-Schilder“. Danach kann die Website mit studio_website gebaut werden. Zahlen sind Schätzungen, kein Gewinnversprechen.',
     parameters: {

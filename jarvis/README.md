@@ -384,6 +384,20 @@ Standard ist jetzt der Look aus den Videos:
 - 🪞 „Setz mir einen Helm auf“ – Kamera an, Jarvis' Anzug-Helm sitzt auf deinem Kopf und folgt ihm; „Visier auf/zu“ klappt die Gesichtsplatte; „Helm ab“. Läuft nur auf dem Gerät, niemand wird erkannt.
 - 📞 „Anzug zu mir!“ – die Anzugteile fliegen von außerhalb heran und rasten krachend ein (Bildschirm wackelt), am Ende das realistische Foto.
 
+## Repulsor, Gesten, Teleport, Kinoplakat, Modi, Rückblick, UFO, Münze, Satellit, Level
+
+- ✋ „Repulsor an“ – Kamera an, auf deiner Handfläche leuchtet ein Repulsor; Faust machen und öffnen = Energiestrahl mit Sound.
+- 🖐️ „Gesten an“ – Jarvis mit der Hand steuern: wischen = Bereich wechseln, 👍 = „Ja“, offene Hand halten = Fenster schließen (kleines Kamerabild unten rechts, „Effekt aus“ beendet).
+- ⚡ „Teleportier mich“ – du löst dich in Partikel auf und bleibst unsichtbar (der Hintergrund hinter dir wird gelernt, wo er noch unbekannt ist, schimmert ein Umriss); „Zurück!“ setzt dich wieder zusammen.
+- 🎬 „Mach ein Kinoplakat von mir“ – Selfie-Countdown, du wirst ausgeschnitten und landest animiert auf einem Filmplakat; Speichern/Teilen als Bild.
+- 🎭 „Friday-Modus“, „Party-Jarvis“, „Butler-Modus“, „Normaler Modus“ – Jarvis spricht wirklich anders, App und Reaktor wechseln die Farbe.
+- 🎞️ „Was haben wir heute gemacht?“ – Film-Abspann mit deinen echten erledigten Aktionen von heute und Musik.
+- 🛸 „UFO-Alarm“ – Spaß-Prank, endet mit „nur ein Wetterballon“.
+- 🪙 „Wirf eine Münze“ / „Würfel“ – 3D-Münze bzw. Würfel, echter Zufall vom Server.
+- 🛰️ „Zoom auf mich“ – Satelliten-HUD, die Erde fliegt zu deinem Standort (mit Erlaubnis; Archivbilder).
+- ⭐ Level: 10 XP pro wirklich erledigter Aufgabe, Level-Up-Animation, neue Reaktor-Ringe/Effekte (Level 2, 3, 4, 5, 6, 8, 10). Anzeige unter dem Reaktor, „Welches Level bist du?“.
+- Alle Kamera-Effekte laufen nur auf deinem Gerät (MediaPipe wird bei Bedarf geladen), niemand wird erkannt.
+
 ## Gesicht 🙂 und Selbstzerstörung 💥
 
 - „Zeig dein Gesicht“: Statt Reaktor/Anzug erscheint Jarvis' fotorealistisches Gesicht (immer dasselbe; „Neues Gesicht“ für ein anderes). Der Mund bewegt sich mit seiner echten Stimme, die Augen blinzeln, der Kopf bewegt sich leicht. Die Gesichtspunkte erkennt einmalig MediaPipe (wird bei Bedarf geladen). „Gesicht weg“ → zurück zu Anzug oder Reaktor. Anzug und Gesicht sind unabhängig.

@@ -1,3 +1,4 @@
+import { logAction } from './fun.js';
 // Live HUD for the main screen. Everything shown here comes from real events:
 // actions Jarvis runs (with their result), what you said, the connection
 // (round-trip time), the session, configured services and your own data
@@ -51,6 +52,7 @@ export function hudAction({ id, label, state: rawState, detail }) {
   hud.mission.steps.set(id, step);
   hud.working = [...hud.mission.steps.values()].filter((s) => s.state === 'running').length;
   if (before === 'running' || (!before && state !== 'running')) {
+    if (state === 'done' || state === 'error') logAction(label, state);
     if (state === 'done') { bumpDay('ok'); hud.flash = { color: [56, 225, 255], at: performance.now() }; toastHud('ok', label); }
     if (state === 'error') { bumpDay('fail'); hud.flash = { color: [255, 77, 106], at: performance.now() }; toastHud('error', `${label}${detail ? ` – ${detail}` : ''}`); }
   }

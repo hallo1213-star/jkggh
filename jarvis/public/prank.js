@@ -99,7 +99,22 @@ export function stopSelfDestruct() {
   setTimeout(() => r.remove(), 2200);
 }
 
+// "UFO-Alarm": radar, city at night, a UFO with a search light – then "only a weather balloon".
+export function startUfo() {
+  if (document.querySelector('.ufo')) return;
+  const root = el('div', 'ufo');
+  root.innerHTML = `<div class="ufo-sky"></div><div class="ufo-city"></div><div class="ufo-ship"><span class="ufo-dome"></span><span class="ufo-body"></span><span class="ufo-lights"></span><span class="ufo-beam"></span></div>
+    <div class="ufo-radar"><i></i><b></b></div><p class="ufo-alert">⚠ UNBEKANNTES FLUGOBJEKT ⚠</p><p class="ufo-info">Kurs: direkt über deiner Stadt · Größe: unbekannt</p><p class="ufo-joke">Entwarnung: nur ein Wetterballon. 🎈😏</p>`;
+  document.body.append(root);
+  const stop = siren();
+  setTimeout(() => root.classList.add('fly'), 400);
+  setTimeout(() => { stop(); root.classList.add('joke'); }, 9500);
+  setTimeout(() => root.classList.add('out'), 13500);
+  setTimeout(() => root.remove(), 14200);
+}
+
 export function handlePrankMessage(message) {
   if (message.action === 'start') startSelfDestruct();
   else if (message.action === 'abbrechen') stopSelfDestruct();
+  else if (message.action === 'ufo') startUfo();
 }
