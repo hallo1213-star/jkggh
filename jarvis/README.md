@@ -384,6 +384,22 @@ Standard ist jetzt der Look aus den Videos:
 - 🪞 „Setz mir einen Helm auf“ – Kamera an, Jarvis' Anzug-Helm sitzt auf deinem Kopf und folgt ihm; „Visier auf/zu“ klappt die Gesichtsplatte; „Helm ab“. Läuft nur auf dem Gerät, niemand wird erkannt.
 - 📞 „Anzug zu mir!“ – die Anzugteile fliegen von außerhalb heran und rasten krachend ein (Bildschirm wackelt), am Ende das realistische Foto.
 
+## Energieklinge, Hologramm, Helm-Stimme, Gedanken-Karte, Feuerwerk, Schwerkraft, Schwarzes Loch, Zeitkapsel, Schatzsuche, Holo-Schach
+
+| Sag zu Jarvis | Was passiert |
+|---|---|
+| „Energieklinge an“ | Kamera an – Faust machen, rote Klinge fährt aus, schnell schwingen = Zischen |
+| „Nimm eine Hologramm-Nachricht auf“ | Countdown, 10 s Aufnahme, du als rotes Hologramm → Video speichern |
+| „Gib mir eine Roboterstimme“ / „Helm-Stimme“ | Mikrofon live mit Helm-/Roboter-/Tief-Effekt, Clip aufnehmen (Kopfhörer empfohlen) |
+| „Mach mir eine Gedanken-Karte zu Vulkanen“ · „Füg Ausbruch hinzu“ | Mindmap wächst animiert, als Bild speichern |
+| „Feuerwerk!“ / „Schreib meinen Namen ins Feuerwerk“ | Raketen, Explosionen, Finale schreibt den Namen |
+| „Schwerkraft an“ / „Schwerkraft aus“ | Bildschirm-Teile fallen, lassen sich werfen / fliegen zurück |
+| „Öffne ein schwarzes Loch“ | Bildschirm wird eingesaugt und wieder ausgespuckt |
+| „Nachricht für mein zukünftiges Ich: …“ · „Zeig meine Zeitkapseln“ | Kapsel wird versiegelt, öffnet erst nach der Zeit (auf diesem Gerät) |
+| „Starte eine Schatzsuche“ | 3 virtuelle Schätze 100–300 m entfernt, Radar + Kompass (draußen) |
+| „Spiel Schach mit mir“ (leicht/mittel/schwer) | Holo-Schachbrett, Figur antippen → Zielfeld |
+| „Effekt aus“ | Kamera-/Mikrofon-Effekt beenden |
+
 ## Startanimation 🔴
 
 Beim Öffnen von Jarvis (Design „Jarvis wie im Video“): Oberfläche ausgeblendet → schwarzer Bildschirm → dünner roter Lichtstrahl von oben nach unten → dein bestehender Reaktor (derselbe Canvas-Code) entsteht in der Mitte, pulsiert, die Ringe drehen schneller und werden heller → rote Partikel fliegen zum Kern → roter Energieimpuls über den Bildschirm → die normale Oberfläche blendet ein, der Reaktor bleibt an seinem Platz → „Alle Systeme sind online.“ (nur wenn der Server wirklich erreichbar ist, sonst „Verbindung wird hergestellt …“). Dauer ca. 5,5 s, Knopf „Überspringen“, startet nie doppelt. Mit Soundeffekten (live erzeugt, keine Dateien): Bass-Teppich, Scan-Ton des Lichtstrahls, Einschalt-Schlag des Reaktors, aufladendes Surren mit Funken, Energie-Aufprall, Übergangs-Rauschen mit Akkord und HUD-Bestätigung bei „Alle Systeme sind online.“; Lautsprecher-Knopf schaltet den Ton ab (wird gemerkt). Blockiert der Browser Ton bis zum ersten Tippen (iPhone), wartet der schwarze Bildschirm mit „Tippen, um Jarvis zu starten“ – der Tipp startet Animation mit Ton und gleichzeitig das Mikrofon. Danach den Reaktor (oder „Jarvis aktivieren“) antippen, um das Mikrofon freizugeben.
