@@ -400,6 +400,21 @@ Standard ist jetzt der Look aus den Videos:
 | „Spiel Schach mit mir“ (leicht/mittel/schwer) | Holo-Schachbrett, Figur antippen → Zielfeld |
 | „Effekt aus“ | Kamera-/Mikrofon-Effekt beenden |
 
+## Anzug auf dir, Laser-Augen, Luft-Malen, Klone, Matrix-Moment, Cyborg, Geheimagent, Escape-Room
+
+Alle Kamera-Effekte laufen nur auf deinem Gerät (MediaPipe), niemand wird erkannt oder gespeichert.
+
+| Sag zu Jarvis | Was passiert |
+|---|---|
+| „Zieh MIR den Anzug an“ | Bis zur Hüfte vor die Kamera stellen – Brust, Schultern, Arme, Reaktor und Helm (dein Anzug) fliegen an und folgen dir |
+| „Laser-Augen an“ | Kurz normal schauen, dann Augen weit aufreißen (oder Bildschirm antippen) = Laser |
+| „Mach mich zum Cyborg“ · „Upgrade!“ | Schaltkreise, Scanner-Auge, Metallkiefer; jedes Upgrade breitet es weiter aus |
+| „Ich will in die Luft malen“ | Zeigefinger = Neon malen, Faust = Pause, offene Hand halten = löschen, Farbe wählen, Bild speichern |
+| „Klon mich“ | Verzögerte Kopien von dir folgen deinen Bewegungen („+ Klon“ für mehr) |
+| „Matrix-Moment!“ | 3 s Aufnahme, dann Super-Zeitlupe mit Geisterspuren → Video speichern |
+| „Verschlüssel eine Nachricht für meinen Freund“ · „Entschlüssel einen Code“ | Codewort selbst eintippen (nie laut sagen) → Geheimcode `JV1.…` mit Animation, kopieren; dein Freund entschlüsselt ihn hier mit demselben Codewort. AES-verschlüsselt im Browser, das Codewort wird nirgends gespeichert |
+| „Starte einen Escape-Room“ · „Gib mir einen Tipp“ · „Escape-Room beenden“ | 5 Minuten: versteckte Ziffern → Tresor, Zahlenreihe → Schloss, richtiger Draht → Bombe; Alarm in den letzten 30 s, Tipp kostet 15 s |
+
 ## Startanimation 🔴
 
 Beim Öffnen von Jarvis (Design „Jarvis wie im Video“): Oberfläche ausgeblendet → schwarzer Bildschirm → dünner roter Lichtstrahl von oben nach unten → dein bestehender Reaktor (derselbe Canvas-Code) entsteht in der Mitte, pulsiert, die Ringe drehen schneller und werden heller → rote Partikel fliegen zum Kern → roter Energieimpuls über den Bildschirm → die normale Oberfläche blendet ein, der Reaktor bleibt an seinem Platz → „Alle Systeme sind online.“ (nur wenn der Server wirklich erreichbar ist, sonst „Verbindung wird hergestellt …“). Dauer ca. 5,5 s, Knopf „Überspringen“, startet nie doppelt. Mit Soundeffekten (live erzeugt, keine Dateien): Bass-Teppich, Scan-Ton des Lichtstrahls, Einschalt-Schlag des Reaktors, aufladendes Surren mit Funken, Energie-Aufprall, Übergangs-Rauschen mit Akkord und HUD-Bestätigung bei „Alle Systeme sind online.“; Lautsprecher-Knopf schaltet den Ton ab (wird gemerkt). Blockiert der Browser Ton bis zum ersten Tippen (iPhone), wartet der schwarze Bildschirm mit „Tippen, um Jarvis zu starten“ – der Tipp startet Animation mit Ton und gleichzeitig das Mikrofon. Danach den Reaktor (oder „Jarvis aktivieren“) antippen, um das Mikrofon freizugeben.

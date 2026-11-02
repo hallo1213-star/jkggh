@@ -3,7 +3,9 @@
 const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
 const MODELS = {
   hand: 'https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task',
-  segment: 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite'
+  segment: 'https://storage.googleapis.com/mediapipe-models/image_segmenter/selfie_segmenter/float16/latest/selfie_segmenter.tflite',
+  pose: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+  face: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task'
 };
 let base = null;
 const cache = {};
@@ -26,6 +28,22 @@ export function handTracker() {
     return lib.HandLandmarker.createFromOptions(files, { baseOptions: { modelAssetPath: MODELS.hand }, runningMode: 'VIDEO', numHands: 1 });
   })(), 30000, 'Handerkennung').catch((e) => { cache.hand = null; throw e; });
   return cache.hand;
+}
+
+export function poseTracker() {
+  cache.pose = cache.pose || timeout((async () => {
+    const { lib, files } = await vision();
+    return lib.PoseLandmarker.createFromOptions(files, { baseOptions: { modelAssetPath: MODELS.pose }, runningMode: 'VIDEO', numPoses: 1 });
+  })(), 30000, 'Körpererkennung').catch((e) => { cache.pose = null; throw e; });
+  return cache.pose;
+}
+
+export function faceTracker() {
+  cache.face = cache.face || timeout((async () => {
+    const { lib, files } = await vision();
+    return lib.FaceLandmarker.createFromOptions(files, { baseOptions: { modelAssetPath: MODELS.face }, runningMode: 'VIDEO', numFaces: 1 });
+  })(), 30000, 'Gesichtserkennung').catch((e) => { cache.face = null; throw e; });
+  return cache.face;
 }
 
 export function personSegmenter(mode = 'VIDEO') {

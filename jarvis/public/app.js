@@ -22,6 +22,8 @@ import { handleEffectMessage, initCamFx } from './camfx.js';
 import { openPoster } from './poster.js';
 import { handleFx3, initFx3 } from './fx3.js';
 import { handleFx4, initFx4 } from './fx4.js';
+import { FX5_ACTIONS, handleFx5, initFx5 } from './fx5.js';
+import { openEscape, openSecret } from './fx6.js';
 import { showMindmap } from './mindmap.js';
 import { openChess } from './chess.js';
 import { handleRealityMessage, initReality } from './reality.js';
@@ -1284,6 +1286,7 @@ initCamFx({ toast, sendText });
 initReality({ toast });
 initFx3({ toast, muteJarvis: (mute) => { if (state.connected && state.micMuted !== mute) els.micToggle.click(); } });
 initFx4({ toast });
+initFx5({ toast });
 initFun({ toast, send: (message) => { if (state.ws?.readyState === 1) state.ws.send(JSON.stringify(message)); } });
 initPrank({ send: (message) => { if (state.ws?.readyState === 1) state.ws.send(JSON.stringify(message)); } });
 initFilm({ openBusiness, openFactory, openSuit: openSuitLab });
@@ -1611,7 +1614,14 @@ function handleMessage(message) {
       break;
     case 'effect':
       if (['klinge', 'hologramm', 'stimme'].includes(message.action)) handleFx3(message.action);
-      else { if (message.action === 'aus') handleFx3('aus'); handleEffectMessage(message); }
+      else if (FX5_ACTIONS.includes(message.action)) handleFx5(message.action);
+      else { if (message.action === 'aus') { handleFx3('aus'); handleFx5('aus'); } handleEffectMessage(message); }
+      break;
+    case 'secret':
+      openSecret(message);
+      break;
+    case 'escape':
+      openEscape(message.action);
       break;
     case 'mindmap':
       showMindmap(message.map, message.added);

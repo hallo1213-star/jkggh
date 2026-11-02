@@ -1434,12 +1434,12 @@ export const cloudTools = [
   },
   {
     name: 'effect_control',
-    description: 'Kamera-/Mikrofon-Effekte (laufen nur auf seinem Gerät, niemand wird erkannt): klinge = rote Energieklinge aus seiner Faust („Energieklinge an“); hologramm = 10-Sekunden-Hologramm-Botschaft von ihm aufnehmen und speichern („Nimm eine Hologramm-Nachricht auf“); stimme = Helm-/Roboterstimme für sein Mikrofon mit Aufnahme („Gib mir eine Roboterstimme“); repulsor = Repulsor in seiner Handfläche, Faust öffnen schießt einen Energiestrahl; gesten = Jarvis mit Handgesten steuern (wischen = Tabs wechseln, Daumen hoch = „Ja“, offene Hand halten = schließen); teleport = er löst sich in Partikel auf und wird unsichtbar; zurueck = nach dem Teleport wieder erscheinen; aus = Kamera-Effekt beenden.',
-    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['repulsor', 'gesten', 'teleport', 'zurueck', 'klinge', 'hologramm', 'stimme', 'aus'] } }, required: ['action'] },
-    label: (a) => ({ repulsor: 'Repulsor-Hand', gesten: 'Gesten-Steuerung', teleport: 'Teleport', zurueck: 'Zurück-Teleport', klinge: 'Energieklinge', hologramm: 'Hologramm-Botschaft', stimme: 'Helm-Stimme', aus: 'Effekt aus' }[a.action] || 'Effekt'),
+    description: 'Kamera-/Mikrofon-Effekte (laufen nur auf seinem Gerät, niemand wird erkannt): klinge = rote Energieklinge aus seiner Faust („Energieklinge an“); hologramm = 10-Sekunden-Hologramm-Botschaft von ihm aufnehmen und speichern („Nimm eine Hologramm-Nachricht auf“); stimme = Helm-/Roboterstimme für sein Mikrofon mit Aufnahme („Gib mir eine Roboterstimme“); repulsor = Repulsor in seiner Handfläche, Faust öffnen schießt einen Energiestrahl; gesten = Jarvis mit Handgesten steuern (wischen = Tabs wechseln, Daumen hoch = „Ja“, offene Hand halten = schließen); teleport = er löst sich in Partikel auf und wird unsichtbar; zurueck = nach dem Teleport wieder erscheinen; anzug_ar = Rüstungsteile fliegen auf seinen Körper (Schultern, Brust, Arme, Reaktor, Helm); laser = Laser aus seinen Augen, wenn er sie weit aufreißt; cyborg = Cyborg-Gesicht (Schaltkreise, Scanner-Auge, Metallkiefer); upgrade = Cyborg breitet sich weiter aus; malen = mit dem Zeigefinger Neon in die Luft malen (Faust = Pause, offene Hand = löschen); klon = verzögerte Klone von ihm; zeitlupe = Matrix-Moment: 3 s Aufnahme, dann Super-Zeitlupe zum Speichern; aus = Kamera-Effekt beenden.',
+    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['repulsor', 'gesten', 'teleport', 'zurueck', 'klinge', 'hologramm', 'stimme', 'anzug_ar', 'laser', 'cyborg', 'upgrade', 'malen', 'klon', 'zeitlupe', 'aus'] } }, required: ['action'] },
+    label: (a) => ({ repulsor: 'Repulsor-Hand', gesten: 'Gesten-Steuerung', teleport: 'Teleport', zurueck: 'Zurück-Teleport', klinge: 'Energieklinge', hologramm: 'Hologramm-Botschaft', stimme: 'Helm-Stimme', anzug_ar: 'Anzug-Filter', laser: 'Laser-Augen', cyborg: 'Cyborg-Gesicht', upgrade: 'Cyborg-Upgrade', malen: 'Luft-Malen', klon: 'Klon-Effekt', zeitlupe: 'Matrix-Moment', aus: 'Effekt aus' }[a.action] || 'Effekt'),
     run: async ({ action }, context) => {
       context.showVisual?.({ type: 'effect', action });
-      const notes = { klinge: 'Kamera öffnet sich. Erklär kurz: Faust machen – die Klinge fährt aus; schnell schwingen zischt.', hologramm: 'Kamera öffnet sich, nach einem Countdown nimmt Jarvis 10 Sekunden auf und macht ein Hologramm daraus. Sag ihm, er soll in die Kamera sprechen.', stimme: 'Sein Mikrofon klingt jetzt wie eine Helm-Stimme (am besten mit Kopfhörern, sonst pfeift es). Er kann einen Clip aufnehmen. Hinweis: Solange der Effekt läuft, ist das Gespräch mit dir pausiert.', repulsor: 'Kamera öffnet sich. Erklär kurz: Handfläche zeigen, Faust machen und öffnen = Schuss.', gesten: 'Gesten sind an: nach links/rechts wischen wechselt die Bereiche, Daumen hoch heißt Ja, offene Hand kurz halten schließt Fenster.', teleport: 'Er löst sich gleich in Partikel auf. Sag etwas Cooles wie „Teleport aktiviert.“', zurueck: 'Er erscheint wieder. Kurz kommentieren.', aus: 'Kurz bestätigen.' };
+      const notes = { klinge: 'Kamera öffnet sich. Erklär kurz: Faust machen – die Klinge fährt aus; schnell schwingen zischt.', hologramm: 'Kamera öffnet sich, nach einem Countdown nimmt Jarvis 10 Sekunden auf und macht ein Hologramm daraus. Sag ihm, er soll in die Kamera sprechen.', stimme: 'Sein Mikrofon klingt jetzt wie eine Helm-Stimme (am besten mit Kopfhörern, sonst pfeift es). Er kann einen Clip aufnehmen. Hinweis: Solange der Effekt läuft, ist das Gespräch mit dir pausiert.', repulsor: 'Kamera öffnet sich. Erklär kurz: Handfläche zeigen, Faust machen und öffnen = Schuss.', gesten: 'Gesten sind an: nach links/rechts wischen wechselt die Bereiche, Daumen hoch heißt Ja, offene Hand kurz halten schließt Fenster.', teleport: 'Er löst sich gleich in Partikel auf. Sag etwas Cooles wie „Teleport aktiviert.“', zurueck: 'Er erscheint wieder. Kurz kommentieren.', anzug_ar: 'Kamera öffnet sich. Sag: Er soll sich so hinstellen, dass man ihn bis zur Hüfte sieht – dann fliegen die Teile an.', laser: 'Kamera öffnet sich. Erklär: kurz normal schauen, dann die Augen weit aufreißen = Laser.', cyborg: 'Kamera öffnet sich, sein Gesicht wird zum Cyborg. Sag, dass er „Upgrade!“ sagen kann.', upgrade: 'Der Cyborg breitet sich weiter aus. Kurz dramatisch kommentieren.', malen: 'Kamera öffnet sich. Erklär: Zeigefinger hoch = malen, Faust = Pause, offene Hand = alles löschen; oben kann er die Farbe wechseln und das Bild speichern.', klon: 'Kamera öffnet sich, verzögerte Klone folgen ihm. Sag, er soll sich langsam bewegen.', zeitlupe: 'In Kürze nimmt die Kamera 3 Sekunden auf – sag ihm, er soll sich schnell bewegen (springen, kicken). Danach läuft die Super-Zeitlupe.', aus: 'Kurz bestätigen.' };
       return { ok: true, hinweis: notes[action] };
     }
   },
@@ -1604,6 +1604,28 @@ export const cloudTools = [
     parameters: { type: 'object', properties: { action: { type: 'string', enum: ['start', 'zeigen', 'stopp'] } }, required: ['action'] },
     label: (a) => ({ start: 'Schatzsuche starten', zeigen: 'Schatz-Radar', stopp: 'Schatzsuche beenden' }[a.action] || 'Schatzsuche'),
     run: async ({ action }, context) => { context.showVisual?.({ type: 'treasure', action }); return { ok: true, hinweis: action === 'start' ? 'Das Radar öffnet sich (er muss den Standort erlauben). Sag kurz: 3 Schätze sind versteckt, und er soll auf Verkehr achten und nur auf öffentlichen Wegen gehen.' : 'Kurz bestätigen.' }; }
+  },
+  {
+    name: 'secret_code',
+    description: 'Geheimagent: Nachricht in einen Geheimcode verschlüsseln (mit Entschlüsselungs-Animation) oder einen Code von einem Freund entschlüsseln. Das Codewort tippt er selbst auf dem Bildschirm ein – frag nie danach und sprich es nie aus. verschluesseln (text = seine Nachricht, falls genannt) | entschluesseln (text = der Code, falls genannt).',
+    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['verschluesseln', 'entschluesseln'] }, text: { type: 'string' } }, required: ['action'] },
+    label: (a) => (a.action === 'entschluesseln' ? 'Geheimcode entschlüsseln' : 'Geheimcode erstellen'),
+    run: async ({ action, text }, context) => {
+      const act = action === 'entschluesseln' ? 'entschluesseln' : 'verschluesseln';
+      context.showVisual?.({ type: 'secret', action: act, text: String(text || '').slice(0, 1000) });
+      return { ok: true, hinweis: act === 'verschluesseln' ? 'Das Geheimdienst-Fenster ist offen. Sag: Er soll ein Codewort eintippen (nicht laut sagen) – nur wer es kennt, kann den Code lesen. Den Code kann er dann kopieren und seinem Freund schicken.' : 'Das Entschlüsseln-Fenster ist offen. Sag: Code einfügen, Codewort eintippen.' };
+    }
+  },
+  {
+    name: 'escape_room',
+    description: 'Escape-Room mit 5-Minuten-Countdown und Alarm: versteckte Ziffern finden (Tresor), Zahlenreihe lösen (Schloss), richtigen Draht schneiden (Bombe). start = neuer Raum; tipp = Jarvis zeigt einen Tipp für das aktuelle Rätsel (kostet 15 s); stopp = beenden.',
+    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['start', 'tipp', 'stopp'] } }, required: ['action'] },
+    label: (a) => ({ start: 'Escape-Room', tipp: 'Escape-Tipp', stopp: 'Escape-Room beenden' }[a.action] || 'Escape-Room'),
+    run: async ({ action }, context) => {
+      context.showVisual?.({ type: 'escape', action });
+      const notes = { start: 'Der Escape-Room läuft, 5 Minuten. Erzähl kurz und spannend: Er ist im Labor eingeschlossen und muss drei Rätsel lösen. Verrate keine Lösungen.', tipp: 'Der Tipp steht jetzt auf dem Bildschirm (kostet 15 Sekunden). Sag ihm, er soll ihn lesen – verrate die Lösung nicht.', stopp: 'Kurz bestätigen.' };
+      return { ok: true, hinweis: notes[action] || notes.start };
+    }
   },
   {
     name: 'holo_chess',
