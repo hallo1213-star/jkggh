@@ -60,14 +60,33 @@ export function effectFunctions(cloudTools) {
 }
 export const effectFunction = (cloudTools) => effectFunctions(cloudTools)[0];
 
-// Turns a jarvis_effekt call into the real tool name + arguments.
+// Turns a bundle call into the real tool name + arguments. Forgiving: the AI
+// sometimes picks the wrong bundle or names the effect instead of the tool
+// ("malen" instead of effect_control) – any listed show feature is accepted,
+// but never anything else (mail, calls etc. stay unreachable).
+const CAMERA_ACTIONS = ['repulsor', 'gesten', 'teleport', 'zurueck', 'klinge', 'hologramm', 'stimme', 'anzug_ar', 'laser', 'cyborg', 'upgrade', 'malen', 'klon', 'zeitlupe'];
+const ALIASES = {
+  luft_malen: ['effect_control', { action: 'malen' }], luftmalen: ['effect_control', { action: 'malen' }], air_draw: ['effect_control', { action: 'malen' }], zeichnen: ['effect_control', { action: 'malen' }],
+  laser_augen: ['effect_control', { action: 'laser' }], laseraugen: ['effect_control', { action: 'laser' }],
+  matrix: ['effect_control', { action: 'zeitlupe' }], matrix_moment: ['effect_control', { action: 'zeitlupe' }], slowmo: ['effect_control', { action: 'zeitlupe' }],
+  klone: ['effect_control', { action: 'klon' }], klonen: ['effect_control', { action: 'klon' }],
+  anzug: ['effect_control', { action: 'anzug_ar' }], anzug_auf_mir: ['effect_control', { action: 'anzug_ar' }], energieklinge: ['effect_control', { action: 'klinge' }],
+  geheimcode: ['secret_code', { action: 'verschluesseln' }], geheimagent: ['secret_code', { action: 'verschluesseln' }], verschluesseln: ['secret_code', { action: 'verschluesseln' }], entschluesseln: ['secret_code', { action: 'entschluesseln' }],
+  escape: ['escape_room', { action: 'start' }], escaperoom: ['escape_room', { action: 'start' }], tipp: ['escape_room', { action: 'tipp' }],
+  schach: ['holo_chess', {}], feuerwerk: ['fireworks', {}], schwarzes_loch: ['black_hole', {}], schatzsuche: ['treasure_hunt', { action: 'start' }]
+};
+const norm = (x) => String(x || '').trim().toLowerCase().replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss').replace(/[\s-]+/g, '_');
 export function unwrapEffect(name, args) {
   if (name !== EFFECT_FUNCTION && !GROUP_NAMES.has(name)) return { name, args };
-  const allowed = GROUPS[name] ? new Set(GROUPS[name].tools) : EFFECT_TOOLS;
-  const inner = String(args?.name || '');
-  const innerArgs = args?.args && typeof args.args === 'object' ? args.args : typeof args?.args === 'string' ? (() => { try { return JSON.parse(args.args); } catch { return {}; } })() : {};
-  // only the listed show features can be reached this way – never mail, calls etc.
-  return allowed.has(inner) ? { name: inner, args: innerArgs } : { name, args: innerArgs, unknown: true };
+  let innerArgs = args?.args && typeof args.args === 'object' ? args.args : typeof args?.args === 'string' ? (() => { try { return JSON.parse(args.args); } catch { return {}; } })() : null;
+  if (!innerArgs) { const { name: _n, args: _a, ...rest } = args || {}; innerArgs = rest; }
+  const inner = norm(args?.name);
+  if (EFFECT_TOOLS.has(inner)) return { name: inner, args: innerArgs };
+  if (CAMERA_ACTIONS.includes(inner)) return { name: 'effect_control', args: { ...innerArgs, action: inner } };
+  if (ALIASES[inner]) return { name: ALIASES[inner][0], args: { ...ALIASES[inner][1], ...innerArgs } };
+  const act = norm(innerArgs.action);
+  if (!inner && CAMERA_ACTIONS.includes(act)) return { name: 'effect_control', args: { ...innerArgs, action: act } };
+  return { name, args: innerArgs, unknown: true };
 }
 
 // The detailed list goes into the system prompt (function descriptions may

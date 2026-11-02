@@ -12,7 +12,11 @@ assert(!tooLong.length, `jede Werkzeug-Beschreibung höchstens 1024 Zeichen (zu 
 const badName = all.filter((x) => !/^[a-zA-Z0-9_-]{1,64}$/.test(x.name)).map((x) => x.name);
 assert(!badName.length, 'alle Werkzeugnamen gültig');
 assert(groups.reduce((n, g) => n + g.parameters.properties.name.enum.length, 0) === EFFECT_TOOLS.size, 'die 3 Sammel-Werkzeuge decken alle Effekte ab');
-assert(unwrapEffect('jarvis_show', { name: 'fireworks', args: {} }).name === 'fireworks' && unwrapEffect('jarvis_show', { name: 'suit_control', args: {} }).name === 'jarvis_show', 'jede Gruppe erreicht nur ihre eigenen Funktionen');
+assert(unwrapEffect('jarvis_show', { name: 'fireworks', args: {} }).name === 'fireworks' && unwrapEffect('jarvis_show', { name: 'email_send', args: {} }).name === 'jarvis_show', 'Bündel erreichen nur Show-Funktionen');
+assert(unwrapEffect('jarvis_show', { name: 'effect_control', args: { action: 'malen' } }).name === 'effect_control', 'falsches Bündel wird verziehen (Luft-Malen über jarvis_show)');
+assert(unwrapEffect('jarvis_show', { name: 'malen' }).args.action === 'malen' && unwrapEffect('jarvis_kamera', { name: 'Luft-Malen' }).args.action === 'malen', 'Effektname statt Funktionsname wird verstanden');
+assert(unwrapEffect('jarvis_show', { action: 'laser' }).args.action === 'laser', 'fehlender Name, aber Kamera-Aktion → effect_control');
+assert(unwrapEffect('jarvis_show', { name: 'Escape Room', args: { action: 'tipp' } }).name === 'escape_room', 'Leerzeichen/Großschreibung egal');
 const u = unwrapEffect('jarvis_effekt', { name: 'fireworks', args: { text: 'OZ' } });
 assert(u.name === 'fireworks' && u.args.text === 'OZ', 'jarvis_effekt wird zum echten Werkzeug aufgelöst');
 assert(unwrapEffect('jarvis_effekt', { name: 'gravity', args: '{"action":"an"}' }).args.action === 'an', 'args als Text werden auch verstanden');
