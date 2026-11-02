@@ -1,7 +1,7 @@
 // Helm-Spiegel: the front camera shows YOU, and Jarvis' suit helmet sits on your
 // head and follows it. Face points come from MediaPipe, running only on this
 // device – nobody is identified, nothing is uploaded.
-import { helmetSvg, ownedSuit } from './suit.js';
+import { helmetSvg, ownedSuit, suitHelmetImage } from './suit.js';
 
 const MP = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14';
 const MODEL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
@@ -52,6 +52,19 @@ function frame() {
   m.smooth = { cx: s.cx + (target.cx - s.cx) * k, cy: s.cy + (target.cy - s.cy) * k, w: s.w + (target.w - s.w) * k, h: s.h + (target.h - s.h) * k, a: s.a + (target.a - s.a) * k };
   const f = m.smooth;
   m.visorK += ((m.visor ? 1 : 0) - m.visorK) * 0.15;
+  if (m.imgs.photo) {
+    // Helmet cut out of the user's own picture; "visor open" lifts it up.
+    const hw2 = f.w * 1.42;
+    const hh2 = hw2 / m.imgs.ratio;
+    ctx.save();
+    ctx.translate(f.cx, f.cy - m.visorK * hh2 * 0.62);
+    ctx.rotate(f.a);
+    ctx.shadowColor = 'rgba(0,0,0,0.5)';
+    ctx.shadowBlur = 18;
+    ctx.drawImage(m.imgs.photo, -hw2 / 2, -hh2 * 0.44, hw2, hh2);
+    ctx.restore();
+    return;
+  }
   // Helmet artwork: viewBox 108..192 × 4..102, eyes at y≈57.
   const hw = f.w * 1.5;
   const hh = hw * (98 / 84);
@@ -100,8 +113,12 @@ export async function openMirror() {
   }
   status.textContent = 'Helm wird angepasst …';
   m.raf = requestAnimationFrame(frame);
-  const [shell, face] = await Promise.all([svgImage(helmetSvg(suit, { part: 'shell' })), svgImage(helmetSvg(suit, { part: 'face' }))]);
-  m.imgs = shell && face ? { shell, face } : null;
+  const own = await suitHelmetImage();
+  if (own) m.imgs = { photo: own.img, ratio: own.ratio };
+  else {
+    const [shell, face] = await Promise.all([svgImage(helmetSvg(suit, { part: 'shell' })), svgImage(helmetSvg(suit, { part: 'face' }))]);
+    m.imgs = shell && face ? { shell, face } : null;
+  }
   try {
     await Promise.race([detector(), new Promise((_, rej) => setTimeout(() => rej(new Error('Zeitüberschreitung')), 25000))]);
     status.textContent = '';

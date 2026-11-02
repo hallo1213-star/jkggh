@@ -371,6 +371,7 @@ Standard ist jetzt der Look aus den Videos:
 - „Zieh den Anzug aus“ → Auszieh-Animation, Jarvis ist wieder normal.
 - Der Anzug bleibt gespeichert (auch nach Neustart, auf diesem Gerät).
 - **Realistisch**: Jarvis' Anzug wird als fotorealistisches KI-Foto gezeigt. Beim Anziehen formt sich die echte Rüstung hinter einer Scan-Linie aus einem Hologramm (mit Funken und Reaktor-Zündung), beim Ausziehen umgekehrt. Ohne Bild (Generator nicht erreichbar) gibt es automatisch die gezeichnete Version.
+- **Eigenes Bild als Anzug** (Anzug-Labor → „📷 Eigenes Bild als Anzug“): Du wählst ein Bild aus deinen Fotos (am besten Ganzkörper, einfarbiger Hintergrund). Jarvis entfernt den Hintergrund, schneidet den Helm aus und findet den leuchtenden Reaktor – dann ist das sein Anzug („Zieh deinen Anzug an“) und genau dieser Helm kommt beim Helm-Spiegel auf deinen Kopf. Das Bild bleibt nur auf deinem Gerät (nicht im Code, nicht auf dem Server).
 - **Flug-Modus**: „Flieg nach Paris“ (nur im Anzug) – Düsen zünden, Abheben, Flug durch die Wolken, dann fliegt die 3D-Erde zum Ziel mit echtem Wetter und Infos.
 
 ## Drohne, Termin-Rakete, Schild, Radio, Geschenk-Box, Helm-Spiegel, Anzug-Ruf

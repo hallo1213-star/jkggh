@@ -765,3 +765,15 @@ body.shield-on .focus-overlay, body.shield-on #focus-overlay { z-index: 127; }
 .suit-fx.call.photo-in .final-photo { opacity: 1; }
 .suit-fx.call.photo-in .suit-fx-fig { opacity: 0; transition: opacity 0.6s; }
 @media (prefers-reduced-motion: reduce) { .drone-rotor, .drone-led, .shield-hex, .radio-onair, .gift-box, .suit-fx.hit { animation: none; } }
+
+/* own picture as suit */
+.suit-photo-box.custom { inset: auto; left: 50%; top: 50%; height: 100%; max-width: 100%; transform: translate(-50%, -50%); }
+.suit-photo-box.custom .suit-photo, .suit-fx-pic.custom img, .film-intro-suit .suit-photo.custom { -webkit-mask-image: none; mask-image: none; filter: drop-shadow(0 0 30px rgba(255, 42, 61, 0.25)) brightness(calc(1 + var(--voice, 0) * 0.3)); }
+.suit-fx-pic.custom { aspect-ratio: auto; }
+.suit-home-photo { width: 100%; max-height: 70vh; object-fit: contain; -webkit-mask-image: radial-gradient(ellipse 60% 62% at 50% 50%, #000 62%, transparent 100%); mask-image: radial-gradient(ellipse 60% 62% at 50% 50%, #000 62%, transparent 100%); }
+.suit-home-photo.custom { -webkit-mask-image: none; mask-image: none; filter: drop-shadow(0 0 24px rgba(127, 243, 255, 0.2)); }
+.suit-upload { display: inline-flex; align-items: center; cursor: pointer; }
+.suit-name-input { width: 100%; margin: 4px 0 10px; padding: 8px 10px; border: 1px solid rgba(127, 243, 255, 0.35); border-radius: 8px; background: rgba(0, 0, 0, 0.4); color: #fff; font: 900 26px 'Orbitron', 'Inter', sans-serif; letter-spacing: 0.06em; }
+.suit-helmet-preview { display: inline-grid; justify-items: center; gap: 6px; padding: 10px; border: 1px solid rgba(127, 243, 255, 0.25); border-radius: 10px; background: rgba(0, 0, 0, 0.3); }
+.suit-helmet-preview img { height: 110px; object-fit: contain; }
+.suit-helmet-preview small { font-size: 10px; letter-spacing: 0.14em; color: #7ff3ff; text-transform: uppercase; }

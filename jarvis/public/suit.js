@@ -3,6 +3,8 @@
 // "Zieh deinen Anzug an" plays the suit-up animation and the main screen shows
 // Jarvis in his suit (the chest reactor is the live voice reactor);
 // "Zieh den Anzug aus" plays the reverse animation.
+import { customHelmet, customPhoto, processSuitImage, saveCustom } from './suit-upload.js';
+
 const OWN_KEY = 'jarvis.suit';
 const WORN_KEY = 'jarvis.suit.worn';
 const el = (tag, className, text) => { const n = document.createElement(tag); if (className) n.className = className; if (text !== undefined) n.textContent = text; return n; };
@@ -22,6 +24,7 @@ function sync() { deps.send(suitState()); }
 
 // --- realistic photo of the suit (same-origin, so it can be used everywhere) ----------------
 export function suitPhotoUrl(suit) {
+  if (suit?.custom) return `custom:${suit.erstellt}`;
   if (!suit?.foto?.prompt) return '';
   return `/api/video/image?format=9%3A16&seed=${encodeURIComponent(suit.foto.seed)}&prompt=${encodeURIComponent(suit.foto.prompt)}`;
 }
@@ -35,7 +38,8 @@ function loadPhoto(suit) {
       img.decoding = 'async';
       img.onload = () => resolve(img);
       img.onerror = () => { photos.delete(url); resolve(null); };
-      img.src = url;
+      if (suit.custom) customPhoto().then((data) => { if (data) img.src = data; else { photos.delete(url); resolve(null); } });
+      else img.src = url;
     }));
   }
   return photos.get(url);
@@ -150,6 +154,7 @@ function renderHome() {
   if (own) {
     const fig = el('div', 'suit-figure');
     fig.innerHTML = suitSvg(own, { id: 'home' });
+    loadPhoto(own).then((img) => { if (img && fig.isConnected) { const pic = img.cloneNode(); pic.className = `suit-home-photo${own.custom ? ' custom' : ''}`; pic.alt = own.name; fig.replaceChildren(pic); } });
     const info = el('div', 'suit-info');
     info.append(el('p', 'suit-kicker', 'MEIN ANZUG'), el('h2', 'suit-name', own.name), el('p', 'suit-motto', own.motto || ''));
     const row = el('div', 'suit-actions');
@@ -179,10 +184,61 @@ function renderHome() {
   };
   go.addEventListener('click', run);
   input.addEventListener('keydown', (e) => { if (e.key === 'Enter') run(); });
-  form.append(input, go, el('p', 'suit-note', 'Oder sag: „Designe dir einen Anzug in Rot und Gold.“'));
+  const upload = el('label', 'suit-ghost suit-upload');
+  const file = el('input');
+  file.type = 'file';
+  file.accept = 'image/*';
+  file.hidden = true;
+  file.addEventListener('change', () => { if (file.files?.[0]) useOwnPicture(file.files[0]); });
+  upload.append(document.createTextNode('📷 Eigenes Bild als Anzug'), file);
+  form.append(input, go, upload, el('p', 'suit-note', 'Oder sag: „Designe dir einen Anzug in Rot und Gold.“ – Mit „Eigenes Bild“ wird ein Bild aus deinen Fotos sein Anzug (am besten Ganzkörper, heller/einfarbiger Hintergrund). Das Bild bleibt nur auf diesem Gerät.'));
   box.append(form);
   ui.stage.replaceChildren(box);
   ui.status.textContent = own ? (suitWorn() ? 'ANZUG AN' : 'ANZUG BEREIT') : 'KEIN ANZUG';
+}
+
+// The user's own picture becomes the suit (and its helmet) – processed locally.
+async function useOwnPicture(file) {
+  renderBuilding('Bild wird verarbeitet: Hintergrund entfernen, Helm ausschneiden, Reaktor finden …');
+  try {
+    const result = await processSuitImage(file);
+    openLabShell();
+    const box = el('section', 'suit-design');
+    const fig = el('div', 'suit-figure');
+    const pic = new Image();
+    pic.className = 'suit-home-photo custom';
+    pic.src = result.photo;
+    pic.alt = 'Dein Anzug';
+    fig.append(pic);
+    const side = el('div', 'suit-info');
+    side.append(el('p', 'suit-kicker', 'EIGENES BILD · ANZUG ERKANNT'));
+    const name = el('input', 'suit-name-input');
+    name.value = 'MEIN ANZUG';
+    name.maxLength = 18;
+    name.setAttribute('aria-label', 'Name des Anzugs');
+    const helm = el('div', 'suit-helmet-preview');
+    const hp = new Image(); hp.src = result.helmet; hp.alt = 'Helm';
+    helm.append(hp, el('small', '', 'Helm für den Helm-Spiegel'));
+    side.append(name, el('p', 'suit-motto', result.meta.cutOut ? 'Hintergrund entfernt, Helm ausgeschnitten, Reaktor gefunden.' : 'Der Hintergrund war zu unruhig zum Entfernen – das Bild wird so benutzt.'), helm);
+    const q = el('div', 'suit-ask');
+    q.append(el('b', '', '„Soll ich den für mich benutzen?“'));
+    const yes = el('button', 'suit-go', 'Ja'); yes.type = 'button';
+    const no = el('button', 'suit-ghost', 'Nein'); no.type = 'button';
+    yes.addEventListener('click', async () => {
+      yes.disabled = true;
+      await saveCustom(result);
+      photos.clear();
+      adopt({ name: (name.value.trim() || 'MEIN ANZUG').toUpperCase().slice(0, 18), motto: 'Mein eigener Anzug', farben: result.meta.farben, helm: 'klassisch', schulter: 'breit', teile: [], werte: [], faehigkeiten: [], custom: true, glow: result.meta.glow, ratio: result.meta.ratio, helmetRatio: result.meta.helmetRatio, erstellt: Date.now() });
+    });
+    no.addEventListener('click', renderHome);
+    q.append(yes, no);
+    side.append(q);
+    box.append(fig, side);
+    ui.stage.replaceChildren(box);
+    ui.status.textContent = 'EIGENES BILD';
+  } catch (error) {
+    renderError(error.message);
+  }
 }
 
 function renderBuilding(wish) {
@@ -289,6 +345,11 @@ function applyWorn() {
       pic.alt = own.name;
       const glow = el('span', 'suit-photo-glow');
       glow.style.setProperty('--g', own.farben?.leuchten || '#7ff3ff');
+      if (own.custom) {
+        photo.classList.add('custom');
+        photo.style.aspectRatio = String(own.ratio || 0.55);
+        if (own.glow) { glow.style.left = `${own.glow.x * 100}%`; glow.style.top = `${own.glow.y * 100}%`; glow.style.width = '22%'; }
+      }
       photo.append(pic, glow);
       stage.append(photo);
       document.body.classList.add('suit-photo');
@@ -299,7 +360,7 @@ function applyWorn() {
   if (on && intro) {
     if (!introSuit) { introSuit = el('div', 'film-intro-suit'); introSuit.id = 'film-intro-suit'; intro.prepend(introSuit); }
     introSuit.innerHTML = suitSvg(own, { id: 'intro' });
-    loadPhoto(own).then((img) => { if (img && introSuit.isConnected) { const pic = img.cloneNode(); pic.className = 'suit-photo'; pic.alt = own.name; introSuit.replaceChildren(pic); introSuit.classList.add('photo'); } });
+    loadPhoto(own).then((img) => { if (img && introSuit.isConnected) { const pic = img.cloneNode(); pic.className = own.custom ? 'suit-photo custom' : 'suit-photo'; pic.alt = own.name; introSuit.replaceChildren(pic); introSuit.classList.add('photo'); } });
   } else introSuit?.remove();
 }
 
@@ -312,6 +373,13 @@ function photoCinematic(kind, own, img) {
     fx.style.setProperty('--g', glow);
     fx.innerHTML = `<div class="suit-fx-flash"></div><div class="suit-fx-ring"></div><div class="suit-fx-pic"><img class="holo" alt=""><img class="real" alt=""><span class="suit-fx-line"></span><span class="suit-fx-core"></span></div><canvas class="suit-fx-sparks"></canvas><p class="suit-fx-text">${kind === 'on' ? 'ANZUG WIRD ANGELEGT' : 'ANZUG WIRD ABGELEGT'}</p>`;
     fx.querySelectorAll('img').forEach((i) => { i.src = img.src; });
+    if (own.custom) {
+      const p = fx.querySelector('.suit-fx-pic');
+      p.classList.add('custom');
+      p.style.aspectRatio = String(own.ratio || 0.55);
+      const core = fx.querySelector('.suit-fx-core');
+      if (own.glow) { core.style.left = `${own.glow.x * 100}%`; core.style.top = `${own.glow.y * 100}%`; core.style.width = '20%'; }
+    }
     document.body.append(fx);
     const pic = fx.querySelector('.suit-fx-pic');
     const text = fx.querySelector('.suit-fx-text');
@@ -455,6 +523,14 @@ export async function suitFly(place) {
 }
 
 // --- public ---------------------------------------------------------------------------
+export async function suitHelmetImage() {
+  const own = ownedSuit();
+  if (!own?.custom) return null;
+  const data = await customHelmet();
+  if (!data) return null;
+  return new Promise((resolve) => { const img = new Image(); img.onload = () => resolve({ img, ratio: own.helmetRatio || img.width / img.height }); img.onerror = () => resolve(null); img.src = data; });
+}
+
 export function initSuit(options) {
   deps = { ...deps, ...options };
   applyWorn();
