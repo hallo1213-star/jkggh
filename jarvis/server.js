@@ -2,6 +2,7 @@
 // the browser microphone to Deepgram Voice Agent, runs cloud functions and
 // forwards computer-control functions to the laptop connector when it is online.
 // The API keys stay in this process and never reach the browser.
+import { EFFECT_TOOLS, effectFunction, unwrapEffect } from './effects-hub.js';
 import { designSuit } from './suit.js';
 import { planBusiness, websiteBrief } from './business-plan.js';
 import { createServer } from 'node:http';
@@ -78,9 +79,11 @@ const contentTypes = {
   '.webmanifest': 'application/manifest+json; charset=utf-8'
 };
 const functionDefinitions = [
-  ...cloudTools.map(({ name, description, parameters, confirm }) => ({ name, description, parameters, ...(confirm ? { defer_until_eot: true } : {}) })),
+  ...cloudTools.filter(({ name }) => !EFFECT_TOOLS.has(name)).map(({ name, description, parameters, confirm }) => ({ name, description, parameters, ...(confirm ? { defer_until_eot: true } : {}) })),
+  effectFunction(cloudTools),
   ...laptopFunctions
 ];
+if (functionDefinitions.length > 128) console.warn(`Achtung: ${functionDefinitions.length} Funktionen – die Sprach-KI erlaubt höchstens 128.`);
 
 const isSecure = (request) => request.headers['x-forwarded-proto'] === 'https';
 // Render appends the real client address as the last X-Forwarded-For entry.
@@ -1278,13 +1281,16 @@ browserWss.on('connection', (browser, request) => {
     return { state: 'done', result: { ok: true, ergebnis: reply.result } };
   }
 
-  async function handleFunctionCall({ id, name, arguments: rawArgs }) {
+  async function handleFunctionCall({ id, name: callName, arguments: rawArgs }) {
     let args = {};
     try {
       args = rawArgs ? JSON.parse(rawArgs) : {};
     } catch {
       // leave args empty; the tool reports what is missing
     }
+    // one shared function for all show features → run the real tool
+    let name = callName;
+    ({ name, args } = unwrapEffect(callName, args));
     const tool = findCloudTool(name) || findLaptopTool(name);
     const label = tool?.label(args) ?? name;
     toBrowser({ type: 'action', id, label, state: 'running', laptop: !findCloudTool(name) });
@@ -1293,7 +1299,7 @@ browserWss.on('connection', (browser, request) => {
       toBrowser({ type: 'action', id, label, state: 'cancelled' });
       return;
     }
-    agent.sendFunctionCallResponse({ type: 'FunctionCallResponse', id, name, content: JSON.stringify(result) });
+    agent.sendFunctionCallResponse({ type: 'FunctionCallResponse', id, name: callName, content: JSON.stringify(result) });
     toBrowser({ type: 'action', id, label, state, detail: result.fehler });
     console.log(`Funktion ${name}: ${state}${result.fehler ? ` – ${result.fehler}` : ''}`);
   }

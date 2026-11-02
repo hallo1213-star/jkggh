@@ -1,0 +1,14 @@
+import { cloudTools } from '../../cloud-tools.js';
+import { functionDefinitions as laptop } from '../../laptop/tools.js';
+import { EFFECT_FUNCTION, EFFECT_TOOLS, effectFunction, unwrapEffect } from '../../effects-hub.js';
+const assert = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) process.exitCode = 1; };
+const total = cloudTools.filter((t) => !EFFECT_TOOLS.has(t.name)).length + 1 + laptop.length;
+assert(total <= 120, `höchstens 120 Funktionen an die Sprach-KI (Grenze 128, Puffer) – jetzt ${total}`);
+assert([...EFFECT_TOOLS].every((n) => cloudTools.some((t) => t.name === n)), 'jeder Effekt-Name gehört zu einem echten Werkzeug');
+const f = effectFunction(cloudTools);
+assert(f.name === EFFECT_FUNCTION && f.parameters.properties.name.enum.length === EFFECT_TOOLS.size, 'jarvis_effekt listet alle Effekte');
+const u = unwrapEffect('jarvis_effekt', { name: 'fireworks', args: { text: 'OZ' } });
+assert(u.name === 'fireworks' && u.args.text === 'OZ', 'jarvis_effekt wird zum echten Werkzeug aufgelöst');
+assert(unwrapEffect('jarvis_effekt', { name: 'gravity', args: '{"action":"an"}' }).args.action === 'an', 'args als Text werden auch verstanden');
+assert(unwrapEffect('jarvis_effekt', { name: 'email_send' }).name === 'jarvis_effekt', 'andere Werkzeuge (z. B. E-Mail) sind über jarvis_effekt nicht erreichbar');
+assert(unwrapEffect('get_weather', { place: 'Berlin' }).name === 'get_weather', 'normale Werkzeuge bleiben unverändert');
