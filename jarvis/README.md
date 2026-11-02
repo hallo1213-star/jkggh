@@ -353,9 +353,20 @@ Solange Impressum oder Links fehlen, ist die Seite als **Entwurf** markiert und 
 - Die Widerrufsbelehrung auf der Seite ist ein Muster. Lass sie am besten mit einem Rechtstext-Generator prüfen.
 - Gumroad wickelt Zahlung und Umsatzsteuer ab.
 
-## Design: Orb oder Iron-Man 🎨
+## Design: Neon-HUD (Standard), Iron-Man oder Orb 🎨
 
-Standard ist jetzt das helle **Orb-Design**: schlicht, eine leuchtende orange Kugel, die beim Zuhören, Denken und Sprechen pulsiert, deine Nachrichten als orange Sprechblasen und Jarvis' Antworten als ruhiger Text. Mit dem **Paletten-Knopf** oben rechts wechselst du jederzeit zurück zum dunklen **Iron-Man-Design**. Deine Wahl wird gespeichert.
+Standard ist jetzt das **Neon-HUD** in Pink-Violett: dunkler Hintergrund, leuchtender Reaktor in der Mitte, HUD-Panels mit abgeschrägten Ecken, Scanlines und weiche Übergänge – auch in Einstellungen, Planer, Einkaufsliste, Studios und Video Studio. Mit dem **Paletten-Knopf** oben rechts (oder in den Einstellungen) wechselst du zu **Iron-Man (cyan)** oder **Orb (hell)**. Deine Wahl wird gespeichert.
+
+**Alles im HUD ist echt – keine Fantasiezahlen:**
+- **Reaktor**: reagiert auf Zuhören, Denken und Jarvis' echte Stimme; kreisende Marker, solange Werkzeuge laufen; kurzer Blitz bei Erfolg (cyan) oder Fehler (rot).
+- **Start-Sequenz**: zeigt die echten Schritte Mikrofon → Verbindung zum Server → Sprachkern (Deepgram) mit ONLINE oder dem echten Fehler.
+- **Aktueller Auftrag**: dein letzter Satz und jeder Schritt, den Jarvis dafür ausführt – mit Dauer, „erledigt“ oder dem echten Fehlertext, plus Zusammenfassung („4 Schritte · 3 erfolgreich · 1 Fehler“).
+- **Telemetrie**: gemessene Antwortzeit zum Server (Ping), Sitzungsdauer, heute erfolgreiche und fehlgeschlagene Aktionen.
+- **Heute**: nächster Termin, Erinnerung, offene Einkäufe und Anzahl Erinnerungen aus deinen eigenen Daten.
+- **System**: welche Dienste bei Render wirklich eingerichtet sind.
+- **Meldungen**: kurze Einblendungen „✓ ERLEDIGT“ / „✖ FEHLER“ nur bei echten Ergebnissen.
+
+**Arbeitsweise**: Jarvis zerlegt mehrteilige Aufträge in Schritte, verbindet Werkzeuge (z. B. Route → Wetter → Erinnerung), prüft Ergebnisse und sagt ehrlich, was geklappt hat. Schlägt ein Werkzeug fehl, bekommt er vom Server konkrete Alternativen (nur Werkzeuge, die es wirklich gibt) und einen nächsten Schritt (z. B. „Schlüssel bei Render fehlt“ oder „Dienst antwortet nicht – Alternative versuchen“).
 
 ## Film-Modus: „Alle Systeme online, Master“ 🎬
 

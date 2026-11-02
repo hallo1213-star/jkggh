@@ -1,0 +1,10 @@
+import { fallbackFor } from '../../tool-fallbacks.js';
+const assert = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) process.exitCode = 1; };
+const r = fallbackFor('get_news', 'Status 503');
+assert(r.alternativen.includes('news_region') && /antwortet gerade nicht/.test(r.naechsterSchritt), 'news failure → alternatives + service advice');
+const only = fallbackFor('get_news', 'kaputt', (t) => t === 'web_search');
+assert(only.alternativen.length === 1 && only.alternativen[0] === 'web_search' && /web_search/.test(only.naechsterSchritt), 'only existing tools are suggested');
+assert(fallbackFor('camera_look', 'irgendwas') === null, 'no alternative, no advice → null');
+const key = fallbackFor('camera_look', 'GROQ_API_KEY fehlt');
+assert(key && !key.alternativen && /GROQ_API_KEY/.test(key.naechsterSchritt), 'missing key → setup advice');
+assert(/Kontingent/.test(fallbackFor('translate', '429 rate limit').naechsterSchritt), 'rate limit → honest retry advice');

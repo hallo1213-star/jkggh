@@ -35,6 +35,7 @@ import { designScene, sanitizeScene } from './model3d.js';
 import { sanitizeProject, writeProject } from './projects.js';
 import { describeImage, llmLabel, llmProvider } from './llm.js';
 import { NARRATION_SCRIPTS, narrateVideo } from './video-narration.js';
+import { fallbackFor } from './tool-fallbacks.js';
 import { GRAPHIC_UPGRADE, STYLES, TYPES as GRAPHIC_TYPES, classifyDesign, designGraphics, editGraphics, sanitizeSet } from './graphics.js';
 import { aiClipFile, aiClipStatus, aiVideoConfig, convertToMp4, editVideo, fetchImage, ffmpegPath, planVideo, sanitizeVideo, startAiClip, synthesizeVoice, voiceConfigured } from './video.js';
 import { twilioConfigured } from './phone-call.js';
@@ -1225,7 +1226,7 @@ browserWss.on('connection', (browser, request) => {
         }
         return { state: 'done', result: { ok: true, ergebnis: await cloudTool.run(args, context) } };
       } catch (error) {
-        return { state: 'failed', result: { ok: false, fehler: error.message } };
+        return { state: 'failed', result: { ok: false, fehler: error.message, ...(fallbackFor(name, error.message, (tool) => Boolean(findCloudTool(tool))) || {}) } };
       }
     }
     if (!findLaptopTool(name)) return { state: 'failed', result: { ok: false, fehler: `Unbekannte Funktion: ${name}` } };
@@ -1431,6 +1432,8 @@ browserWss.on('connection', (browser, request) => {
         .catch((error) => toBrowser({ type: 'globe', action: 'error', message: `Ort nicht erkannt: ${error.message}` }));
     } else if (message.type === 'globe_location_error') {
       if (agentOpen) agent.sendInjectAgentMessage({ type: 'InjectAgentMessage', message: `Ich konnte deinen Standort nicht abfragen: ${String(message.message || 'keine Erlaubnis').slice(0, 120)}. Erlaube den Standortzugriff für Jarvis im Browser.` });
+    } else if (message.type === 'ping') {
+      toBrowser({ type: 'pong', t: Number(message.t) || 0 });
     } else if (message.type === 'design_current') {
       try {
         context.designMemory.last = sanitizeSet(message.set);

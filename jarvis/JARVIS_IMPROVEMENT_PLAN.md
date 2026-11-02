@@ -124,6 +124,14 @@ Diese Datei hält fest, was analysiert, gebaut und getestet wurde und was noch o
 
 3D-Studio (GLB-Export), Projekt-Werkstatt (Sandbox-Vorschau, ZIP), Bilder erschaffen/verstehen, Aufgabenmodus, Orb-Design, Film-Modus (Butler, Lagebericht, Börse, Wochenzahlen), Verkaufsseite, Essen bestellen per Telefon mit Testmodus, 3D-Erde, Geld-Modus, Planer, Gmail, Telegram-Benachrichtigungen, Laptop-Verbinder.
 
+## Neon-HUD-Redesign + echte Live-Anzeigen
+
+- Neues Standard-Design „Neon-HUD“ (Pink-Violett) für Login, Start, Dashboard, Chat, Einstellungen, Menüs, Studios und Video Studio; Iron-Man und Orb bleiben wählbar.
+- `public/hud.js`: Auftrag mit allen Schritten, Telemetrie (echter Ping über WS `ping`/`pong`), Start-Sequenz aus echten Schritten, Dienste aus `/api/status`, Heute-Panel aus Planer/Einkauf/Gedächtnis, Ergebnis-Meldungen. Die alte Fake-„Alle Systeme online“-Liste ist entfernt.
+- `tool-fallbacks.js`: bei Werkzeugfehlern liefert der Server `alternativen` + `naechsterSchritt` (nur existierende Werkzeuge).
+- `agent-config.js`: Abschnitt „Arbeitsweise“ (Verstehen, Zerlegen, Verbinden, Prüfen, Fehler ehrlich melden).
+- Getestet mit Fake-Diensten (Desktop + iPhone-Größe): alle Panels zeigen echte Ereignisse, kein Querscrollen, keine JS-Fehler. Echte Deepgram-/Groq-Verbindung hier nicht testbar.
+
 ## Bewusst nicht umgesetzt
 
 - **Maus, Tastatur und Bildschirm des Computers fernsteuern** sowie fremde Apps auf dem Handy bedienen.

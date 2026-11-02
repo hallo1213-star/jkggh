@@ -13,6 +13,7 @@ import { initCards, isEverydayCard, showEverydayCard } from './cards.js';
 import { handleCameraMessage, initCamera } from './camera.js';
 import { handleVideoMessage, initVideo } from './video.js';
 import { handleDesignMessage, initDesign } from './design.js';
+import { hudAction, hudBoot, hudConnected, hudPong, hudToday, hudUser, initHud, reactorFx, refreshSystem } from './hud.js';
 
 const OUTPUT_SAMPLE_RATE = 24000;
 
@@ -158,6 +159,7 @@ function setControlsEnabled(enabled) {
 function sendText(text) {
   if (!text || !state.connected) return;
   stopPlayback();
+  hudUser(text);
   state.ws.send(JSON.stringify({ type: 'text', text }));
 }
 
@@ -183,6 +185,7 @@ function addMessage(role, content) {
 }
 
 function upsertAction({ id, label, state: actionState, detail }) {
+  hudAction({ id, label, state: actionState, detail });
   clearEmpty(els.actionLog);
   let item = state.actions.get(id);
   if (!item) {
@@ -773,23 +776,7 @@ let booted = false;
 function bootSequence() {
   if (booted) return;
   booted = true;
-  const overlay = el('div', 'boot-overlay');
-  overlay.setAttribute('aria-hidden', 'true');
-  const box = el('div', 'boot-box');
-  box.append(el('p', 'boot-title', 'J.A.R.V.I.S.'));
-  ['Spracherkennung', 'Erdbeobachtung', 'Nachrichtenlage', 'Märkte', 'Geld-Modus', 'Planer & Gedächtnis'].forEach((name, i) => {
-    const row = el('p', 'boot-line');
-    row.style.animationDelay = `${0.15 + i * 0.22}s`;
-    row.append(el('span', '', name), el('b', '', 'online'));
-    box.append(row);
-  });
-  const done = el('p', 'boot-done', 'Alle Systeme online');
-  done.style.animationDelay = '1.6s';
-  box.append(done);
-  overlay.append(box);
-  document.body.append(overlay);
-  setTimeout(() => overlay.classList.add('fade'), 2600);
-  setTimeout(() => overlay.remove(), 3200);
+  hudBoot('voice', true);
 }
 
 function addWeatherCard(weather) {
@@ -1226,13 +1213,8 @@ async function openSettings() {
     address.className = 'settings-input';
     const addressSave = pill('Anrede speichern', false, () => saveStyle({ address: address.value }));
     const designRow = el('div', 'order-actions');
-    const orb = document.body.classList.contains('theme-orb');
-    const setDesign = (wantOrb) => {
-      document.body.classList.toggle('theme-orb', wantOrb);
-      try { localStorage.setItem('jarvis.theme', wantOrb ? 'orb' : 'hud'); } catch { /* ignore */ }
-      openSettings();
-    };
-    designRow.append(pill('Orb (hell)', orb, () => setDesign(true)), pill('Iron-Man (dunkel)', !orb, () => setDesign(false)));
+    const active = currentTheme();
+    designRow.append(...THEMES.map(([name, label]) => pill(label, active === name, () => { applyTheme(name); openSettings(); })));
     body.replaceChildren(
       section('Persönlichkeit'), styleRow, address, addressSave,
       section('Design'), designRow,
@@ -1247,11 +1229,18 @@ async function openSettings() {
 document.getElementById('settings-button').addEventListener('click', openSettings);
 document.getElementById('settings-close').addEventListener('click', () => { document.getElementById('settings-modal').hidden = true; });
 
-// Design: bright "Orb" look (default) or the dark Iron-Man HUD.
+// Design: pink-violet Neon HUD (default), cyan Iron-Man HUD or bright Orb.
+const THEMES = [['neon', 'Neon-HUD (pink-violett)'], ['hud', 'Iron-Man (cyan)'], ['orb', 'Orb (hell)']];
+function applyTheme(name) {
+  document.body.classList.toggle('theme-orb', name === 'orb');
+  document.body.classList.toggle('theme-neon', name === 'neon');
+  try { localStorage.setItem('jarvis.theme', name); } catch { /* ignore */ }
+}
+const currentTheme = () => (document.body.classList.contains('theme-neon') ? 'neon' : document.body.classList.contains('theme-orb') ? 'orb' : 'hud');
 document.getElementById('theme-button').addEventListener('click', () => {
-  const orb = document.body.classList.toggle('theme-orb');
-  try { localStorage.setItem('jarvis.theme', orb ? 'orb' : 'hud'); } catch { /* ignore */ }
-  toast(orb ? 'Design: Orb (hell)' : 'Design: Iron-Man (dunkel)');
+  const next = THEMES[(THEMES.findIndex(([n]) => n === currentTheme()) + 1) % THEMES.length];
+  applyTheme(next[0]);
+  toast(`Design: ${next[1]}`);
 });
 initTasks({ toast });
 initPalace({ toast });
@@ -1295,6 +1284,16 @@ initModels({
     return true;
   }
 });
+initHud({
+  send: (message) => {
+    if (state.ws?.readyState !== WebSocket.OPEN) return false;
+    state.ws.send(JSON.stringify(message));
+    return true;
+  }
+});
+const updateToday = () => hudToday({ planner: personalStores.planner.load(), shopping: loadShoppingList(), memories: memories.load() });
+updateToday();
+setInterval(updateToday, 5000);
 initDesign({
   toast,
   send: (message) => {
@@ -1444,7 +1443,7 @@ function connect() {
   setMode('connecting');
   els.reconnect.hidden = true;
 
-  ws.onopen = () => ws.send(JSON.stringify({ type: 'start', sampleRate: state.audio.sampleRate, shoppingList: shopping.load(), shoppingListUpdatedAt: shopping.loadTime(), customers: customers.load(), customersUpdatedAt: customers.loadTime(), memories: memories.load(), memoriesUpdatedAt: memories.loadTime(), history: loadHistory().slice(-16), stores: Object.fromEntries(Object.entries(personalStores).map(([name, store]) => [name, { items: store.load(), updatedAt: store.loadTime() }])) }));
+  ws.onopen = () => hudBoot('link', true) || ws.send(JSON.stringify({ type: 'start', sampleRate: state.audio.sampleRate, shoppingList: shopping.load(), shoppingListUpdatedAt: shopping.loadTime(), customers: customers.load(), customersUpdatedAt: customers.loadTime(), memories: memories.load(), memoriesUpdatedAt: memories.loadTime(), history: loadHistory().slice(-16), stores: Object.fromEntries(Object.entries(personalStores).map(([name, store]) => [name, { items: store.load(), updatedAt: store.loadTime() }])) }));
   ws.onmessage = ({ data }) => {
     if (typeof data !== 'string') {
       playChunk(data);
@@ -1454,6 +1453,8 @@ function connect() {
   };
   ws.onclose = async () => {
     if (state.ws !== ws) return;
+    if (!state.connected) hudBoot('link', false, 'getrennt');
+    hudConnected(false);
     if (!(await checkSession())) return;
     disconnected('Verbindung zu Jarvis getrennt.');
   };
@@ -1474,12 +1475,18 @@ function handleMessage(message) {
     case 'status':
       if (message.state === 'listening' && !state.connected) {
         bootSequence();
+        hudConnected(true);
+        refreshSystem();
         state.connected = true;
         setControlsEnabled(true);
       }
       setMode(message.state);
       break;
+    case 'pong':
+      hudPong(message.t);
+      break;
     case 'transcript':
+      if (message.role === 'user') hudUser(message.content);
       addMessage(message.role === 'user' ? 'user' : 'assistant', message.content);
       rememberTurn(message.role === 'user' ? 'user' : 'assistant', message.content);
       break;
@@ -1668,9 +1675,11 @@ function handleMessage(message) {
 
 async function activate() {
   els.activate.disabled = true;
+  hudBoot('start');
   try {
     await setupAudio();
     await state.audio.resume();
+    hudBoot('mic', true);
     if (!(await checkSession())) return;
     els.activate.hidden = true;
     connect();
@@ -1678,6 +1687,7 @@ async function activate() {
     els.activate.disabled = false;
     setMode('error');
     const denied = error.name === 'NotAllowedError' || error.name === 'SecurityError';
+    hudBoot('mic', false, denied ? 'verweigert' : 'Fehler');
     toast(denied ? 'Mikrofonzugriff wurde verweigert. Erlaube ihn über das Schloss-Symbol in der Adressleiste.' : `Audio konnte nicht gestartet werden: ${error.message}`, 'error');
   }
 }
@@ -1823,6 +1833,13 @@ function readLevel(analyser) {
 }
 
 function palette() {
+  if (document.body.classList.contains('theme-neon')) {
+    if (state.mode === 'error') return [255, 77, 106];
+    if (state.mode === 'thinking' || state.mode === 'connecting') return [168, 85, 247];
+    if (state.mode === 'offline' || state.micMuted) return [130, 90, 160];
+    if (state.mode === 'speaking') return [255, 92, 190];
+    return [255, 62, 165];
+  }
   if (state.mode === 'error') return [255, 77, 106];
   if (state.mode === 'thinking' || state.mode === 'connecting') return [255, 181, 71];
   if (state.mode === 'offline' || state.micMuted) return [90, 140, 160];
@@ -1927,8 +1944,36 @@ function draw() {
   ctx.stroke();
   ctx.restore();
 
+  drawLiveEffects(cx, cy);
   if (speaking && state.mode !== 'speaking' && state.mode !== 'error') setMode('speaking');
   requestAnimationFrame(draw);
+}
+
+// Real status on the reactor: orbiting markers while Jarvis runs tools, a
+// shock ring when an action finished (cyan = success, red = error).
+function drawLiveEffects(cx, cy) {
+  const fx = reactorFx();
+  if (fx.working > 0) {
+    for (let i = 0; i < 3; i += 1) {
+      const a = angle * 3 + (i / 3) * Math.PI * 2;
+      const x = cx + Math.cos(a) * 232;
+      const y = cy + Math.sin(a) * 232;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, 16);
+      g.addColorStop(0, 'rgba(160, 245, 255, 1)');
+      g.addColorStop(1, 'rgba(56, 225, 255, 0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(x, y, 16, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  if (fx.flash) {
+    const k = (performance.now() - fx.flash.at) / 900;
+    if (k < 1) {
+      const [r, g, b] = fx.flash.color;
+      ctx.strokeStyle = `rgba(${r}, ${g}, ${b}, ${0.9 * (1 - k)})`;
+      ctx.lineWidth = 10 * (1 - k) + 1;
+      ctx.beginPath(); ctx.arc(cx, cy, 120 + k * 150, 0, Math.PI * 2); ctx.stroke();
+    }
+  }
 }
 
 setMode('offline');
