@@ -362,6 +362,15 @@ Standard ist jetzt der Look aus den Videos:
 - Andere Funktionen (Planer, Einkauf, Spiele, Erde, Geld-Modus …) sind in diesem Look ausgeblendet, funktionieren aber weiter per Sprache. Der alte Gesprächsverlauf wird hier nicht angezeigt (nichts gelöscht).
 - Die anderen Designs (Neon-HUD, Iron-Man, Orb) sind in den Einstellungen wählbar.
 
+## App-Fabrik 📱 und Anzug-Labor 🦾
+
+**App-Fabrik** (Tab „Apps“ oder „Bau mir in 60 Sekunden eine App für …“): Countdown, Code-Regen, dann läuft der echte Code der neuen App über den Bildschirm und die App startet in einem Handy-Rahmen – sofort benutzbar. „In der Werkstatt öffnen“ zum Ändern/Speichern. Die Uhr zeigt die echte Bauzeit.
+
+**Anzug-Labor** (Tab „Anzug“ oder „Designe dir einen Iron-Man-Anzug in Rot und Gold“): Jarvis entwirft seinen eigenen Anzug – Bauplan-Animation Teil für Teil, Bauteile, Werte, KI-Bild – und fragt: „Soll ich den für mich benutzen?“ Bei „Ja“ gehört er ihm.
+- „Zieh deinen Anzug an“ → Anzieh-Animation (Teile fliegen heran, Reaktor zündet). Danach steht Jarvis im Anzug auf dem Startbildschirm; der Brust-Reaktor reagiert auf seine Stimme, die Augen leuchten beim Sprechen. Du redest ganz normal weiter.
+- „Zieh den Anzug aus“ → Auszieh-Animation, Jarvis ist wieder normal.
+- Der Anzug bleibt gespeichert (auch nach Neustart, auf diesem Gerät).
+
 ## Design: Neon-HUD, Iron-Man oder Orb 🎨
 
 Wählbar ist außerdem das **Neon-HUD** in Pink-Violett: dunkler Hintergrund, leuchtender Reaktor in der Mitte, HUD-Panels mit abgeschrägten Ecken, Scanlines und weiche Übergänge – auch in Einstellungen, Planer, Einkaufsliste, Studios und Video Studio. Mit dem **Paletten-Knopf** oben rechts (oder in den Einstellungen) wechselst du zu **Iron-Man (cyan)** oder **Orb (hell)**. Deine Wahl wird gespeichert.

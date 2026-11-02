@@ -15,6 +15,8 @@ import { handleVideoMessage, initVideo } from './video.js';
 import { handleDesignMessage, initDesign } from './design.js';
 import { handleBusinessMessage, initBusiness, openBusiness } from './business.js';
 import { filmTab, initFilm } from './film.js';
+import { handleFactoryMessage, initFactory, openFactory } from './factory.js';
+import { handleSuitMessage, initSuit, openSuitLab, ownedSuit, suitState } from './suit.js';
 import { hudAction, hudBoot, hudResult, hudConnected, hudPong, hudToday, hudUser, initHud, reactorFx, refreshSystem } from './hud.js';
 
 const OUTPUT_SAMPLE_RATE = 24000;
@@ -1260,7 +1262,9 @@ initBusiness({
     followJob(data.id, 'build', prompt);
   }
 });
-initFilm({ openBusiness });
+initFactory({ toast, showProject, result: hudResult, onClose: () => filmTab('normal') });
+initSuit({ toast, result: hudResult, onClose: () => filmTab('normal'), send: (message) => { if (state.ws?.readyState === 1) state.ws.send(JSON.stringify(message)); } });
+initFilm({ openBusiness, openFactory, openSuit: openSuitLab });
 initPalace({ toast });
 initVisuals({ toast, chime: (f) => chime(f) });
 initCards({
@@ -1461,7 +1465,7 @@ function connect() {
   setMode('connecting');
   els.reconnect.hidden = true;
 
-  ws.onopen = () => hudBoot('link', true) || ws.send(JSON.stringify({ type: 'start', sampleRate: state.audio.sampleRate, shoppingList: shopping.load(), shoppingListUpdatedAt: shopping.loadTime(), customers: customers.load(), customersUpdatedAt: customers.loadTime(), memories: memories.load(), memoriesUpdatedAt: memories.loadTime(), history: loadHistory().slice(-16), stores: Object.fromEntries(Object.entries(personalStores).map(([name, store]) => [name, { items: store.load(), updatedAt: store.loadTime() }])) }));
+  ws.onopen = () => hudBoot('link', true) || ws.send(JSON.stringify({ type: 'start', sampleRate: state.audio.sampleRate, shoppingList: shopping.load(), shoppingListUpdatedAt: shopping.loadTime(), customers: customers.load(), customersUpdatedAt: customers.loadTime(), memories: memories.load(), memoriesUpdatedAt: memories.loadTime(), history: loadHistory().slice(-16), stores: Object.fromEntries(Object.entries(personalStores).map(([name, store]) => [name, { items: store.load(), updatedAt: store.loadTime() }])) })) || ws.send(JSON.stringify(suitState()));
   ws.onmessage = ({ data }) => {
     if (typeof data !== 'string') {
       playChunk(data);
@@ -1574,6 +1578,14 @@ function handleMessage(message) {
       break;
     case 'design_open':
       handleDesignMessage(message);
+      break;
+    case 'factory':
+      filmTab('apps');
+      handleFactoryMessage(message);
+      break;
+    case 'suit':
+      if (message.action !== 'on' && message.action !== 'off') filmTab('anzug');
+      handleSuitMessage(message);
       break;
     case 'business_start':
     case 'business_result':
@@ -1856,7 +1868,13 @@ function readLevel(analyser) {
   return Math.min(1, Math.sqrt(sum / analyser.fftSize) * 4);
 }
 
+let suitGlow = { key: '', rgb: null };
 function palette() {
+  if (document.body.classList.contains('suit-on') && state.mode !== 'error') {
+    const hex = ownedSuit()?.farben?.leuchten || '';
+    if (suitGlow.key !== hex) suitGlow = { key: hex, rgb: /^#[0-9a-f]{6}$/i.test(hex) ? [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16)) : null };
+    if (suitGlow.rgb) return state.mode === 'offline' || state.micMuted ? suitGlow.rgb.map((v) => Math.round(v * 0.5)) : suitGlow.rgb;
+  }
   if (document.body.classList.contains('theme-film')) {
     if (state.mode === 'error') return [255, 150, 60];
     if (state.mode === 'offline' || state.micMuted) return [150, 30, 42];

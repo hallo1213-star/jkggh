@@ -92,7 +92,7 @@ function sideTabs() {
 
 export function filmTab(name) { setTab(name); }
 
-export function initFilm({ openBusiness, onNormal }) {
+export function initFilm({ openBusiness, openFactory, openSuit, onNormal }) {
   renderHead();
   sideTabs();
   new MutationObserver(() => { renderHead(); intro(); }).observe(document.body, { attributes: true, attributeFilter: ['data-mode', 'class'] });
@@ -104,6 +104,8 @@ export function initFilm({ openBusiness, onNormal }) {
     b.addEventListener('click', () => {
       setTab(b.dataset.tab);
       if (b.dataset.tab === 'business') openBusiness();
+      else if (b.dataset.tab === 'apps') openFactory?.();
+      else if (b.dataset.tab === 'anzug') openSuit?.();
       else if (b.dataset.tab === 'websites') { $('studio-button')?.click(); setTimeout(() => setTab('normal'), 400); }
       else onNormal?.();
     });

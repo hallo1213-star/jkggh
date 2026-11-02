@@ -2,6 +2,7 @@
 // the browser microphone to Deepgram Voice Agent, runs cloud functions and
 // forwards computer-control functions to the laptop connector when it is online.
 // The API keys stay in this process and never reach the browser.
+import { designSuit } from './suit.js';
 import { planBusiness, websiteBrief } from './business-plan.js';
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
@@ -563,6 +564,20 @@ const httpServer = createServer(async (request, response) => {
         'Bilder malen (Pollinations)': yes(true, 'ohne Schlüssel')
       }
     });
+    return;
+  }
+
+  if (pathname === '/api/suit/design' && request.method === 'POST') {
+    if (!isAuthenticated(request) || !String(request.headers['content-type'] || '').startsWith('application/json')) {
+      sendJson(response, 401, { error: 'Nicht angemeldet' });
+      return;
+    }
+    try {
+      const body = JSON.parse(await readBody(request, 4096));
+      sendJson(response, 200, { suit: await designSuit(body.description) });
+    } catch (error) {
+      sendJson(response, 400, { error: error.message });
+    }
     return;
   }
 
@@ -1142,6 +1157,7 @@ browserWss.on('connection', (browser, request) => {
     projectMemory: {},
     videoMemory: {},
     designMemory: {},
+    suitMemory: { last: null, owned: null, worn: false },
     startTask(goal) {
       return startTask(goal, {
         onEvent(event) {
@@ -1449,6 +1465,9 @@ browserWss.on('connection', (browser, request) => {
         .catch((error) => toBrowser({ type: 'globe', action: 'error', message: `Ort nicht erkannt: ${error.message}` }));
     } else if (message.type === 'globe_location_error') {
       if (agentOpen) agent.sendInjectAgentMessage({ type: 'InjectAgentMessage', message: `Ich konnte deinen Standort nicht abfragen: ${String(message.message || 'keine Erlaubnis').slice(0, 120)}. Erlaube den Standortzugriff für Jarvis im Browser.` });
+    } else if (message.type === 'suit_state') {
+      context.suitMemory.owned = message.owned ? String(message.owned).slice(0, 30) : null;
+      context.suitMemory.worn = Boolean(message.owned) && message.worn === true;
     } else if (message.type === 'ping') {
       toBrowser({ type: 'pong', t: Number(message.t) || 0 });
     } else if (message.type === 'design_current') {

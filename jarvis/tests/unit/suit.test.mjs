@@ -1,0 +1,12 @@
+import { designSuit, normalizeSuit } from '../../suit.js';
+const assert = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) process.exitCode = 1; };
+let seen;
+const suit = await designSuit('rot und gold, kantig', { generate: async (o) => { seen = o; return { name: 'Mark Rot<1>', motto: 'Bereit.', farben: { haupt: '#b3121f', akzent: 'gold', leuchten: '#7ff3ff' }, helm: 'KANTIG', schulter: 'riesig', teile: [{ teil: 'Helm', beschreibung: 'Kantiger Helm' }, { teil: 'Arme', beschreibung: 'Repulsoren' }], werte: { schutz: 150, tempo: '80', flug: -5 }, faehigkeiten: ['Fliegen', 'Scannen', 'Tarnung', 'zu viel'], bild: 'red and gold armored suit' }; } });
+assert(/rot und gold/.test(seen.prompt), 'wish goes to the AI');
+assert(suit.name === 'MARK ROT1', 'name cleaned and upper-cased');
+assert(suit.farben.akzent === '#d4a64a' && suit.farben.haupt === '#b3121f', 'invalid colour replaced');
+assert(suit.helm === 'kantig' && suit.schulter === 'breit', 'shape options normalized');
+assert(suit.teile.length === 5 && suit.teile[2].teil === 'Arme' && suit.teile[2].beschreibung === 'Repulsoren', 'parts matched by name');
+assert(suit.werte.find((w) => w.key === 'schutz').wert === 100 && suit.werte.find((w) => w.key === 'flug').wert === 0 && suit.werte.find((w) => w.key === 'energie').wert === 60, 'stats clamped with defaults');
+assert(suit.faehigkeiten.length === 3 && suit.bildUrl.includes('image.pollinations.ai') && /height=1216/.test(suit.bildUrl), 'abilities capped, real render picture');
+assert(normalizeSuit(null).name === 'MARK I', 'empty answer → safe default');

@@ -1,4 +1,5 @@
 // Functions that run in the cloud and work even when the laptop is off.
+import { designSuit } from './suit.js';
 import { planBusiness, websiteBrief } from './business-plan.js';
 import { normalizeUrl, searchUrls } from './laptop/tools.js';
 import { DIFFICULTIES, GAME_TYPES, encodeGame, sanitizeGame } from './public/game-config.js';
@@ -1237,6 +1238,75 @@ export const cloudTools = [
       const url = imageUrl(plan.prompt, { format });
       context.showImage({ url, title: plan.title, description: String(description).slice(0, 300) });
       return { erstellt: true, titel: plan.title, hinweis: 'Das Bild wird gerade gemalt und erscheint in ein paar Sekunden in der App. Sag kurz, was du gemalt hast. Er kann es speichern oder eine andere Version wünschen.' };
+    }
+  },
+  {
+    name: 'app_factory',
+    description: 'App-Fabrik: Jarvis baut eine komplette, benutzbare App/ein Spiel/ein Werkzeug „in 60 Sekunden“ mit Countdown-Animation, Code-Regen und Handy-Vorschau, in der man die App sofort benutzen kann. Für „Bau mir in 60 Sekunden eine App für …“, „App-Fabrik: …“, „Bau mir eine App/ein Spiel …“. Änderungen an der fertigen App danach mit create_project (edit true).',
+    parameters: {
+      type: 'object',
+      properties: { description: { type: 'string', description: 'Was für eine App, in seinen Worten' } },
+      required: ['description']
+    },
+    label: (a) => `App-Fabrik: ${a.description}`,
+    run: async ({ description }, context) => {
+      context.showVisual?.({ type: 'factory', action: 'start', description: String(description).slice(0, 300) });
+      try {
+        const project = await writeProject(`${description}\n(Wichtig: muss auf dem Handy-Bildschirm gut bedienbar sein, Touch-Bedienung, modernes dunkles Design.)`);
+        if (context.projectMemory) context.projectMemory.last = project;
+        context.showVisual?.({ type: 'factory', action: 'done', project });
+        return { fertig: true, titel: project.title, art: project.kind, beschreibung: project.description, hinweis: 'Die App läuft jetzt in der Handy-Vorschau der App-Fabrik. Sag kurz, was sie kann. Änderungen: create_project mit edit true.' };
+      } catch (error) {
+        context.showVisual?.({ type: 'factory', action: 'error', error: error.message });
+        throw error;
+      }
+    }
+  },
+  {
+    name: 'suit_design',
+    description: 'Anzug-Labor: Jarvis entwirft SEINEN EIGENEN Hightech-Rüstungsanzug (Bauplan-Animation, Bauteile, Werte, KI-Bild). Für „Designe/Erstelle mir einen Iron-Man-Anzug …“, „Bau dir einen Anzug in Rot und Gold“. Danach IMMER fragen: „Soll ich den für mich benutzen?“',
+    parameters: {
+      type: 'object',
+      properties: { description: { type: 'string', description: 'Wünsche zu Farben, Stil, Fähigkeiten in seinen Worten' } }
+    },
+    label: (a) => `Anzug-Labor${a.description ? `: ${a.description}` : ''}`,
+    run: async ({ description }, context) => {
+      context.showVisual?.({ type: 'suit', action: 'design_start', description: String(description || '').slice(0, 200) });
+      const suit = await designSuit(description);
+      if (context.suitMemory) context.suitMemory.last = suit;
+      context.showVisual?.({ type: 'suit', action: 'design', suit });
+      return { name: suit.name, motto: suit.motto, farben: suit.farben, faehigkeiten: suit.faehigkeiten, hinweis: 'Der Anzug ist auf dem Bildschirm. Beschreib ihn in 1–2 Sätzen und frag dann genau: „Soll ich den für mich benutzen?“ Sagt er ja → suit_control mit action uebernehmen. Sagt er nein → nichts tun.' };
+    }
+  },
+  {
+    name: 'suit_control',
+    description: 'Jarvis\' eigener Anzug: uebernehmen = den gerade entworfenen Anzug als SEINEN Anzug übernehmen (nachdem er „ja“ gesagt hat); anziehen = „Zieh deinen Anzug an“ (Anzieh-Animation, danach steht Jarvis im Anzug auf dem Startbildschirm); ausziehen = „Zieh den Anzug aus“, „Anzug ablegen“ (Auszieh-Animation, wieder normal); status = ob er einen Anzug hat/trägt.',
+    parameters: {
+      type: 'object',
+      properties: { action: { type: 'string', enum: ['uebernehmen', 'anziehen', 'ausziehen', 'status'] } },
+      required: ['action']
+    },
+    label: (a) => ({ uebernehmen: 'Anzug übernehmen', anziehen: 'Anzug anziehen', ausziehen: 'Anzug ausziehen', status: 'Anzug-Status' }[a.action] || 'Anzug'),
+    run: async ({ action }, context) => {
+      const mem = context.suitMemory || {};
+      if (action === 'status') return { hatAnzug: Boolean(mem.owned), name: mem.owned || null, traegtIhn: Boolean(mem.worn) };
+      if (action === 'uebernehmen') {
+        if (!mem.last) throw new Error('Es ist gerade kein neuer Anzug entworfen. Sag zum Beispiel: „Designe dir einen Anzug in Rot und Gold.“');
+        mem.owned = mem.last.name;
+        context.showVisual?.({ type: 'suit', action: 'own', suit: mem.last });
+        return { uebernommen: mem.last.name, hinweis: 'Der Anzug gehört jetzt dir (Jarvis). Sag kurz danke und dass er ihn mit „Zieh deinen Anzug an“ anziehen lassen kann.' };
+      }
+      if (!mem.owned) throw new Error('Ich habe noch keinen eigenen Anzug. Sag: „Designe dir einen Anzug“ und dann „Ja, benutz ihn“.');
+      if (action === 'anziehen') {
+        if (mem.worn) return { schonAn: true, hinweis: 'Du trägst den Anzug schon.' };
+        mem.worn = true;
+        context.showVisual?.({ type: 'suit', action: 'on' });
+        return { angezogen: mem.owned, hinweis: 'Die Anzieh-Animation läuft. Sag einen kurzen, coolen Satz (z. B. „Anzug aktiviert. Alle Systeme bereit.“). Danach redest du ganz normal weiter – du trägst jetzt deinen Anzug.' };
+      }
+      if (!mem.worn) return { schonAus: true, hinweis: 'Du trägst den Anzug gerade nicht.' };
+      mem.worn = false;
+      context.showVisual?.({ type: 'suit', action: 'off' });
+      return { ausgezogen: mem.owned, hinweis: 'Die Auszieh-Animation läuft. Sag kurz etwas wie „Anzug abgelegt.“ und rede normal weiter.' };
     }
   },
   {

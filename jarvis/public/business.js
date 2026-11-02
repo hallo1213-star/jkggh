@@ -96,7 +96,9 @@ function close() {
   deps.onClose();
 }
 
+function closeQuiet() { if (ui && !ui.root.hidden) { ui.root.hidden = true; document.body.classList.remove('biz-open'); } }
 function show() {
+  document.dispatchEvent(new CustomEvent('jarvis-overlay', { detail: 'biz' }));
   build();
   ui.root.hidden = false;
   document.body.classList.add('biz-open');
@@ -514,3 +516,6 @@ export function handleBusinessMessage(message) {
   else if (message.type === 'business_result') { if (!mission.startedAt) startMission({ idea: message.plan?.idee, budget: message.plan?.budget, fetchPlan: false }); receive(message.plan, message.brief); }
   else if (message.type === 'business_error') { show(); fail(message.error || 'Unbekannter Fehler'); }
 }
+
+// Only one big mode at a time: close when another one opens.
+document.addEventListener('jarvis-overlay', (e) => { if (e.detail !== 'biz') closeQuiet(); });
