@@ -384,6 +384,16 @@ Standard ist jetzt der Look aus den Videos:
 - 🪞 „Setz mir einen Helm auf“ – Kamera an, Jarvis' Anzug-Helm sitzt auf deinem Kopf und folgt ihm; „Visier auf/zu“ klappt die Gesichtsplatte; „Helm ab“. Läuft nur auf dem Gerät, niemand wird erkannt.
 - 📞 „Anzug zu mir!“ – die Anzugteile fliegen von außerhalb heran und rasten krachend ein (Bildschirm wackelt), am Ende das realistische Foto.
 
+## JARVIS Digital Reality 🌌
+
+„Jarvis, öffne deine eigene Realität“ (auch: „Aktiviere die digitale Realität“, „Öffne das digitale Universum“, „Zeig mir deine Welt“):
+- Öffnung: Bildschirm wird dunkel → Reaktor erscheint, dreht und leuchtet → Portal öffnet sich → Flug hindurch → die 3D-Welt (Three.js) erscheint, die Kamera fliegt auf die Plattform.
+- Welt: Universum mit Sternen und Nebel, schwebende Plattform mit Holo-Kern, Holo-Panels und Datenkristallen, Stadt unter der Plattform (aktivierbar: Lichter, Verkehr, Signale), großes Portal mit animiertem Shader, drei kleine Portale zu anderen Umgebungen, Partikel, echte Lichter und Schatten.
+- Steuerung PC: WASD/Pfeile bewegen, Leertaste/Shift (bzw. E/Q) hoch/runter, Maus ziehen = umsehen, Mausrad = Zoom, Klick = Objekt aktivieren, Esc = zurück.
+- Steuerung iPhone: Joystick links = bewegen, Wischen = umsehen, zwei Finger = Zoom, Tippen = aktivieren, ▲/▼ = hoch/runter.
+- Sprache: „Öffne das Portal“ (offen: hindurchfliegen), „Aktiviere die Stadt“, „Ändere die Umgebung“, „Kehre zurück“. Menü unten: Portal · Stadt · Umgebung · Zurück zu Jarvis.
+- Umgebungen: Cyber-Nexus, Aurora-Feld, Nebel-Sektor, Solar-Kern. Auf dem Handy automatisch weniger Partikel/Gebäude und kleinere Schatten für flüssige Darstellung.
+
 ## Repulsor, Gesten, Teleport, Kinoplakat, Modi, Rückblick, UFO, Münze, Satellit, Level
 
 - ✋ „Repulsor an“ – Kamera an, auf deiner Handfläche leuchtet ein Repulsor; Faust machen und öffnen = Energiestrahl mit Sound.
