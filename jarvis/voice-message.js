@@ -10,13 +10,13 @@ export function voiceMessagesEnabled() {
   return process.env.TELEGRAM_VOICE?.trim().toLowerCase() !== 'false';
 }
 
-export async function synthesize(text, { client } = {}) {
+// format: 'ogg' (Opus, like WhatsApp/Telegram voice notes) or 'mp3'
+export async function synthesize(text, { client, format = 'ogg' } = {}) {
   const deepgram = client || new DeepgramClient({ apiKey: process.env.DEEPGRAM_API_KEY?.trim() });
   const audio = await deepgram.speak.v1.audio.generate({
     text: String(text).slice(0, MAX_SPOKEN_CHARS),
     model: process.env.DEEPGRAM_VOICE?.trim() || DEFAULT_VOICE,
-    encoding: 'opus',
-    container: 'ogg'
+    ...(format === 'mp3' ? { encoding: 'mp3' } : { encoding: 'opus', container: 'ogg' })
   });
   return new Uint8Array(await audio.arrayBuffer());
 }

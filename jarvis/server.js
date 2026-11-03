@@ -24,7 +24,8 @@ import { sanitizeExpenses, sanitizeNotes, sanitizeVocab } from './personal.js';
 import { composeBriefing, startScheduler } from './scheduler.js';
 import { getNews, getWeather } from './knowledge.js';
 import { gmailConfigured, listEmails } from './gmail.js';
-import { sendVoiceNote, voiceMessagesEnabled } from './voice-message.js';
+import { sendVoiceNote, synthesize, voiceMessagesEnabled } from './voice-message.js';
+import { createPhoneHub, elevenLabsMp3, makeVoiceClip, openReply, resolveApp } from './iphone.js';
 import { sendTelegramDocument } from './telegram.js';
 import { addIncome, completeUserTask, sanitizeMoney, startMoney, stopMoney, addLog as addMoneyLog, updateProject, updateTask, incomeTotals } from './money-state.js';
 import { moneyToolStatus, relinkPages, startMoneyAgent } from './money-agent.js';
@@ -131,6 +132,13 @@ function readBody(request, limit = 2048) {
 
 const laptop = { ws: null, calls: new Map() };
 const sessions = new Set();
+// iPhone link (Jarvis page open on the iPhone, authenticated /phone socket)
+const phoneHub = createPhoneHub({
+  onStatus(status, event) {
+    for (const session of sessions) session.toBrowser({ type: 'phone', ...status, event: event ? { kind: String(event.kind || ''), info: String(event.info || '').slice(0, 160) } : undefined });
+  }
+});
+const phoneWss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
 
 // Lists shared by all devices (shopping list, customers). The free server
 // forgets them while it sleeps, so every device keeps a copy stamped with the
@@ -478,7 +486,20 @@ const httpServer = createServer(async (request, response) => {
 
   if (pathname === '/api/session') {
     if (!isAuthenticated(request)) sendJson(response, 401, { error: 'Nicht angemeldet' });
-    else sendJson(response, 200, { ok: true, laptop: laptopConnected() });
+    else sendJson(response, 200, { ok: true, laptop: laptopConnected(), phone: phoneHub.status() });
+    return;
+  }
+
+  // Voice clip for a WhatsApp voice message, fetched by the logged-in iPhone.
+  if (pathname === '/api/phone/voice' && request.method === 'GET') {
+    if (!isAuthenticated(request)) { sendJson(response, 401, { error: 'Nicht angemeldet' }); return; }
+    const query = new URL(request.url, 'http://localhost').searchParams;
+    const clip = phoneHub.clip(query.get('id'));
+    const mp3 = query.get('f') === 'mp3';
+    const bytes = clip && (mp3 ? clip.mp3 : clip.ogg);
+    if (!bytes) { sendJson(response, 404, { error: 'Sprachnachricht nicht mehr da – bitte neu erstellen.' }); return; }
+    response.writeHead(200, { 'content-type': mp3 ? 'audio/mpeg' : 'audio/ogg', 'content-length': bytes.length, 'cache-control': 'no-store' });
+    response.end(bytes);
     return;
   }
 
@@ -1015,6 +1036,11 @@ httpServer.on('upgrade', (request, socket, head) => {
   } catch {
     // missing or invalid origin
   }
+  if (pathname === '/phone') {
+    if (originHost !== request.headers.host || !isAuthenticated(request)) { socket.end('HTTP/1.1 401 Unauthorized\r\n\r\n'); return; }
+    phoneWss.handleUpgrade(request, socket, head, (ws) => phoneHub.attach(ws));
+    return;
+  }
   if (pathname !== '/ws' || originHost !== request.headers.host || !isAuthenticated(request)) {
     socket.end('HTTP/1.1 401 Unauthorized\r\n\r\n');
     return;
@@ -1070,8 +1096,25 @@ browserWss.on('connection', (browser, request) => {
   };
   sessions.add(session);
   toBrowser({ type: 'laptop', connected: laptopConnected() });
+  toBrowser({ type: 'phone', ...phoneHub.status() });
 
   const context = {
+    phone: {
+      status: () => phoneHub.status(),
+      async open(app, query) {
+        const target = resolveApp(app, query);
+        if (!target) throw new Error('Welche App soll ich auf dem iPhone öffnen?');
+        return openReply(target, await phoneHub.send({ action: 'open', url: target.url, label: target.label, via: target.via, shortcut: target.shortcut || '' }));
+      },
+      async voice(contact, text) {
+        if (!phoneHub.status().connected) return openReply({ label: 'WhatsApp' }, { state: 'offline' });
+        const clip = await makeVoiceClip(text, { elevenLabs: elevenLabsConfigured(), eleven: (t) => elevenLabsMp3(t), synth: (t, o) => synthesize(t, o), ffmpeg: ffmpegPath(), log: console });
+        const id = phoneHub.storeClip(clip);
+        const r = await phoneHub.send({ action: 'voice', clip: id, hasOgg: Boolean(clip.ogg), hasMp3: Boolean(clip.mp3), contact: String(contact || '').slice(0, 60), text: String(text).slice(0, 1200) });
+        if (r.state === 'ready') return { ok: true, bereit: true, hinweis: `Die Sprachnachricht an ${contact || 'den Kontakt'} ist in deiner Stimme fertig und liegt auf dem iPhone. iOS erlaubt keiner App, WhatsApp-Sprachnachrichten selbst abzuschicken – er tippt auf dem iPhone „An ${contact || 'Kontakt'} senden“, wählt WhatsApp und ${contact || 'den Kontakt'} und drückt Senden. Sag das kurz.` };
+        return openReply({ label: 'WhatsApp' }, r);
+      }
+    },
     captureCamera({ question = '', facing } = {}) {
       return new Promise((resolve, reject) => {
         const id = `cam${(cameraRequestId += 1)}`;

@@ -24,6 +24,7 @@ import { handleFx3, initFx3 } from './fx3.js';
 import { handleFx4, initFx4 } from './fx4.js';
 import { FX5_ACTIONS, handleFx5, initFx5 } from './fx5.js';
 import { openEscape, openSecret } from './fx6.js';
+import { handlePhoneStatus, initIphone, phoneState, receiverWanted, setReceiver } from './iphone.js';
 import { showMindmap } from './mindmap.js';
 import { openChess } from './chess.js';
 import { handleRealityMessage, initReality } from './reality.js';
@@ -160,7 +161,8 @@ function setMode(mode) {
   els.statusLine.textContent = statusText[shown] || mode;
   const chipState = mode === 'error' ? 'error' : mode === 'offline' ? '' : mode === 'connecting' || mode === 'thinking' ? 'busy' : 'online';
   els.chip.dataset.state = chipState;
-  els.chipText.textContent = mode === 'offline' ? 'Offline' : mode === 'error' ? 'Fehler' : mode === 'connecting' ? 'Verbinde' : 'Online';
+  els.chipText.dataset.mode = mode;
+  els.chipText.textContent = mode === 'offline' ? (phoneState.self ? 'iPhone bereit' : 'Offline') : mode === 'error' ? 'Fehler' : mode === 'connecting' ? 'Verbinde' : 'Online';
 }
 
 function isSpeaking() {
@@ -1177,7 +1179,7 @@ async function checkSession() {
       location.replace('/login.html');
       return false;
     }
-    if (response.ok) setLaptop((await response.json()).laptop);
+    if (response.ok) { const info = await response.json(); setLaptop(info.laptop); if (info.phone) handlePhoneStatus(info.phone); }
   } catch {
     // offline: keep going, the connection error is shown elsewhere
   }
@@ -1238,6 +1240,9 @@ async function openSettings() {
     body.replaceChildren(
       section('Persönlichkeit'), styleRow, address, addressSave,
       section('Design'), designRow,
+      section('iPhone'),
+      row(phoneState.self ? 'Dieses Gerät empfängt Befehle' : phoneState.connected ? `${phoneState.device || 'iPhone'} verbunden` : 'Kein iPhone verbunden', phoneState.self ? 'Jarvis kann hier Apps öffnen und WhatsApp-Sprachnachrichten vorbereiten. Seite offen lassen.' : 'Jarvis auf dem iPhone in Safari öffnen und eingeloggt offen lassen – verbindet sich automatisch.', phoneState.self || phoneState.connected),
+      (() => { const r = el('div', 'order-actions'); r.append(pill(receiverWanted() ? 'Empfänger an (dieses Gerät)' : 'Dieses Gerät als iPhone-Empfänger', receiverWanted(), () => { setReceiver(!receiverWanted()); setTimeout(openSettings, 600); })); return r; })(),
       section('Gedächtnis'), row(`${data.memories} gespeicherte Erinnerungen`, 'Ansehen und löschen über den Gehirn-Knopf oben. Passwörter und Bankdaten werden nie gespeichert.'),
       section('Dienste & Modelle'), ...Object.entries(data.services).map(([name, s]) => row(name, s.detail, s.ok)),
       el('p', 'card-source', 'Schlüssel werden nur bei Render (Environment) eingetragen – nie hier in der App. Anleitung im README.')
@@ -1286,6 +1291,7 @@ initCamFx({ toast, sendText });
 initReality({ toast });
 initFx3({ toast, muteJarvis: (mute) => { if (state.connected && state.micMuted !== mute) els.micToggle.click(); } });
 initFx4({ toast });
+initIphone({ toast, chip: els.chipText });
 initFx5({ toast, runEffect: (action) => handleMessage({ type: 'effect', action }) });
 initFun({ toast, send: (message) => { if (state.ws?.readyState === 1) state.ws.send(JSON.stringify(message)); } });
 initPrank({ send: (message) => { if (state.ws?.readyState === 1) state.ws.send(JSON.stringify(message)); } });
@@ -1751,6 +1757,9 @@ function handleMessage(message) {
     }
     case 'laptop':
       setLaptop(message.connected);
+      break;
+    case 'phone':
+      handlePhoneStatus(message);
       break;
     case 'confirm':
       queueConfirm(message);

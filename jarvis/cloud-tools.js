@@ -1444,6 +1444,22 @@ export const cloudTools = [
     }
   },
   {
+    name: 'iphone_control',
+    description: 'Steuert sein iPhone über die dort geöffnete Jarvis-Seite. oeffnen = App auf dem iPhone öffnen (app = Name wie WhatsApp, Instagram, YouTube, Spotify, Kamera, Nachrichten, Einstellungen; query = optional Suchbegriff, z. B. für YouTube/Spotify). sprachnachricht = WhatsApp-Sprachnachricht in deiner Stimme vorbereiten (contact = Name, text = genau der gesprochene Text, in Ich-Form des Nutzers formuliert, z. B. „Hey Marie, ich komme heute etwas später.“). status = ist das iPhone verbunden?',
+    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['oeffnen', 'sprachnachricht', 'status'] }, app: { type: 'string' }, query: { type: 'string' }, contact: { type: 'string' }, text: { type: 'string' } }, required: ['action'] },
+    label: (a) => (a.action === 'sprachnachricht' ? `WhatsApp-Sprachnachricht${a.contact ? ` an ${a.contact}` : ''}` : a.action === 'oeffnen' ? `iPhone: ${a.app || 'App'} öffnen` : 'iPhone-Status'),
+    run: async ({ action, app, query, contact, text }, context) => {
+      if (!context.phone) throw new Error('Die iPhone-Steuerung geht nur in der Jarvis-App.');
+      if (action === 'status') {
+        const st = context.phone.status();
+        return st.connected ? { verbunden: true, geraet: st.device, hinweis: 'Das iPhone ist verbunden.' } : { verbunden: false, hinweis: 'Kein iPhone verbunden. Er soll Jarvis auf dem iPhone in Safari öffnen (eingeloggt) und offen lassen.' };
+      }
+      if (action === 'oeffnen') return context.phone.open(app, query);
+      if (!String(text || '').trim()) throw new Error('Was soll in der Sprachnachricht gesagt werden?');
+      return context.phone.voice(contact, text);
+    }
+  },
+  {
     name: 'movie_poster',
     description: 'Kinoplakat: Jarvis macht ein Selfie, schneidet ihn aus (nur auf dem Gerät) und baut animiert ein Filmplakat mit Explosionen, Titel und Credits – zum Speichern. Für „Mach ein Kinoplakat von mir“.',
     parameters: { type: 'object', properties: { title: { type: 'string', description: 'Filmtitel, falls er einen nennt' }, tagline: { type: 'string' } } },

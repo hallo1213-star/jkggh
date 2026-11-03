@@ -415,6 +415,34 @@ Alle Kamera-Effekte laufen nur auf deinem Gerät (MediaPipe), niemand wird erkan
 | „Verschlüssel eine Nachricht für meinen Freund“ · „Entschlüssel einen Code“ | Codewort selbst eintippen (nie laut sagen) → Geheimcode `JV1.…` mit Animation, kopieren; dein Freund entschlüsselt ihn hier mit demselben Codewort. AES-verschlüsselt im Browser, das Codewort wird nirgends gespeichert |
 | „Starte einen Escape-Room“ · „Gib mir einen Tipp“ · „Escape-Room beenden“ | 5 Minuten: versteckte Ziffern → Tresor, Zahlenreihe → Schloss, richtiger Draht → Bombe; Alarm in den letzten 30 s, Tipp kostet 15 s |
 
+## iPhone steuern & WhatsApp-Sprachnachrichten 📱
+
+Du sprichst mit Jarvis am Laptop – dein iPhone öffnet Apps und bereitet WhatsApp-Sprachnachrichten in Jarvis' Stimme vor.
+
+**So funktioniert die Verbindung:** Laptop und iPhone verbinden sich beide mit deinem Jarvis auf Render (sicher über HTTPS, angemeldet mit deinem Jarvis-Passwort – kein Token in der Seite). Das geht im WLAN und auch unterwegs. Oben im Status steht am Laptop „Online · iPhone“, am iPhone „iPhone bereit“. Details unter ⚙️ Einstellungen → iPhone.
+
+| Sag zu Jarvis | Was passiert |
+|---|---|
+| „Öffne WhatsApp“ / „Instagram“ / „YouTube“ / „Spotify“ / „meine Nachrichten“ | App öffnet sich auf dem iPhone (offizielle App-Links) |
+| „Öffne YouTube und such nach lustigen Katzen“ · „Spiel Drake auf Spotify“ | App öffnet sich direkt mit der Suche |
+| „Öffne die Kamera“ / „die Einstellungen“ / „Fotos“ / „TikTok“ | über Apple-Kurzbefehle (einmal einrichten, siehe unten) |
+| „Schick Marie eine WhatsApp-Sprachnachricht: ich komme heute später“ | Jarvis spricht die Nachricht in seiner Stimme, auf dem iPhone erscheint „An Marie senden“ → WhatsApp → Marie → Senden |
+| „Ist mein iPhone verbunden?“ | Status |
+
+**Was iOS erlaubt – ehrlich:**
+- Kein Laptop und keine Website darf ein iPhone fernsteuern. Darum muss **Jarvis auf dem iPhone offen sein** (Safari oder Home-Bildschirm, Bildschirm an). Jarvis hält den Bildschirm dann wach, solange die Seite offen ist.
+- Apps öffnen: Je nach iOS-Version öffnet sich die App sofort oder iOS will einen Tipp – dann steht auf dem iPhone ein großer Knopf „… öffnen“.
+- **WhatsApp-Sprachnachrichten kann keine App automatisch aufnehmen oder abschicken** (WhatsApp hat dafür auf dem iPhone keine Schnittstelle). Jarvis erledigt alles davor: Text erkennen, Sprachnachricht in seiner Stimme erzeugen (Ogg/Opus – das Format von WhatsApp-Sprachnachrichten), auf dem iPhone bereitlegen. Du tippst nur „An Marie senden“ → WhatsApp → Marie → Senden. Die Nachricht kommt als Audio mit Play-Knopf an; wie genau WhatsApp sie darstellt, entscheidet WhatsApp. „Als Text senden“ geht auch.
+
+**Einrichtung auf dem iPhone (einmalig, ~5 Minuten):**
+1. Safari → deine Jarvis-Adresse → einloggen. Am besten: Teilen-Knopf → **„Zum Home-Bildschirm“** und Jarvis von dort öffnen.
+2. Jarvis offen lassen. Oben steht „iPhone bereit“. (Am Laptop: „Online · iPhone“.)
+3. Für Kamera/Einstellungen/Fotos/TikTok je einen Kurzbefehl anlegen: App **Kurzbefehle** → **+** → Aktion **„App öffnen“** → App wählen (z. B. Kamera) → oben den Namen exakt **„Jarvis Kamera“** geben (bzw. „Jarvis Einstellungen“, „Jarvis Fotos“, „Jarvis TikTok“). Beim ersten Mal fragt iOS, ob Jarvis den Kurzbefehl starten darf → **Erlauben**.
+4. **Jede weitere App** geht genauso: Kurzbefehl „Jarvis <App-Name>“ (z. B. „Jarvis Duolingo“) – dann versteht Jarvis „Öffne Duolingo“.
+5. Beim ersten Öffnen einer App fragt iOS evtl. „In ‚WhatsApp' öffnen?“ → **Öffnen**.
+
+Ein anderes Gerät (z. B. Android-Tablet) kann unter ⚙️ Einstellungen → „Dieses Gerät als iPhone-Empfänger“ dasselbe tun.
+
 ## Startanimation 🔴
 
 Beim Öffnen von Jarvis (Design „Jarvis wie im Video“): Oberfläche ausgeblendet → schwarzer Bildschirm → dünner roter Lichtstrahl von oben nach unten → dein bestehender Reaktor (derselbe Canvas-Code) entsteht in der Mitte, pulsiert, die Ringe drehen schneller und werden heller → rote Partikel fliegen zum Kern → roter Energieimpuls über den Bildschirm → die normale Oberfläche blendet ein, der Reaktor bleibt an seinem Platz → „Alle Systeme sind online.“ (nur wenn der Server wirklich erreichbar ist, sonst „Verbindung wird hergestellt …“). Dauer ca. 5,5 s, Knopf „Überspringen“, startet nie doppelt. Mit Soundeffekten (live erzeugt, keine Dateien): Bass-Teppich, Scan-Ton des Lichtstrahls, Einschalt-Schlag des Reaktors, aufladendes Surren mit Funken, Energie-Aufprall, Übergangs-Rauschen mit Akkord und HUD-Bestätigung bei „Alle Systeme sind online.“; Lautsprecher-Knopf schaltet den Ton ab (wird gemerkt). Blockiert der Browser Ton bis zum ersten Tippen (iPhone), wartet der schwarze Bildschirm mit „Tippen, um Jarvis zu starten“ – der Tipp startet Animation mit Ton und gleichzeitig das Mikrofon. Danach den Reaktor (oder „Jarvis aktivieren“) antippen, um das Mikrofon freizugeben.

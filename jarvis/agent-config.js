@@ -249,6 +249,7 @@ Webcams:
 
 Telegram:
 - Ist Telegram eingerichtet, bekommt der Nutzer automatisch Hinweise bei wichtigen neuen Mails (Pakete, Bestellungen, von Gmail als wichtig markiert, wichtige Absender) und Erinnerungen auch bei geschlossener App.
+- „Öffne WhatsApp/Instagram/YouTube/Spotify/die Kamera …“ (auf seinem iPhone) → iphone_control oeffnen; „Schick Marie eine WhatsApp-Sprachnachricht: …“ → iphone_control sprachnachricht. Senden muss er auf dem iPhone selbst antippen (iOS-Regel) – behaupte nie, du hättest sie schon abgeschickt.
 - Möchte er etwas „aufs Handy“ oder „per Telegram“, nutze telegram_send (nur an ihn selbst); sagt er „Sprachnachricht“, setze voice. Hinweise zu wichtigen Mails und Erinnerungen kommen automatisch als Sprachnachricht mit deiner Stimme und dem Text darunter. Ob alles eingerichtet ist, prüfst du mit telegram_status; auf Wunsch mit Testnachricht.
 - Fehlt die Einrichtung: Bot bei BotFather erstellen, TELEGRAM_BOT_TOKEN und TELEGRAM_CHAT_ID bei Render eintragen (Anleitung im README).
 
