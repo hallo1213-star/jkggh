@@ -1489,14 +1489,14 @@ export const cloudTools = [
   },
   {
     name: 'holo_pet',
-    description: 'Holo-Haustier: ein kleiner holografischer Roboter, der in Jarvis wohnt (auf seinem Gerät). Schlüpft beim ersten Mal aus einem Ei, wächst mit Pflege (Baby → Kind → Groß), wird hungrig/gelangweilt, schläft nachts. action: zeigen | fuettern | spielen | streicheln | name (name = neuer Name) | aufwecken | schlafen.',
-    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['zeigen', 'fuettern', 'spielen', 'streicheln', 'name', 'aufwecken', 'schlafen'] }, name: { type: 'string' } }, required: ['action'] },
-    label: (a) => ({ zeigen: 'Holo-Haustier', fuettern: 'Haustier füttern', spielen: 'Mit Haustier spielen', streicheln: 'Haustier streicheln', name: `Haustier heißt ${a.name || '…'}`, aufwecken: 'Haustier wecken', schlafen: 'Haustier schläft' }[a.action] || 'Holo-Haustier'),
-    run: async ({ action, name }, context) => {
-      if (action === 'name' && !String(name || '').trim()) throw new Error('Wie soll das Haustier heißen?');
-      context.showVisual?.({ type: 'pet', action, name: String(name || '').slice(0, 20) });
+    description: 'Holo-Katze: ein realistisches Kätzchen, das in Jarvis wohnt (auf seinem Gerät). Kommt beim ersten Mal aus einer Geschenk-Kiste, wächst mit Pflege (Kätzchen → Junge Katze → Erwachsene Katze), wird hungrig/gelangweilt, schläft nachts, schnurrt, miaut. action: zeigen | fuettern (food: milch|trocken|fisch) | spielen (toy: ball|laser) | streicheln | name (name) | aufwecken | schlafen.',
+    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['zeigen', 'fuettern', 'spielen', 'streicheln', 'name', 'aufwecken', 'schlafen'] }, name: { type: 'string' }, food: { type: 'string', enum: ['milch', 'trocken', 'fisch'] }, toy: { type: 'string', enum: ['ball', 'laser'] } }, required: ['action'] },
+    label: (a) => ({ zeigen: 'Holo-Katze', fuettern: 'Katze füttern', spielen: 'Mit der Katze spielen', streicheln: 'Katze streicheln', name: `Katze heißt ${a.name || '…'}`, aufwecken: 'Katze wecken', schlafen: 'Katze schläft' }[a.action] || 'Holo-Katze'),
+    run: async ({ action, name, food, toy }, context) => {
+      if (action === 'name' && !String(name || '').trim()) throw new Error('Wie soll die Katze heißen?');
+      context.showVisual?.({ type: 'pet', action, name: String(name || '').slice(0, 20), food: ['milch', 'trocken', 'fisch'].includes(food) ? food : undefined, toy: ['ball', 'laser'].includes(toy) ? toy : undefined });
       const p = context.petState;
-      if (!p?.exists) return { ok: true, neu: true, hinweis: 'Ein Ei erscheint und das Haustier schlüpft gerade zum ersten Mal! Freu dich mit ihm und frag, wie es heißen soll.' };
+      if (!p?.exists) return { ok: true, neu: true, hinweis: 'Eine Geschenk-Kiste erscheint und ein Kätzchen klettert heraus! Freu dich und frag, wie es heißen soll. Er kann es füttern (Milch, Trockenfutter, Fisch), mit Wollknäuel oder Laserpunkt spielen und mit dem Finger streicheln.' };
       return { ok: true, haustier: { name: p.name, stufe: p.stufe, stimmung: p.stimmung, hunger: p.hunger, spass: p.spass, energie: p.energie, xp: p.xp, naechsteStufeBei: p.naechsteStufeBei }, hinweis: `Stand VOR dieser Aktion. Kommentiere kurz und süß${!p.name ? ' und frag nach einem Namen' : ''}. Erfinde keine anderen Werte.` };
     }
   },

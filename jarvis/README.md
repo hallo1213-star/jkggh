@@ -470,17 +470,21 @@ Sag zu Jarvis: **„Erstelle mir einen Link für meinen Freund, damit er dich au
 - **Kosten:** Gäste nutzen deine Deepgram-Minuten → Limit pro Gast und Tag: 30 Minuten (bei Render änderbar: `GUEST_MINUTES`).
 - **Sperren:** bei Render `GUEST_BLOCK` = Name des Freundes (mehrere mit Komma) → sein Zugang endet sofort.
 
-## Holo-Haustier & 3D-Namens-Hologramm 🐾
+## Holo-Katze & 3D-Namens-Hologramm 🐱
 
-| Sag zu Jarvis | Was passiert |
+| Sag zu Jarvis / tu das | Was passiert |
 |---|---|
-| „Zeig mir mein Haustier“ | Beim ersten Mal wackelt ein Ei, bekommt Risse und ein kleiner Holo-Roboter schlüpft. Danach siehst du ihn mit Satt-, Spaß- und Energie-Balken |
-| „Er soll Bolt heißen“ | Name wird gespeichert (oder unten eintippen) |
-| „Füttere Bolt“ · „Spiel mit ihm“ · „Streichel ihn“ | Futter fliegt ins Maul / Ball hüpft, er springt / Herzchen – Werte und Erfahrung (XP) steigen. Antippen = streicheln |
-| (mit der Zeit) | Er wird hungrig und gelangweilt, wächst mit Pflege: Baby → Kind (Antenne) → Groß (Arme). Nachts (22–7 Uhr) schläft er – „Weck ihn auf“ geht |
-| „Schreib meinen Namen in 3D“ | Der Name setzt sich aus Funken zu glänzendem rotem 3D-Metall zusammen, dreht sich über einem Holo-Boden mit Spiegelung. Umlaute gehen. Speichern als **Bild** oder **6-Sekunden-Video** |
+| „Zeig mir meine Katze“ | Beim ersten Mal wackelt eine Geschenk-Kiste „Für dich“ – ein Kätzchen klettert heraus und miaut. Fell mit Tigerstreifen, große Augen, Schnurrhaare, Schwanz; sie atmet, blinzelt, zuckt mit den Ohren, schaut deinem Finger nach, putzt sich, gähnt, streckt sich |
+| „Sie soll Mila heißen“ | Name wird gespeichert (oder unten eintippen) |
+| „Füttere sie mit Milch / Trockenfutter / Fisch“ oder 🍽️ Füttern | Schüssel gleitet heran, sie senkt den Kopf: schleckt Milch (Zunge) oder knuspert (Knister-Geräusch), die Schüssel wird leer, danach leckt sie sich das Maul. Jede Sorte wirkt anders. Ist sie satt, frisst sie nicht |
+| „Spiel mit ihr“ oder 🧶 Spielen → **Wollknäuel** | Wirf das Knäuel (tippen oder wischen): sie verfolgt es, duckt sich, wackelt mit dem Po und springt – jeder Fang zählt |
+| 🧶 Spielen → **Laserpunkt** | Du steuerst den roten Punkt mit Finger/Maus, sie lauert und springt darauf |
+| Mit dem Finger über Kopf oder Rücken streichen | Sie schließt die Augen, schmiegt den Kopf an, **schnurrt** (echtes Schnurr-Geräusch), Herzchen. „Streichel sie“ = Holo-Hand streichelt |
+| (mit der Zeit) | Hunger und Langeweile steigen; mit Pflege wächst sie: Kätzchen (blaue Augen) → Junge Katze (grün) → Erwachsene Katze (bernstein). Nachts (22–7 Uhr) schläft sie eingerollt mit „z z z“ – antippen weckt sie |
+| Fellfarbe | unten wählbar: rot getigert, grau getigert, schwarz-weiß |
+| „Schreib meinen Namen in 3D“ | Name setzt sich aus Funken zu glänzendem rotem 3D-Metall zusammen (Umlaute gehen), speicherbar als Bild oder 6-s-Video |
 
-Das Haustier lebt auf deinem Gerät (Handy und Laptop haben jeweils ihres). Jarvis kennt seinen echten Zustand.
+Die Katze lebt auf deinem Gerät. Jarvis kennt ihren echten Zustand (Hunger, Spaß, Energie, Stufe).
 
 ## Befehls-Animationen (Command Animation Engine) 🎬
 

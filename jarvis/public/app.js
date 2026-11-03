@@ -1772,7 +1772,7 @@ function handleMessage(message) {
       showInvite(message, toast);
       break;
     case 'pet':
-      openPet(message.action, { name: message.name });
+      openPet(message.action, { name: message.name, food: message.food, toy: message.toy });
       break;
     case 'holoname':
       openHoloName(message.text);

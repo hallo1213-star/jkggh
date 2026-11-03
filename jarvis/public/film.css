@@ -1391,3 +1391,12 @@ body.guest-mode #film-tabs button:not([data-tab="normal"]), body.guest-mode #set
 .hn-bar button { padding: 11px 18px; border: 1px solid rgba(255, 255, 255, 0.25); border-radius: 10px; background: rgba(10, 2, 3, 0.8); color: #fff; font: 700 13px 'Inter', sans-serif; cursor: pointer; }
 .hn-bar .hn-img, .hn-bar .hn-vid { border: 0; background: #ff2a3d; box-shadow: 0 0 20px rgba(255, 42, 61, 0.45); }
 .hn-bar button:disabled { opacity: 0.6; }
+.pet-stage { position: relative; }
+.pet-hint { position: absolute; left: 8px; right: 8px; bottom: 6px; margin: 0; text-align: center; font-size: 12px; color: rgba(255, 208, 212, 0.75); pointer-events: none; }
+.pet-sub { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; padding: 8px; border: 1px dashed rgba(255, 42, 61, 0.4); border-radius: 12px; animation: biz-pop 0.25s ease; }
+.pet-sub[hidden] { display: none; }
+.pet-sub button { flex: 1 1 30%; padding: 10px 6px; border: 1px solid rgba(255, 42, 61, 0.5); border-radius: 10px; background: #1a0407; color: #fff; font: 700 13px 'Inter', sans-serif; cursor: pointer; }
+.pet-sub button:active { background: #ff2a3d; }
+.pet-fur { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12px; color: #c9a0a5; }
+.pet-fur button { width: 26px; height: 26px; padding: 0; border-radius: 50%; border: 2px solid rgba(255, 255, 255, 0.25); background: radial-gradient(circle at 60% 70%, var(--c2) 0 30%, var(--c) 32%); cursor: pointer; }
+.pet-fur button.on { border-color: #fff; box-shadow: 0 0 10px #ff2a3d; }
