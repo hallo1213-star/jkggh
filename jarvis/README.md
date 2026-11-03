@@ -446,12 +446,12 @@ Du sprichst mit Jarvis am Laptop – dein iPhone öffnet Apps und bereitet Whats
 iOS fragt bei Webseiten jedes Mal nach – ein Kurzbefehl darf Apps dagegen direkt öffnen. Dieser Kurzbefehl holt sich die Befehle von Jarvis ab und öffnet die App sofort:
 
 1. Bei Render → Environment: `PHONE_TOKEN` = ein langes, nur dir bekanntes Passwort (mind. 20 Zeichen, z. B. aus einem Passwort-Generator) → speichern.
-2. iPhone → App **Kurzbefehle** → **+** → Name **„Jarvis Empfänger“**. Aktionen in dieser Reihenfolge:
+2. iPhone → App **Kurzbefehle** → **+** → Name **„Jarvis Empfänger“**. Nur 4 Aktionen:
    - **Wiederholen** – Anzahl **1000**
-   - darin **Inhalt von URL abrufen** – URL: `https://DEINE-JARVIS-ADRESSE/api/phone/next` – „Mehr anzeigen“ → Methode **GET** → **Header** hinzufügen: Schlüssel `Authorization`, Wert `Bearer DEIN-PHONE_TOKEN`
-   - **Wörterbuchwert abrufen** – Wert für Schlüssel `url` in *Inhalt von URL*
-   - **Wenn** *Wörterbuchwert* **hat einen beliebigen Wert** → darin **URLs öffnen** (*Wörterbuchwert*)
-   - (Ende Wenn, Ende Wiederholen kommen automatisch)
+   - darin **Inhalt von URL abrufen** – URL: `https://DEINE-JARVIS-ADRESSE/api/phone/link?key=DEIN-PHONE_TOKEN` (kein Header nötig)
+   - darin **Wenn** *Inhalte von URL* **hat einen beliebigen Wert**
+   - darin (zwischen Wenn und Sonst) **URLs öffnen** – *Inhalte von URL*
+   (Profis: `/api/phone/next` mit Header `Authorization: Bearer …` liefert dasselbe als JSON.)
 3. Kurzbefehl starten (antippen). Am Laptop steht dann „Online · iPhone“. Jetzt öffnet „Öffne WhatsApp“ WhatsApp **ohne Nachfrage**. Bei einer Sprachnachricht öffnet der Kurzbefehl Jarvis mit der fertigen Karte.
 4. Er läuft, bis du ihn stoppst; iOS kann ihn nach längerer Zeit im Hintergrund beenden – dann einfach neu starten. Tipp: Kurzbefehle → **Automation** → **+** → z. B. „Ladegerät: ist verbunden“ → **Sofort ausführen** → *Kurzbefehl ausführen: Jarvis Empfänger* – dann startet er von selbst.
 

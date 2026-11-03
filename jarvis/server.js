@@ -500,6 +500,16 @@ const httpServer = createServer(async (request, response) => {
     return;
   }
 
+  // Same for simple Shortcuts: key in the link, answer is plain text (the app link or nothing).
+  if (pathname === '/api/phone/link' && request.method === 'GET') {
+    const key = new URL(request.url, 'http://localhost').searchParams.get('key') || '';
+    if (!tokenMatches(`Bearer ${key}`, process.env.PHONE_TOKEN)) { response.writeHead(401, { 'content-type': 'text/plain; charset=utf-8' }); response.end(''); return; }
+    let closed = false; request.on('close', () => { closed = true; });
+    const command = await phoneHub.poll(25_000);
+    if (!closed) { response.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' }); response.end(command?.url || ''); }
+    return;
+  }
+
   // Voice clip for a WhatsApp voice message, fetched by the logged-in iPhone.
   if (pathname === '/api/phone/voice' && request.method === 'GET') {
     if (!isAuthenticated(request)) { sendJson(response, 401, { error: 'Nicht angemeldet' }); return; }
