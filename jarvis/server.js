@@ -1617,6 +1617,8 @@ browserWss.on('connection', (browser, request, guest = null) => {
       clearTimeout(context.pranks?.selfDestruct);
     } else if (message.type === 'level_state') {
       context.level = { level: Math.max(1, Number(message.level) || 1), xp: Math.max(0, Number(message.xp) || 0), next: Math.max(1, Number(message.next) || 50) };
+    } else if (message.type === 'pet_state') {
+      context.petState = message.exists ? { exists: true, name: message.name ? String(message.name).slice(0, 20) : null, stufe: String(message.stufe || '').slice(0, 10), stimmung: String(message.stimmung || '').slice(0, 30), hunger: Number(message.hunger) || 0, spass: Number(message.spass) || 0, energie: Number(message.energie) || 0, xp: Number(message.xp) || 0, naechsteStufeBei: message.naechsteStufeBei ?? null } : { exists: false };
     } else if (message.type === 'suit_state') {
       context.suitMemory.owned = message.owned ? String(message.owned).slice(0, 30) : null;
       context.suitMemory.worn = Boolean(message.owned) && message.worn === true;

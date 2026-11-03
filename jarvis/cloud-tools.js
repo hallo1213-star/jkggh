@@ -1488,6 +1488,31 @@ export const cloudTools = [
     }
   },
   {
+    name: 'holo_pet',
+    description: 'Holo-Haustier: ein kleiner holografischer Roboter, der in Jarvis wohnt (auf seinem Gerät). Schlüpft beim ersten Mal aus einem Ei, wächst mit Pflege (Baby → Kind → Groß), wird hungrig/gelangweilt, schläft nachts. action: zeigen | fuettern | spielen | streicheln | name (name = neuer Name) | aufwecken | schlafen.',
+    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['zeigen', 'fuettern', 'spielen', 'streicheln', 'name', 'aufwecken', 'schlafen'] }, name: { type: 'string' } }, required: ['action'] },
+    label: (a) => ({ zeigen: 'Holo-Haustier', fuettern: 'Haustier füttern', spielen: 'Mit Haustier spielen', streicheln: 'Haustier streicheln', name: `Haustier heißt ${a.name || '…'}`, aufwecken: 'Haustier wecken', schlafen: 'Haustier schläft' }[a.action] || 'Holo-Haustier'),
+    run: async ({ action, name }, context) => {
+      if (action === 'name' && !String(name || '').trim()) throw new Error('Wie soll das Haustier heißen?');
+      context.showVisual?.({ type: 'pet', action, name: String(name || '').slice(0, 20) });
+      const p = context.petState;
+      if (!p?.exists) return { ok: true, neu: true, hinweis: 'Ein Ei erscheint und das Haustier schlüpft gerade zum ersten Mal! Freu dich mit ihm und frag, wie es heißen soll.' };
+      return { ok: true, haustier: { name: p.name, stufe: p.stufe, stimmung: p.stimmung, hunger: p.hunger, spass: p.spass, energie: p.energie, xp: p.xp, naechsteStufeBei: p.naechsteStufeBei }, hinweis: `Stand VOR dieser Aktion. Kommentiere kurz und süß${!p.name ? ' und frag nach einem Namen' : ''}. Erfinde keine anderen Werte.` };
+    }
+  },
+  {
+    name: 'name_hologram',
+    description: '3D-Namens-Hologramm: ein Name oder Wort als glänzendes rotes 3D-Metall, das sich aus Funken zusammensetzt und dreht – als Bild oder Video speicherbar. text = der Name/das Wort (max. 18 Zeichen). Für „Schreib meinen Namen in 3D“.',
+    parameters: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] },
+    label: (a) => `3D-Hologramm: ${a.text || ''}`,
+    run: async ({ text }, context) => {
+      const t = String(text || '').trim().slice(0, 18);
+      if (!t) throw new Error('Welcher Name oder welches Wort soll in 3D erscheinen?');
+      context.showVisual?.({ type: 'holoname', text: t });
+      return { ok: true, hinweis: `„${t}“ setzt sich gerade aus Funken als 3D-Hologramm zusammen. Unten kann er es als Bild oder Video speichern. Sag kurz etwas Beeindruckendes.` };
+    }
+  },
+  {
     name: 'movie_poster',
     description: 'Kinoplakat: Jarvis macht ein Selfie, schneidet ihn aus (nur auf dem Gerät) und baut animiert ein Filmplakat mit Explosionen, Titel und Credits – zum Speichern. Für „Mach ein Kinoplakat von mir“.',
     parameters: { type: 'object', properties: { title: { type: 'string', description: 'Filmtitel, falls er einen nennt' }, tagline: { type: 'string' } } },

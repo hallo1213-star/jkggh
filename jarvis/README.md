@@ -470,6 +470,18 @@ Sag zu Jarvis: **„Erstelle mir einen Link für meinen Freund, damit er dich au
 - **Kosten:** Gäste nutzen deine Deepgram-Minuten → Limit pro Gast und Tag: 30 Minuten (bei Render änderbar: `GUEST_MINUTES`).
 - **Sperren:** bei Render `GUEST_BLOCK` = Name des Freundes (mehrere mit Komma) → sein Zugang endet sofort.
 
+## Holo-Haustier & 3D-Namens-Hologramm 🐾
+
+| Sag zu Jarvis | Was passiert |
+|---|---|
+| „Zeig mir mein Haustier“ | Beim ersten Mal wackelt ein Ei, bekommt Risse und ein kleiner Holo-Roboter schlüpft. Danach siehst du ihn mit Satt-, Spaß- und Energie-Balken |
+| „Er soll Bolt heißen“ | Name wird gespeichert (oder unten eintippen) |
+| „Füttere Bolt“ · „Spiel mit ihm“ · „Streichel ihn“ | Futter fliegt ins Maul / Ball hüpft, er springt / Herzchen – Werte und Erfahrung (XP) steigen. Antippen = streicheln |
+| (mit der Zeit) | Er wird hungrig und gelangweilt, wächst mit Pflege: Baby → Kind (Antenne) → Groß (Arme). Nachts (22–7 Uhr) schläft er – „Weck ihn auf“ geht |
+| „Schreib meinen Namen in 3D“ | Der Name setzt sich aus Funken zu glänzendem rotem 3D-Metall zusammen, dreht sich über einem Holo-Boden mit Spiegelung. Umlaute gehen. Speichern als **Bild** oder **6-Sekunden-Video** |
+
+Das Haustier lebt auf deinem Gerät (Handy und Laptop haben jeweils ihres). Jarvis kennt seinen echten Zustand.
+
 ## Befehls-Animationen (Command Animation Engine) 🎬
 
 Jede wichtige Aktion bekommt ihre eigene Animation – ausgelöst von dem, was Jarvis **wirklich tut** (der echten Funktion), nicht von bestimmten Wörtern. „Mach mir eine moderne Website“ und „Erstelle einen Onlineshop“ führen beide zur Website-Animation, weil Jarvis dafür die Website-Funktion startet.

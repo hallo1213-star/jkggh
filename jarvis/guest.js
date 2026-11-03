@@ -10,7 +10,7 @@ const LINK_DAYS = 30;     // the link can be opened for 30 days
 const ACCESS_DAYS = 365;  // after that the friend's device stays logged in for a year
 
 // Only functions that touch no personal data of the owner.
-export const GUEST_TOOLS = new Set(['get_datetime', 'web_search', 'open_link', 'get_weather', 'get_news', 'wiki_lookup', 'create_game', 'iss_live', 'translate', 'transit', 'route_plan', 'holidays', 'calculate', 'currency', 'qr_code', 'quiz', 'countdown', 'summarize_url', 'football', 'create_image', 'camera_look', 'effect_control', 'helmet_mirror', 'movie_poster', 'ufo_prank', 'random_toss', 'mindmap', 'fireworks', 'gravity', 'black_hole', 'time_capsule', 'treasure_hunt', 'secret_code', 'escape_room', 'holo_chess', 'self_destruct', 'globe', 'digital_reality']);
+export const GUEST_TOOLS = new Set(['get_datetime', 'web_search', 'open_link', 'get_weather', 'get_news', 'wiki_lookup', 'create_game', 'iss_live', 'translate', 'transit', 'route_plan', 'holidays', 'calculate', 'currency', 'qr_code', 'quiz', 'countdown', 'summarize_url', 'football', 'create_image', 'camera_look', 'effect_control', 'helmet_mirror', 'movie_poster', 'ufo_prank', 'random_toss', 'mindmap', 'fireworks', 'gravity', 'black_hole', 'time_capsule', 'treasure_hunt', 'secret_code', 'escape_room', 'holo_chess', 'self_destruct', 'globe', 'digital_reality', 'holo_pet', 'name_hologram']);
 
 const secret = () => createHash('sha256').update(`jarvis-guest:${process.env.SESSION_SECRET || process.env.JARVIS_PASSWORD || ''}`).digest();
 const sign = (s) => createHmac('sha256', secret()).update(s).digest('base64url');

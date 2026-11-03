@@ -28,6 +28,8 @@ export const EFFECTS = {
   time_capsule: 'Zeitkapsel: {action: neu, text (wörtlich), days?} („Nachricht für mein zukünftiges Ich …“) | {action: zeigen}.',
   treasure_hunt: '„Starte eine Schatzsuche“ → {action: start|zeigen|stopp}.',
   holo_chess: '„Spiel Schach mit mir“ → {level?: leicht|mittel|schwer}.',
+  holo_pet: '„Zeig mir mein Haustier“, „Füttere es“ → {action: zeigen|fuettern|spielen|streicheln|name|aufwecken|schlafen, name?}.',
+  name_hologram: '„Schreib meinen Namen in 3D“ → {text}.',
   secret_code: '„Verschlüssel eine Nachricht“ → {action: verschluesseln|entschluesseln, text?}. Codewort tippt er selbst.',
   escape_room: '„Starte einen Escape-Room“ → {action: start|tipp („Gib mir einen Tipp“)|stopp}.',
   self_destruct: 'Spaß-Prank „Selbstzerstörung aktivieren“ → {action: start|abbrechen}. Verrate den Spaß erst am Ende.',
@@ -41,7 +43,7 @@ export const EFFECT_TOOLS = new Set(Object.keys(EFFECTS));
 
 // Three bundles, each with its own short list (function descriptions ≤ 1024 chars).
 export const GROUPS = {
-  jarvis_anzug_welt: { title: 'Anzug, Gesicht, Modi, eigene Welt, Business, App-Fabrik, Level', tools: ['suit_design', 'suit_control', 'suit_fly', 'face_control', 'persona_mode', 'digital_reality', 'business_mode', 'app_factory', 'level_status', 'day_recap'] },
+  jarvis_anzug_welt: { title: 'Anzug, Gesicht, Modi, eigene Welt, Business, App-Fabrik, Level, Haustier, 3D-Name', tools: ['suit_design', 'suit_control', 'suit_fly', 'face_control', 'persona_mode', 'digital_reality', 'business_mode', 'app_factory', 'level_status', 'day_recap', 'holo_pet', 'name_hologram'] },
   jarvis_kamera: { title: 'Kamera-/Mikrofon-Effekte, Helm, Kinoplakat, Drohne, Satellit, Schatzsuche', tools: ['effect_control', 'helmet_mirror', 'movie_poster', 'drone_control', 'satellite_zoom', 'treasure_hunt'] },
   jarvis_show: { title: 'Show, Spiele und Spaß', tools: ['fireworks', 'gravity', 'black_hole', 'mindmap', 'time_capsule', 'holo_chess', 'secret_code', 'escape_room', 'appointment_rocket', 'shield', 'radio_show', 'gift_box', 'random_toss', 'self_destruct', 'ufo_prank'] }
 };
@@ -118,6 +120,8 @@ const SHORT_LIST = {
   time_capsule: 'Zeitkapsel {action: neu, text, days?} | {action: zeigen}',
   treasure_hunt: 'Schatzsuche {action: start|zeigen|stopp}',
   holo_chess: 'Schach {level?: leicht|mittel|schwer}',
+  holo_pet: 'Holo-Haustier {action: zeigen|fuettern|spielen|streicheln|name|aufwecken|schlafen, name?}',
+  name_hologram: 'Name/Wort als 3D-Hologramm {text}',
   secret_code: 'Geheimcode {action: verschluesseln|entschluesseln, text?} – Codewort NIE erfragen',
   escape_room: 'Escape-Room {action: start|tipp|stopp}',
   self_destruct: 'Prank Selbstzerstörung {action: start|abbrechen}',

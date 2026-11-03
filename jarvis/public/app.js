@@ -26,6 +26,8 @@ import { FX5_ACTIONS, handleFx5, initFx5 } from './fx5.js';
 import { openEscape, openSecret } from './fx6.js';
 import { enterGuestMode, showInvite } from './invite.js';
 import { ingest as animate } from './cae/engine.js';
+import { initPet, openPet, petState } from './pet.js';
+import { openHoloName } from './holoname.js';
 import { handlePhoneStatus, initIphone, phoneState, receiverWanted, setReceiver } from './iphone.js';
 import { showMindmap } from './mindmap.js';
 import { openChess } from './chess.js';
@@ -1294,6 +1296,7 @@ initReality({ toast });
 initFx3({ toast, muteJarvis: (mute) => { if (state.connected && state.micMuted !== mute) els.micToggle.click(); } });
 initFx4({ toast });
 initIphone({ toast, chip: els.chipText });
+initPet({ toast, send: (m) => { try { if (state.ws?.readyState === 1) state.ws.send(JSON.stringify(m)); } catch { /* offline */ } } });
 initFx5({ toast, runEffect: (action) => handleMessage({ type: 'effect', action }) });
 initFun({ toast, send: (message) => { if (state.ws?.readyState === 1) state.ws.send(JSON.stringify(message)); } });
 initPrank({ send: (message) => { if (state.ws?.readyState === 1) state.ws.send(JSON.stringify(message)); } });
@@ -1499,7 +1502,7 @@ function connect() {
   setMode('connecting');
   els.reconnect.hidden = true;
 
-  ws.onopen = () => hudBoot('link', true) || ws.send(JSON.stringify({ type: 'start', sampleRate: state.audio.sampleRate, shoppingList: shopping.load(), shoppingListUpdatedAt: shopping.loadTime(), customers: customers.load(), customersUpdatedAt: customers.loadTime(), memories: memories.load(), memoriesUpdatedAt: memories.loadTime(), history: loadHistory().slice(-16), stores: Object.fromEntries(Object.entries(personalStores).map(([name, store]) => [name, { items: store.load(), updatedAt: store.loadTime() }])) })) || ws.send(JSON.stringify(suitState())) || ws.send(JSON.stringify(levelState()));
+  ws.onopen = () => hudBoot('link', true) || ws.send(JSON.stringify({ type: 'start', sampleRate: state.audio.sampleRate, shoppingList: shopping.load(), shoppingListUpdatedAt: shopping.loadTime(), customers: customers.load(), customersUpdatedAt: customers.loadTime(), memories: memories.load(), memoriesUpdatedAt: memories.loadTime(), history: loadHistory().slice(-16), stores: Object.fromEntries(Object.entries(personalStores).map(([name, store]) => [name, { items: store.load(), updatedAt: store.loadTime() }])) })) || ws.send(JSON.stringify(suitState())) || ws.send(JSON.stringify(levelState())) || ws.send(JSON.stringify(petState()));
   ws.onmessage = ({ data }) => {
     if (typeof data !== 'string') {
       playChunk(data);
@@ -1767,6 +1770,12 @@ function handleMessage(message) {
       break;
     case 'invite':
       showInvite(message, toast);
+      break;
+    case 'pet':
+      openPet(message.action, { name: message.name });
+      break;
+    case 'holoname':
+      openHoloName(message.text);
       break;
     case 'guest':
       enterGuestMode(message.name);
