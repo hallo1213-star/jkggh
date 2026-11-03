@@ -27,7 +27,8 @@ const STUDIO_STEPS = 5; // Konzept, CSS, JavaScript, HTML, Design-Prüfung
 
 const handles = new Map(); // action id → { module, handle }
 let thinking = null;
-let studioAction = null;   // action id that waits for the studio job
+let studioAction = null;   // function call that waits for its studio job
+const jobActions = new Map(); // studio job id → animation (action id)
 let enabled = true;
 
 export const moduleFor = (tool) => TOOL_MODULES[tool] || 'neutral';
@@ -52,6 +53,13 @@ function finish(id, kind, info) {
   if (!entry) return;
   handles.delete(id);
   safe(() => (kind === 'ok' ? entry.handle.complete(info) : entry.handle.fail(info)), `Modul ${entry.module} Abschluss`);
+}
+// removes an animation silently (no "done", no error) – used for duplicates
+function drop(id) {
+  const entry = handles.get(id);
+  if (!entry) return;
+  handles.delete(id);
+  safe(() => entry.handle.dispose?.(), `Modul ${entry.module} entfernen`);
 }
 function byModule(key) { for (const [id, e] of handles) if (e.module === key) return { id, ...e }; return null; }
 
@@ -96,7 +104,10 @@ export function ingest(m) {
         emit(EV.ACTION_STARTED, { id: m.id, tool, label: a.label });
       } else if (m.state === 'done') {
         if (BACKGROUND_JOBS[tool] === 'studio') {
-          // the function only STARTED the website build – wait for the real job
+          // the function only STARTED the website build – wait for the real job.
+          // If the job already reported progress first, keep that animation and drop this one.
+          const early = [...jobActions.values()].find((aid) => aid.startsWith('studio-') && state.actions.get(aid)?.status === 'job' && !state.actions.get(aid).claimed && Date.now() - state.actions.get(aid).startedAt < 15000);
+          if (early) { setAction(early, { claimed: true }); drop(m.id); setAction(m.id, { status: 'merged' }); break; }
           setAction(m.id, { status: 'job' });
           studioAction = m.id;
           emit(EV.ACTION_PROGRESS, { id: m.id, tool, progress: 0.04, step: 'Auftrag angenommen' });
@@ -112,12 +123,17 @@ export function ingest(m) {
     }
     case 'studio_job': {
       // real website-build progress (also when started from the Studio itself)
-      let id = studioAction;
-      if (!id || !state.actions.has(id)) {
-        if (m.status !== 'läuft') break;
-        id = `studio-${m.id}`; studioAction = id;
-        setAction(id, { tool: 'studio_website', label: 'Website wird gebaut', status: 'job', progress: 0, startedAt: Date.now() });
-        emit(EV.ACTION_STARTED, { id, tool: 'studio_website', label: 'Website wird gebaut' });
+      // every job gets its own animation: bound to the function call that started it, or its own
+      let id = jobActions.get(m.id);
+      if (!id) {
+        if (studioAction && state.actions.get(studioAction)?.status === 'job') { id = studioAction; studioAction = null; }
+        else {
+          if (m.status !== 'läuft') break;
+          id = `studio-${m.id}`;
+          setAction(id, { tool: 'studio_website', label: 'Website wird gebaut', status: 'job', progress: 0, startedAt: Date.now() });
+          emit(EV.ACTION_STARTED, { id, tool: 'studio_website', label: 'Website wird gebaut' });
+        }
+        jobActions.set(m.id, id);
       }
       const a = state.actions.get(id);
       if (m.status === 'läuft') {
@@ -126,10 +142,10 @@ export function ingest(m) {
         setAction(id, { steps, progress });
         emit(EV.ACTION_PROGRESS, { id, tool: 'studio_website', progress, step: m.step || 'läuft' });
       } else if (m.status === 'fertig') {
-        setAction(id, { status: 'done', progress: 1 }); studioAction = null;
+        setAction(id, { status: 'done', progress: 1 }); jobActions.delete(m.id);
         emit(EV.ACTION_COMPLETED, { id, tool: 'studio_website' });
       } else if (m.status === 'fehler') {
-        setAction(id, { status: 'failed' }); studioAction = null;
+        setAction(id, { status: 'failed' }); jobActions.delete(m.id);
         emit(EV.ACTION_FAILED, { id, tool: 'studio_website', reason: String(m.error || 'Website-Erstellung fehlgeschlagen') });
       }
       break;

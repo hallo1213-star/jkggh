@@ -66,6 +66,7 @@ export const websiteModule = {
     const close = (ms) => setTimeout(() => { root.classList.add('out'); setTimeout(() => { stop(); root.remove(); }, 650); }, ms);
     const x = el('button', 'cae-web-x', '✕'); x.type = 'button'; x.setAttribute('aria-label', 'Animation ausblenden'); x.addEventListener('click', () => close(0)); root.append(x);
     return {
+      dispose() { stop(); root.remove(); },
       progress(p, s) { if (state !== 'run') return; target = Math.max(target, Number(p) || 0); if (s) step.textContent = s; },
       complete() { state = 'ok'; target = 1; doneAt = performance.now(); title.textContent = 'WEBSITE FERTIG'; step.textContent = real ? 'Vorschau öffnet sich …' : 'Fertig – siehe Ergebnis'; root.classList.add('ok'); close(1500); },
       fail(info) { state = 'bad'; title.textContent = 'FEHLER BEIM BAUEN'; step.textContent = String(info?.reason || 'Die Website konnte nicht erstellt werden.').slice(0, 140); root.classList.add('bad'); close(6000); }

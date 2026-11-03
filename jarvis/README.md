@@ -470,6 +470,27 @@ Sag zu Jarvis: **„Erstelle mir einen Link für meinen Freund, damit er dich au
 - **Kosten:** Gäste nutzen deine Deepgram-Minuten → Limit pro Gast und Tag: 30 Minuten (bei Render änderbar: `GUEST_MINUTES`).
 - **Sperren:** bei Render `GUEST_BLOCK` = Name des Freundes (mehrere mit Komma) → sein Zugang endet sofort.
 
+## Jarvis Studio 2.0 – Agentur-Websites mit Qualitäts-Agent 🧪
+
+„Erstelle mir eine moderne Website für …“ / „Bau einen Online-Shop für …“ → Jarvis Studio öffnet sich.
+
+**So baut Jarvis jetzt:**
+1. **Konzept & Art Direction** – Jarvis wählt eine von 10 Design-Richtungen passend zur Branche (z. B. Editorial Luxus, Warmes Handwerk, Klare Tech, Mutig & Brutal, Natur & Wellness, Dunkel & Filmisch, Swiss Minimal …) und passt sie an die Marke an: Farben, Google-Fonts-Paar, Hero-Muster, Seiten, Produkte, Texte.
+2. **Designsystem & CSS** – eigene Design-Tokens, Typo-Skala, 8-px-Raster, Hero, Sektionen, Hover-/Scroll-Animationen, Handy/Tablet/Desktop.
+3. **Startseite** und 4. **weitere Seiten** – mit dem **Jarvis Site-Kit** (`site-kit/kit.js`): getesteter Baukasten für Seiten/Router, Mobilmenü, Produktliste, Filter, Suche, Sortierung, Produktdetail, Warenkorb (Menge, Entfernen, Summe), Kasse (Demo), Formular-Prüfung, Tabs, Slider, Zähler, Einblenden. Die KI schreibt nur Markup + Design – die Funktionen sind immer echt.
+5. **Code-Prüfung** (Server): tote Links, Knöpfe ohne Funktion, fehlende Seiten/Abschnitte, Formulare ohne Prüfung, unvollständiger Shop, fehlendes Designsystem → sofortige Reparatur.
+
+**Qualitäts-Agent** (läuft danach automatisch in deinem Browser): startet die Website unsichtbar in **Desktop- (1280 px) und Handy-Größe (390 px)**, besucht jede Seite und
+- sammelt **Konsolen-Fehler**,
+- klickt **jeden Knopf** und meldet Knöpfe ohne Wirkung, prüft **jeden Link**,
+- testet **Formulare** (leer abschicken → Fehlermeldung? korrekt ausfüllen → Erfolgsmeldung?),
+- testet den **Warenkorb** (hinzufügen, öffnen, Menge +, entfernen), **Produktseite**, **Suche** und **Filter**, das **Handy-Menü**,
+- prüft **Layout** (horizontaler Überlauf, abgeschnittene Texte, kleine Schrift, zu kleine Tipp-Flächen, Kontrast) und **Bilder**,
+- macht **Screenshots** beider Ansichten und lässt das **Bild-Modell** das Design wie ein Senior-Designer bewerten (Note 1–10, konkrete Probleme).
+Findet er Fehler, **repariert Jarvis automatisch** (gezielte Suchen/Ersetzen-Änderungen) und testet erneut – bis zu 3 Runden, bis die Website besteht oder keine Verbesserung mehr möglich ist. Ergebnis: **Prüfbericht** unter der Vorschau (✓/✖ je Prüfung, Note, Screenshots, Problemliste).
+
+Hinweise: Die Design-Bewertung per Screenshot braucht einen KI-Schlüssel mit Bildverständnis (Groq, Gemini, Claude oder OpenRouter – ohne wird sie übersprungen und das steht im Bericht). Formulare und Kasse sind Demos ohne echten Versand/Zahlung. Export als ZIP enthält kit.js und data.js – die Seite läuft so überall.
+
 ## Holo-Katze & 3D-Namens-Hologramm 🐱
 
 | Sag zu Jarvis / tu das | Was passiert |

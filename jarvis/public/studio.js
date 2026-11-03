@@ -3,6 +3,7 @@
 // Projects are kept in the browser's IndexedDB (durable on this device) and
 // can always be exported.
 import { buildPreview, makeZip } from './projects.js';
+import { runQualityAgent } from './studio-qa.js';
 
 const $ = (id) => document.getElementById(id);
 const els = {
@@ -45,28 +46,19 @@ const deleteProject = (id) => store('readwrite', (s) => s.delete(id));
 const version = () => current?.versions[current.active];
 const asProject = () => current && { title: current.title, kind: 'website', description: '', files: version().files, plan: version().plan };
 
-// --- Preview & quality check ---------------------------------------------------------
-// Injected into the preview: collects JS errors, visits every route from the
-// navigation, checks content and images, then reports to Jarvis.
-const QA_SCRIPT = `<script>(function(){var errs=[];window.addEventListener('error',function(e){errs.push('JS-Fehler: '+(e.message||'unbekannt'))});window.addEventListener('unhandledrejection',function(e){errs.push('Promise-Fehler: '+(e.reason&&e.reason.message||e.reason))});
-function sleep(ms){return new Promise(function(r){setTimeout(r,ms)})}
-window.addEventListener('load',async function(){await sleep(700);var routes=[];document.querySelectorAll('a[href^="#/"]').forEach(function(a){var h=a.getAttribute('href');if(routes.indexOf(h)<0&&routes.length<12)routes.push(h)});var empty=[];
-for(var i=0;i<routes.length;i++){location.hash=routes[i];await sleep(450);var app=document.getElementById('app');if(app&&app.innerText.trim().length<20)empty.push(routes[i])}
-location.hash=routes[0]||'#/';await sleep(300);
-var products=document.querySelectorAll('[data-add], .add-to-cart, button[onclick*="add"]').length;
-var imgs=[].slice.call(document.images);await sleep(2500);var broken=imgs.filter(function(im){return im.complete&&im.naturalWidth===0}).map(function(im){return im.src.slice(0,80)});
-var overflow=document.documentElement.scrollWidth>window.innerWidth+2;
-parent.postMessage({jarvisQA:true,errors:errs.slice(0,8),routes:routes,empty:empty,broken:broken.slice(0,5),images:imgs.length,overflow:overflow,buttons:document.querySelectorAll('button,a').length,products:products},'*')})})();<\/script>`;
-
+// --- Preview & quality agent ---------------------------------------------------------
+const MAX_ROUNDS = 3;
+let qaToken = 0;
+let qaHistory = [];
+let lastReport = null;
 function render(fixAllowed = false) {
   if (!current) return;
   autoFix = fixAllowed;
   const v = version();
   els.title.textContent = current.title;
   els.meta.textContent = `Version ${current.active + 1} von ${current.versions.length} · ${new Date(v.at).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}${v.note ? ` · ${v.note}` : ''}`;
-  els.qa.textContent = 'Prüfe Website …';
-  els.qa.dataset.state = 'running';
-  els.frame.srcdoc = buildPreview(asProject(), { csp: CSP, inject: QA_SCRIPT });
+  els.frame.srcdoc = buildPreview(asProject(), { csp: CSP });
+  runQA(fixAllowed);
   els.versions.replaceChildren(...current.versions.map((ver, i) => new Option(`V${i + 1} · ${ver.note || 'Version'}`, String(i))).reverse());
   els.versions.value = String(current.active);
   send({ type: 'studio_current', project: asProject() });
@@ -98,29 +90,72 @@ function renderCode() {
   els.codePre.textContent = files.find((f) => f.path === codeFile)?.content || '';
 }
 
-window.addEventListener('message', (event) => {
-  if (event.source !== els.frame.contentWindow || !event.data?.jarvisQA) return;
-  const r = event.data;
-  const problems = [
-    ...r.errors,
-    ...r.empty.map((route) => `Seite ${route} ist leer oder lädt nicht`),
-    ...r.broken.map((src) => `Bild lädt nicht: ${src}`),
-    ...(r.overflow ? ['Seite ist breiter als der Bildschirm (horizontales Scrollen)'] : [])
-  ];
-  if (!problems.length) {
+// Quality agent: tests the site in real browser frames, shows the report and
+// lets Jarvis repair it – up to MAX_ROUNDS rounds, stops when nothing improves.
+async function runQA(fixAllowed) {
+  const token = ++qaToken;
+  const project = asProject();
+  if (!project) return;
+  if (!fixAllowed) { qaRound = 0; qaHistory = []; }
+  els.qa.dataset.state = 'running';
+  els.qa.textContent = qaRound ? `Teste erneut (Runde ${qaRound + 1}) …` : 'Qualitäts-Agent testet die Website …';
+  let report;
+  try {
+    report = await runQualityAgent(project, { buildPreview, csp: CSP, onStatus: (t) => { if (token === qaToken) els.qa.textContent = `${qaRound ? `Runde ${qaRound + 1}: ` : ''}${t}`; } });
+  } catch (error) {
+    if (token !== qaToken) return;
+    els.qa.dataset.state = 'warn'; els.qa.textContent = `Qualitäts-Test nicht möglich: ${error.message}`; return;
+  }
+  if (token !== qaToken) return;
+  lastReport = report;
+  const v = version(); if (v) { v.qa = { passed: report.passed, score: report.score, errors: report.errors, hints: report.hints, problems: report.problems.slice(0, 30), vision: report.vision?.available ? { score: report.vision.score, good: report.vision.good } : null, at: report.testedAt }; saveProject(current).catch(() => {}); }
+  showReport(report);
+  qaHistory.push(report.errors);
+  const errors = report.problems.filter((p) => p.level === 'fehler');
+  if (report.passed) {
     els.qa.dataset.state = 'ok';
-    els.qa.textContent = `✓ Geprüft: ${r.routes.length} Seiten, ${r.images} Bilder, keine Fehler`;
-    qaRound = 0;
+    els.qa.textContent = `✓ Qualitäts-Agent: bestanden · Note ${String(report.score).replace('.', ',')}/10${report.vision?.available ? ` · Design ${report.vision.score}/10` : ''}${qaRound ? ` · nach ${qaRound} Reparatur${qaRound > 1 ? 'en' : ''}` : ''}`;
+    qaRound = 0; autoFix = false;
+    return;
+  }
+  const improving = qaHistory.length < 2 || qaHistory[qaHistory.length - 1] < qaHistory[qaHistory.length - 2];
+  if (autoFix && qaRound < MAX_ROUNDS && improving && (errors.length || report.vision?.available)) {
+    qaRound += 1;
+    els.qa.dataset.state = 'warn';
+    els.qa.textContent = `⚠ ${report.errors} Fehler, Note ${String(report.score).replace('.', ',')}/10 – Jarvis repariert (Runde ${qaRound} von ${MAX_ROUNDS}) …`;
+    const list = [...errors, ...report.problems.filter((p) => p.level !== 'fehler')].slice(0, 20).map((p) => p.text);
+    runJob('fix', { project, problems: list }, `Automatische Reparatur ${qaRound}`);
     return;
   }
   els.qa.dataset.state = 'warn';
-  els.qa.textContent = `⚠ ${problems.length} Problem(e): ${problems.slice(0, 2).join(' · ')}`;
-  if (autoFix && qaRound < 1) {
-    qaRound += 1;
-    els.qa.textContent += ' – Jarvis repariert …';
-    runJob('fix', { project: asProject(), problems }, 'Automatische Reparatur');
-  }
-});
+  const why = !improving ? 'nicht automatisch behebbar (keine Verbesserung mehr)' : qaRound >= MAX_ROUNDS ? `nach ${MAX_ROUNDS} Reparatur-Runden noch offen` : 'offen';
+  els.qa.textContent = `⚠ Qualitäts-Agent: ${report.errors} Fehler, ${report.hints} Hinweis(e) ${why} · Note ${String(report.score).replace('.', ',')}/10`;
+  qaRound = 0; autoFix = false;
+}
+
+function showReport(r) {
+  let box = document.getElementById('studio-qareport');
+  if (!box) { box = document.createElement('details'); box.id = 'studio-qareport'; box.className = 'studio-qareport'; els.qa.after(box); }
+  const d = r.desktop || {}; const m = r.mobile || {};
+  const row = (ok, label, detail = '') => `<li class="${ok === null ? 'na' : ok ? 'ok' : 'bad'}"><b>${ok === null ? '–' : ok ? '✓' : '✖'}</b> ${label}${detail ? ` <small>${detail}</small>` : ''}</li>`;
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const cart = d.cart;
+  const checks = [
+    row(!(d.errors?.length || m.errors?.length), 'Konsole ohne Fehler', d.errors?.length ? esc(d.errors[0]) : ''),
+    row((d.pages || []).every((p) => p.text >= 40 && p.visible), `Seiten (${(d.pages || []).length}) laden und haben Inhalt`),
+    row(!(d.dead || []).length, `Alle Knöpfe funktionieren`, (d.dead || []).length ? `${d.dead.length} ohne Wirkung` : ''),
+    row(!(d.deadLinks || []).length, 'Keine toten Links', (d.deadLinks || []).length ? `${d.deadLinks.length} tot` : ''),
+    row((d.forms || []).length ? d.forms.every((f) => f.validates && f.succeeds) : null, `Formulare prüfen Eingaben${(d.forms || []).length ? ` (${d.forms.length})` : ''}`),
+    row(cart ? cart.add && cart.open && cart.plus && cart.remove && cart.detail !== false : null, 'Warenkorb & Produktseite'),
+    row(d.search === null || d.search === undefined ? null : d.search, 'Suche'),
+    row(d.filter === null || d.filter === undefined ? null : d.filter, 'Kategorie-Filter'),
+    row(m.menu ? m.menu.ok : null, 'Handy-Menü', m.menu ? esc(m.menu.note) : ''),
+    row(!(d.layout || []).concat(m.layout || []).some((t) => /breiter|ragt/.test(t)), 'Layout Desktop + Handy ohne Überlauf'),
+    row(!((d.images?.broken || []).length), `Bilder laden (${d.images?.total || 0})`),
+    row(r.vision?.available ? r.vision.score >= 7 : null, `Design-Bewertung per Screenshot${r.vision?.available ? ` · ${r.vision.score}/10` : ''}`, r.vision?.available ? esc(r.vision.good || '') : esc(r.vision?.note || ''))
+  ];
+  box.innerHTML = `<summary>Prüfbericht · Note ${String(r.score).replace('.', ',')}/10 · ${r.errors} Fehler · ${r.hints} Hinweis(e)</summary>${r.image ? `<img class="studio-qashot" src="${r.image}" alt="Screenshots Desktop und Handy">` : ''}<ul class="studio-qachecks">${checks.join('')}</ul>${r.problems.length ? `<ol class="studio-qaproblems">${r.problems.slice(0, 20).map((p) => `<li class="${p.level}">${esc(p.text)}</li>`).join('')}</ol>` : ''}`;
+}
 
 // --- Jobs --------------------------------------------------------------------------------
 function showProgress(lines, active = true) {
@@ -173,7 +208,7 @@ export async function followJob(id, kind, prompt, note) {
     current.versions = current.versions.slice(-15);
     current.active = current.versions.length - 1;
     await saveProject(current);
-    render(kind !== 'fix');
+    render(kind !== 'fix' || qaRound > 0);
   } catch (error) {
     showProgress([], false);
     notify(error.message, 'error');

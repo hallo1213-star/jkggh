@@ -46,7 +46,7 @@ import { aiClipFile, aiClipStatus, aiVideoConfig, convertToMp4, editVideo, fetch
 import { twilioConfigured } from './phone-call.js';
 import { telegramAssistantEnabled } from './telegram-bot.js';
 import { cancelTasks, startTask } from './tasks.js';
-import { UPGRADE_WISH, buildSite, designReview, editSite, fixSite, upgradeSite } from './studio.js';
+import { UPGRADE_WISH, buildSite, designReview, editSite, fixSite, siteCheck, upgradeSite } from './studio.js';
 import { getChart } from './markets.js';
 import { getIss } from './iss.js';
 import { startTelegramAssistant } from './telegram-bot.js';
@@ -283,7 +283,8 @@ function startStudioJob(kind, { prompt, project, problems }) {
         // keep the first result; the review shows what is still open
       }
     }
-    return { ...result, designReview: review, upgraded: upgrade };
+    // code check (links, buttons, pages, shop parts) for every version
+    return { ...result, designReview: review, check: siteCheck(result), upgraded: upgrade };
   });
   run.then((result) => {
     job.status = 'fertig';

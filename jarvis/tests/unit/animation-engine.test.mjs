@@ -57,3 +57,11 @@ assert(/Gmail, iPhone/.test(sys.modules.find((m) => m.key === 'kommunikation').d
 const sys2 = buildSystems({ tools: ['get_weather'], laptopTools: 0, voice: 'x' });
 assert(sys2.modules.find((m) => m.key === 'welt').count === 1 && !sys2.modules.some((m) => m.key === 'wissen'), 'fehlt eine Funktion, fehlt auch das Modul (nichts erfunden)');
 assert([...names].includes('systems_overview'), 'Funktion systems_overview existiert');
+
+// job reports progress BEFORE the function says it started → only one animation stays
+ingest({ type: 'action', id: 'r1', state: 'running', tool: 'studio_website' });
+ingest({ type: 'studio_job', id: 'jr', status: 'läuft', step: 'Konzept' });
+ingest({ type: 'action', id: 'r1', state: 'done', tool: 'studio_website' });
+ingest({ type: 'studio_job', id: 'jr', status: 'läuft', step: 'CSS' });
+ingest({ type: 'studio_job', id: 'jr', status: 'fertig' });
+assert(state.actions.get('r1').status === 'merged' && state.actions.get('studio-jr').status === 'done', 'Wettlauf Job/Funktion: doppelte Animation wird entfernt, die echte wird fertig');
