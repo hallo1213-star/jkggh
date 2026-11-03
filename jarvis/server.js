@@ -502,7 +502,16 @@ const httpServer = createServer(async (request, response) => {
 
   // Same for simple Shortcuts: key in the link, answer is plain text (the app link or nothing).
   if (pathname === '/api/phone/link' && request.method === 'GET') {
-    const key = new URL(request.url, 'http://localhost').searchParams.get('key') || '';
+    const linkQuery = new URL(request.url, 'http://localhost').searchParams;
+    const key = linkQuery.get('key') || '';
+    // ...&test=1 in Safari: shows at once whether the server has the key and it matches
+    if (linkQuery.get('test')) {
+      const ok = tokenMatches(`Bearer ${key}`, process.env.PHONE_TOKEN);
+      const st = phoneHub.status();
+      response.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
+      response.end(!process.env.PHONE_TOKEN?.trim() ? 'FEHLER: Bei Render fehlt PHONE_TOKEN (Environment → Add → PHONE_TOKEN). Danach neu starten lassen.' : ok ? `OK: Schlüssel stimmt. Kurzbefehl verbunden: ${st.turbo ? 'ja' : 'nein (Kurzbefehl läuft gerade nicht)'}` : `FEHLER: Schlüssel passt nicht zu PHONE_TOKEN bei Render (Länge hier: ${key.length} Zeichen). Groß-/Kleinschreibung und Leerzeichen prüfen.`);
+      return;
+    }
     if (!tokenMatches(`Bearer ${key}`, process.env.PHONE_TOKEN)) { response.writeHead(401, { 'content-type': 'text/plain; charset=utf-8' }); response.end(''); return; }
     let closed = false; request.on('close', () => { closed = true; });
     const command = await phoneHub.poll(25_000);
