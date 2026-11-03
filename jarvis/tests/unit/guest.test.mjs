@@ -1,0 +1,34 @@
+process.env.SESSION_SECRET = '0123456789abcdef0123456789abcdef';
+const { GUEST_TOOLS, createInvite, createUsage, deviceAllowed, guestCookie, guestPrompt, invitePage, normalizePlatform, readGuest, readInvite } = await import('../../guest.js');
+const { cloudTools } = await import('../../cloud-tools.js');
+const assert = (c, m) => { console.log(c ? 'ok  ' : 'FAIL', m); if (!c) process.exitCode = 1; };
+const iphone = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148 Safari/604.1';
+const win = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/130 Safari/537.36';
+
+assert(normalizePlatform('nur Handy') === 'handy' && normalizePlatform('Laptop') === 'laptop' && normalizePlatform('für beides') === 'beides' && normalizePlatform('egal') === null, 'Gerät verstehen: Handy / Laptop / beides');
+let err = ''; try { createInvite({ name: 'X', platform: '' }); } catch (e) { err = e.message; } assert(/Laptop.*Handy.*beides/.test(err), 'ohne Gerät → Rückfrage „Nur für Laptop, nur für Handy oder für beides?“');
+const t = createInvite({ name: 'Abdullah Demir', platform: 'handy' });
+const inv = readInvite(t);
+assert(inv && inv.name === 'Abdullah Demir' && inv.platform === 'handy', 'Link enthält Name und Gerät');
+assert(readInvite(t.slice(0, -2) + 'xx') === null && readInvite(t.replace(/^./, 'A')) === null, 'veränderter Link ist ungültig');
+assert(readInvite(t, Date.now() + 31 * 86400000) === null, 'Link läuft nach 30 Tagen ab');
+assert(deviceAllowed('handy', iphone) && !deviceAllowed('handy', win) && deviceAllowed('laptop', win) && !deviceAllowed('laptop', iphone) && deviceAllowed('beides', win), 'nur Handy / nur Laptop wird eingehalten');
+const cookie = guestCookie(inv, true).split(';')[0];
+assert(/HttpOnly/.test(guestCookie(inv, true)) && /Secure/.test(guestCookie(inv, true)), 'Gast-Cookie: HttpOnly + Secure');
+assert(readGuest({ headers: { cookie, 'user-agent': iphone } })?.name === 'Abdullah Demir', 'Gast wird am Handy erkannt');
+assert(readGuest({ headers: { cookie, 'user-agent': win } }) === null, 'Handy-Gast-Cookie gilt nicht am PC');
+process.env.GUEST_BLOCK = inv.id; assert(readGuest({ headers: { cookie, 'user-agent': iphone } }) === null, 'Gast sperrbar über GUEST_BLOCK'); delete process.env.GUEST_BLOCK;
+const forbidden = ['memory_save', 'memory_list', 'email_send', 'email_list', 'telegram_send', 'reminder_add', 'appointment_list', 'note_find', 'shopping_list_show', 'customer_list', 'money_status', 'iphone_control', 'invite_link', 'weather_show', 'recipe', 'set_timer', 'order_call', 'laptop_status', 'business_mode', 'run_task'];
+assert(forbidden.every((n) => !GUEST_TOOLS.has(n)), 'Gast hat keinen Zugriff auf Gedächtnis, Mails, Telegram, Termine, Listen, Geld, iPhone, Laptop, Anrufe');
+const names = new Set(cloudTools.map((x) => x.name));
+assert([...GUEST_TOOLS].every((n) => names.has(n)), 'alle Gast-Funktionen existieren');
+const u = createUsage({ minutes: 1 }); u.add('g1', 45000); assert(u.left('g1') === 15000 && u.left('g2') === 60000, 'Tageslimit pro Gast');
+assert(/Abdullah Demir/.test(guestPrompt(inv, 'Ozan')) && /Nicht im Gast-Modus/.test(guestPrompt(inv)), 'eigene Gast-Anleitung');
+const page = invitePage({ ok: true, invite: { ...inv, name: '<script>x</script>' }, token: t });
+assert(!page.includes('<script>x</script>') && page.includes('Zum Home-Bildschirm') && page.includes('/einladung/manifest?t='), 'Einladungsseite: sicher, mit Home-Bildschirm-Anleitung');
+
+const tool = cloudTools.find((x) => x.name === 'invite_link');
+const shown = [];
+const r = await tool.run({ platform: 'handy', name: 'Abdullah Demir' }, { origin: 'https://jarvis.example', showVisual: (m) => shown.push(m) });
+assert(r.erstellt && shown[0].url.startsWith('https://jarvis.example/einladung?t=') && readInvite(new URL(shown[0].url).searchParams.get('t')).platform === 'handy', 'Jarvis erstellt den Link (nur Handy)');
+err = ''; try { await tool.run({ name: 'A' }, { origin: 'x' }); } catch (e) { err = e.message; } assert(/Nur für Laptop/.test(err), 'ohne Gerät fragt Jarvis nach');

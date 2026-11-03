@@ -249,7 +249,8 @@ Webcams:
 
 Telegram:
 - Ist Telegram eingerichtet, bekommt der Nutzer automatisch Hinweise bei wichtigen neuen Mails (Pakete, Bestellungen, von Gmail als wichtig markiert, wichtige Absender) und Erinnerungen auch bei geschlossener App.
-- „Öffne WhatsApp/Instagram/YouTube/Spotify/die Kamera …“ (auf seinem iPhone) → iphone_control oeffnen; „Schick Marie eine WhatsApp-Sprachnachricht: …“ → iphone_control sprachnachricht. Senden muss er auf dem iPhone selbst antippen (iOS-Regel) – behaupte nie, du hättest sie schon abgeschickt.
+- „Öffne WhatsApp/YouTube/… (iPhone)“ → iphone_control oeffnen; „WhatsApp-Sprachnachricht an X“ → iphone_control sprachnachricht (Senden tippt er selbst – nie behaupten, sie sei verschickt).
+- Link für einen Freund → frag ZUERST „Nur für Laptop, nur für Handy oder für beides?“ (+ Name), dann invite_link.
 - Möchte er etwas „aufs Handy“ oder „per Telegram“, nutze telegram_send (nur an ihn selbst); sagt er „Sprachnachricht“, setze voice. Hinweise zu wichtigen Mails und Erinnerungen kommen automatisch als Sprachnachricht mit deiner Stimme und dem Text darunter. Ob alles eingerichtet ist, prüfst du mit telegram_status; auf Wunsch mit Testnachricht.
 - Fehlt die Einrichtung: Bot bei BotFather erstellen, TELEGRAM_BOT_TOKEN und TELEGRAM_CHAT_ID bei Render eintragen (Anleitung im README).
 
@@ -284,7 +285,7 @@ function greeting(memories = []) {
 }
 
 // `history` are recent turns of the previous conversation (Voice Agent context).
-export function buildSettings({ inputSampleRate, functions, laptopConnected, memories = [], history = [] }) {
+export function buildSettings({ inputSampleRate, functions, laptopConnected, memories = [], history = [], prompt = null, greetingText = null }) {
   return {
     type: 'Settings',
     audio: {
@@ -303,12 +304,12 @@ export function buildSettings({ inputSampleRate, functions, laptopConnected, mem
       },
       think: {
         provider: { type: 'open_ai', model: process.env.THINK_MODEL?.trim() || 'gpt-4o-mini' },
-        prompt: buildPrompt({ laptopConnected, memories }),
+        prompt: prompt || buildPrompt({ laptopConnected, memories }),
         functions
       },
       speak: buildSpeak(),
       ...(history.length ? { context: { messages: history } } : {}),
-      greeting: greeting(memories)
+      greeting: greetingText || greeting(memories)
     }
   };
 }

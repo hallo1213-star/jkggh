@@ -1304,3 +1304,7 @@ body.gravity-on .topbar, body.gravity-on .hud { overflow: visible; }
 .iph-go { display: block; width: 100%; box-sizing: border-box; padding: 14px; border: 0; border-radius: 12px; background: #ff2a3d; color: #fff; font: 800 15px 'Inter', sans-serif; text-align: center; text-decoration: none; cursor: pointer; box-shadow: 0 0 22px rgba(255, 42, 61, 0.5); }
 .iph-steps { margin: 10px 0 6px; font-size: 13px; color: #c9a0a5; text-align: center; }
 .iph-alt { display: block; text-align: center; font-size: 13px; color: #ffd0d4; padding: 6px; }
+
+/* ===== Invitation + guest mode ===== */
+.inv-link { width: 100%; box-sizing: border-box; margin: 0 0 10px; padding: 10px 12px; border: 1px solid rgba(255, 42, 61, 0.45); border-radius: 10px; background: #050102; color: #ffd0d4; font: 13px ui-monospace, Menlo, monospace; }
+body.guest-mode #film-tabs button:not([data-tab="normal"]), body.guest-mode #settings-button, body.guest-mode #memory-button, body.guest-mode #laptop-chip { display: none !important; }

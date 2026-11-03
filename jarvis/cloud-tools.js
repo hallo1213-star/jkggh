@@ -1,4 +1,5 @@
 // Functions that run in the cloud and work even when the laptop is off.
+import { createInvite, normalizePlatform, platformLabel } from './guest.js';
 import { buildMindmap, extendMap } from './mindmap.js';
 import { giftIdeas } from './gifts.js';
 import { designSuit } from './suit.js';
@@ -1457,6 +1458,20 @@ export const cloudTools = [
       if (action === 'oeffnen') return context.phone.open(app, query);
       if (!String(text || '').trim()) throw new Error('Was soll in der Sprachnachricht gesagt werden?');
       return context.phone.voice(contact, text);
+    }
+  },
+  {
+    name: 'invite_link',
+    description: 'Erstellt einen Einladungslink, mit dem ein Freund Jarvis als Gast bekommt (eigene Unterhaltung, nur harmlose Funktionen – nie seine Daten, Mails, Laptop oder Handy). Frag VORHER, falls nicht gesagt: „Nur für Laptop, nur für Handy oder für beides?“ und wie der Freund heißt. platform: handy | laptop | beides; name: Name des Freundes.',
+    parameters: { type: 'object', properties: { platform: { type: 'string', enum: ['handy', 'laptop', 'beides'] }, name: { type: 'string' } }, required: ['platform'] },
+    label: (a) => `Einladung${a.name ? ` für ${a.name}` : ''} (${a.platform || '?'})`,
+    run: async ({ platform, name }, context) => {
+      const p = normalizePlatform(platform);
+      if (!p) throw new Error('Frag ihn zuerst: Nur für Laptop, nur für Handy oder für beides?');
+      if (!context.origin) throw new Error('Der Link geht nur in der Jarvis-App.');
+      const url = `${context.origin}/einladung?t=${createInvite({ name, platform: p })}`;
+      context.showVisual?.({ type: 'invite', url, name: String(name || '').slice(0, 40), platform: p, label: platformLabel(p) });
+      return { erstellt: true, fuer: name || 'Freund', geraet: platformLabel(p), hinweis: `Der Link steht auf dem Bildschirm (Kopieren/Teilen). Er gilt 30 Tage zum Öffnen, ${p === 'handy' ? 'nur auf dem Handy' : p === 'laptop' ? 'nur am Laptop/PC' : 'auf Handy und Laptop'}. Sag kurz: Er soll ihn dem Freund schicken; der Freund öffnet ihn und tippt „Jarvis starten“ (am Handy vorher „Zum Home-Bildschirm“). Der Freund hat eine eigene Unterhaltung ohne Zugriff auf seine Daten, mit Tageslimit. Lies den Link NICHT vor.` };
     }
   },
   {

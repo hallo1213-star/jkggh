@@ -24,6 +24,7 @@ import { handleFx3, initFx3 } from './fx3.js';
 import { handleFx4, initFx4 } from './fx4.js';
 import { FX5_ACTIONS, handleFx5, initFx5 } from './fx5.js';
 import { openEscape, openSecret } from './fx6.js';
+import { enterGuestMode, showInvite } from './invite.js';
 import { handlePhoneStatus, initIphone, phoneState, receiverWanted, setReceiver } from './iphone.js';
 import { showMindmap } from './mindmap.js';
 import { openChess } from './chess.js';
@@ -1179,7 +1180,7 @@ async function checkSession() {
       location.replace('/login.html');
       return false;
     }
-    if (response.ok) { const info = await response.json(); setLaptop(info.laptop); if (info.phone) handlePhoneStatus(info.phone); }
+    if (response.ok) { const info = await response.json(); if (info.guest) enterGuestMode(info.guest.name); else { setLaptop(info.laptop); if (info.phone) handlePhoneStatus(info.phone); } }
   } catch {
     // offline: keep going, the connection error is shown elsewhere
   }
@@ -1760,6 +1761,12 @@ function handleMessage(message) {
       break;
     case 'phone':
       handlePhoneStatus(message);
+      break;
+    case 'invite':
+      showInvite(message, toast);
+      break;
+    case 'guest':
+      enterGuestMode(message.name);
       break;
     case 'confirm':
       queueConfirm(message);

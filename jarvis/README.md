@@ -459,6 +459,17 @@ Das `PHONE_TOKEN` steht nur bei Render und in deinem Kurzbefehl – nie in der A
 
 Ein anderes Gerät (z. B. Android-Tablet) kann unter ⚙️ Einstellungen → „Dieses Gerät als iPhone-Empfänger“ dasselbe tun.
 
+## Jarvis an Freunde verschenken (Einladungslink) 🎁
+
+Sag zu Jarvis: **„Erstelle mir einen Link für meinen Freund, damit er dich auch bekommt“** → Jarvis fragt **„Nur für Laptop, nur für Handy oder für beides?“** (und den Namen) → auf dem Bildschirm erscheint der Link mit **Kopieren** / **Teilen**.
+
+- Dein Freund öffnet den Link → Begrüßungsseite mit seinem Namen → am iPhone **Teilen → „Zum Home-Bildschirm“** (Android: „Jarvis installieren“) → Jarvis ist wie eine App auf seinem Handy → Reaktor antippen, reden.
+- **Gast-Modus:** eigene Unterhaltung, nur harmlose Funktionen (Wetter, Wissen, Quiz, Spiele, Bilder, Feuerwerk, Kamera-Effekte, Escape-Room, Schach …). **Kein Zugriff** auf deine Erinnerungen, Mails, Telegram, Termine, Notizen, Listen, Geld, Business, Laptop oder iPhone – auch nicht, wenn er danach fragt.
+- „Nur Handy“-Links funktionieren nur auf Handys, „nur Laptop“ nur am PC.
+- Der Link lässt sich 30 Tage öffnen; danach bleibt Jarvis auf seinem Gerät 1 Jahr angemeldet.
+- **Kosten:** Gäste nutzen deine Deepgram-Minuten → Limit pro Gast und Tag: 30 Minuten (bei Render änderbar: `GUEST_MINUTES`).
+- **Sperren:** bei Render `GUEST_BLOCK` = Name des Freundes (mehrere mit Komma) → sein Zugang endet sofort.
+
 ## Startanimation 🔴
 
 Beim Öffnen von Jarvis (Design „Jarvis wie im Video“): Oberfläche ausgeblendet → schwarzer Bildschirm → dünner roter Lichtstrahl von oben nach unten → dein bestehender Reaktor (derselbe Canvas-Code) entsteht in der Mitte, pulsiert, die Ringe drehen schneller und werden heller → rote Partikel fliegen zum Kern → roter Energieimpuls über den Bildschirm → die normale Oberfläche blendet ein, der Reaktor bleibt an seinem Platz → „Alle Systeme sind online.“ (nur wenn der Server wirklich erreichbar ist, sonst „Verbindung wird hergestellt …“). Dauer ca. 5,5 s, Knopf „Überspringen“, startet nie doppelt. Mit Soundeffekten (live erzeugt, keine Dateien): Bass-Teppich, Scan-Ton des Lichtstrahls, Einschalt-Schlag des Reaktors, aufladendes Surren mit Funken, Energie-Aufprall, Übergangs-Rauschen mit Akkord und HUD-Bestätigung bei „Alle Systeme sind online.“; Lautsprecher-Knopf schaltet den Ton ab (wird gemerkt). Blockiert der Browser Ton bis zum ersten Tippen (iPhone), wartet der schwarze Bildschirm mit „Tippen, um Jarvis zu starten“ – der Tipp startet Animation mit Ton und gleichzeitig das Mikrofon. Danach den Reaktor (oder „Jarvis aktivieren“) antippen, um das Mikrofon freizugeben.

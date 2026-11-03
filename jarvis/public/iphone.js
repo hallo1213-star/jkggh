@@ -42,7 +42,7 @@ async function keepAwake() {
 const send = (m) => { try { if (ws?.readyState === 1) ws.send(JSON.stringify(m)); } catch { /* closed */ } };
 
 function connect() {
-  if (!receiverWanted() || (ws && ws.readyState <= 1)) return;
+  if (document.body.classList.contains('guest-mode') || !receiverWanted() || (ws && ws.readyState <= 1)) return;
   const sock = new WebSocket(`${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/phone`);
   ws = sock;
   sock.onopen = () => { retry = 1500; phoneState.self = true; showChip(); send({ type: 'hello', device: isIphone() ? 'iPhone' : 'Handy' }); keepAwake(); clearInterval(pingTimer); pingTimer = setInterval(() => send({ type: 'ping' }), 20000); };

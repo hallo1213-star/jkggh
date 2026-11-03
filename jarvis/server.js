@@ -25,6 +25,7 @@ import { composeBriefing, startScheduler } from './scheduler.js';
 import { getNews, getWeather } from './knowledge.js';
 import { gmailConfigured, listEmails } from './gmail.js';
 import { sendVoiceNote, synthesize, voiceMessagesEnabled } from './voice-message.js';
+import { GUEST_TOOLS, createUsage, deviceAllowed, guestCookie, guestPrompt, inviteManifest, invitePage, readGuest, readInvite } from './guest.js';
 import { createPhoneHub, elevenLabsMp3, makeVoiceClip, openReply, resolveApp } from './iphone.js';
 import { sendTelegramDocument } from './telegram.js';
 import { addIncome, completeUserTask, sanitizeMoney, startMoney, stopMoney, addLog as addMoneyLog, updateProject, updateTask, incomeTotals } from './money-state.js';
@@ -84,6 +85,9 @@ const functionDefinitions = [
   ...effectFunctions(cloudTools),
   ...laptopFunctions
 ];
+// Guests (friends with an invitation link) get only harmless functions, by their own names.
+const guestFunctions = cloudTools.filter(({ name }) => GUEST_TOOLS.has(name)).map(({ name, description, parameters }) => ({ name, description: description.slice(0, 1000), parameters }));
+const guestUsage = createUsage();
 if (functionDefinitions.length > 128) console.warn(`Achtung: ${functionDefinitions.length} Funktionen – die Sprach-KI erlaubt höchstens 128.`);
 
 const isSecure = (request) => request.headers['x-forwarded-proto'] === 'https';
@@ -485,8 +489,33 @@ const httpServer = createServer(async (request, response) => {
   }
 
   if (pathname === '/api/session') {
-    if (!isAuthenticated(request)) sendJson(response, 401, { error: 'Nicht angemeldet' });
+    const guest = isAuthenticated(request) ? null : readGuest(request);
+    if (guest) sendJson(response, 200, { ok: true, guest: { name: guest.name, platform: guest.platform, minutes: guestUsage.minutes } });
+    else if (!isAuthenticated(request)) sendJson(response, 401, { error: 'Nicht angemeldet' });
     else sendJson(response, 200, { ok: true, laptop: laptopConnected(), phone: phoneHub.status() });
+    return;
+  }
+
+  // Invitation link for a friend (guest access, see guest.js).
+  if (pathname === '/einladung' || pathname === '/einladung/manifest') {
+    const query = new URL(request.url, 'http://localhost').searchParams;
+    const token = query.get('t') || '';
+    const invite = readInvite(token);
+    if (pathname === '/einladung/manifest') {
+      if (!invite) { sendJson(response, 404, { error: 'ungültig' }); return; }
+      response.writeHead(200, { 'content-type': 'application/manifest+json; charset=utf-8', 'cache-control': 'no-store' });
+      response.end(inviteManifest(token));
+      return;
+    }
+    const html = (code, page, extra = {}) => { response.writeHead(code, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', 'referrer-policy': 'no-referrer', ...extra }); response.end(page); };
+    if (!invite) { html(410, invitePage({ ok: false })); return; }
+    if (!deviceAllowed(invite.platform, request.headers['user-agent'])) {
+      html(403, invitePage({ ok: false, reason: invite.platform === 'handy' ? 'Dieser Link ist nur fürs Handy – öffne ihn bitte auf deinem Handy.' : 'Dieser Link ist nur für den Laptop/PC – öffne ihn bitte dort.' }));
+      return;
+    }
+    const cookie = guestCookie(invite, isSecure(request));
+    if (query.get('app')) { response.writeHead(302, { location: '/', 'set-cookie': cookie, 'cache-control': 'no-store' }); response.end(); return; }
+    html(200, invitePage({ ok: true, invite, token }), { 'set-cookie': cookie });
     return;
   }
 
@@ -893,7 +922,7 @@ const httpServer = createServer(async (request, response) => {
   }
 
   const route = pathname === '/' ? '/index.html' : pathname;
-  if (!publicFiles.has(route) && !isAuthenticated(request)) {
+  if (!publicFiles.has(route) && !isAuthenticated(request) && !readGuest(request, { device: route !== '/index.html' && !route.endsWith('.html') ? false : true })) {
     if (route === '/index.html') {
       response.writeHead(302, { location: '/login.html', 'cache-control': 'no-store' });
       response.end();
@@ -1070,14 +1099,15 @@ httpServer.on('upgrade', (request, socket, head) => {
     phoneWss.handleUpgrade(request, socket, head, (ws) => phoneHub.attach(ws));
     return;
   }
-  if (pathname !== '/ws' || originHost !== request.headers.host || !isAuthenticated(request)) {
+  const wsGuest = isAuthenticated(request) ? null : readGuest(request);
+  if (pathname !== '/ws' || originHost !== request.headers.host || !(isAuthenticated(request) || wsGuest)) {
     socket.end('HTTP/1.1 401 Unauthorized\r\n\r\n');
     return;
   }
-  browserWss.handleUpgrade(request, socket, head, (ws) => browserWss.emit('connection', ws, request));
+  browserWss.handleUpgrade(request, socket, head, (ws) => browserWss.emit('connection', ws, request, wsGuest));
 });
 
-browserWss.on('connection', (browser, request) => {
+browserWss.on('connection', (browser, request, guest = null) => {
   const origin = `${isSecure(request) ? 'https' : 'http'}://${request.headers.host}`;
   let agent = null;
   let agentOpen = false;
@@ -1123,9 +1153,13 @@ browserWss.on('connection', (browser, request) => {
       console.warn(`Konnte Laptop-Status nicht ans Gespräch melden: ${error.message}`);
     }
   };
-  sessions.add(session);
-  toBrowser({ type: 'laptop', connected: laptopConnected() });
-  toBrowser({ type: 'phone', ...phoneHub.status() });
+  // guests are never part of the owner's broadcasts (lists, memories, status)
+  if (guest) toBrowser({ type: 'guest', name: guest.name });
+  else {
+    sessions.add(session);
+    toBrowser({ type: 'laptop', connected: laptopConnected() });
+    toBrowser({ type: 'phone', ...phoneHub.status() });
+  }
 
   const context = {
     phone: {
@@ -1368,6 +1402,10 @@ browserWss.on('connection', (browser, request) => {
     ({ name, args, unknown, guessed } = unwrapEffect(callName, args));
     if (unknown || guessed) console.warn(`[effekt] ${callName} ${guessed ? 'geraten → Auswahl' : 'unbekannt'}: ${JSON.stringify(callArgs).slice(0, 300)}`);
     if (unknown) args = callArgs;
+    if (guest && !GUEST_TOOLS.has(name)) {
+      agent.sendFunctionCallResponse({ type: 'FunctionCallResponse', id, name: callName, content: JSON.stringify({ ok: false, fehler: 'Im Gast-Modus nicht verfügbar – das kann nur der Besitzer von Jarvis.' }) });
+      return;
+    }
     const tool = findCloudTool(name) || findLaptopTool(name);
     const label = tool?.label(args) ?? name;
     toBrowser({ type: 'action', id, label, state: 'running', laptop: !findCloudTool(name) });
@@ -1444,6 +1482,8 @@ browserWss.on('connection', (browser, request) => {
   // `history` = recent turns of the previous conversation. If Deepgram rejects
   // the settings before applying them, Jarvis starts once more without it.
   let settingsApplied = false;
+  let guestStarted = 0;
+  let guestTimer = null;
   let retriedWithoutHistory = false;
   let startedWith = { inputSampleRate: 48000, history: [] };
 
@@ -1451,6 +1491,10 @@ browserWss.on('connection', (browser, request) => {
     if (agent) return;
     startedWith = { inputSampleRate, history };
     settingsApplied = false;
+    if (guest && guestUsage.left(guest.id) <= 0) {
+      toBrowser({ type: 'error', message: `Dein Jarvis-Gastlimit für heute (${guestUsage.minutes} Minuten) ist aufgebraucht – morgen geht es weiter.` });
+      return;
+    }
     const missing = missingConfig();
     if (missing.length) {
       toBrowser({ type: 'error', message: `Bei Render bzw. in der .env fehlt: ${missing.join(', ')}` });
@@ -1463,7 +1507,12 @@ browserWss.on('connection', (browser, request) => {
     agent = current;
     current.on('open', () => {
       agentOpen = true;
-      current.sendSettings(buildSettings({ inputSampleRate, functions: functionDefinitions, laptopConnected: laptopConnected(), memories: memoryStore.items, history }));
+      if (guest) {
+        guestStarted = Date.now();
+        const left = guestUsage.left(guest.id);
+        guestTimer = setTimeout(() => { toBrowser({ type: 'error', message: `Dein Jarvis-Gastlimit für heute (${guestUsage.minutes} Minuten) ist aufgebraucht – morgen geht es weiter.` }); agent?.close(); }, left);
+        current.sendSettings(buildSettings({ inputSampleRate, functions: guestFunctions, laptopConnected: false, memories: [], history, prompt: guestPrompt(guest, process.env.USER_NAME?.trim()), greetingText: `Hallo ${guest.name}! Ich bin Jarvis. Was kann ich für dich tun?` }));
+      } else current.sendSettings(buildSettings({ inputSampleRate, functions: functionDefinitions, laptopConnected: laptopConnected(), memories: memoryStore.items, history }));
       keepAlive = setInterval(() => {
         if (agentOpen && Date.now() - lastAudioAt > 5000) agent.sendKeepAlive({ type: 'KeepAlive' });
       }, 5000);
@@ -1474,6 +1523,7 @@ browserWss.on('connection', (browser, request) => {
       queue = queue.then(() => handleAgentMessage(message)).catch((error) => console.error(error));
     });
     current.on('close', (event) => {
+      if (guest && guestStarted) { guestUsage.add(guest.id, Date.now() - guestStarted); guestStarted = 0; clearTimeout(guestTimer); }
       if (current !== agent) return;
       agentOpen = false;
       clearInterval(keepAlive);
@@ -1513,7 +1563,12 @@ browserWss.on('connection', (browser, request) => {
     } catch {
       return;
     }
-    if (message.type === 'start') {
+    // guests may never read or change the owner's lists and memories
+    if (guest && /^(shopping_list|customers|memories|planner|notes|expenses|vocab)_update$/.test(String(message.type))) return;
+    if (message.type === 'start' && guest) {
+      const rate = Number(message.sampleRate);
+      startAgent(rate >= 8000 && rate <= 96000 ? rate : 48000, sanitizeHistory(message.history)).catch((error) => { agent = null; toBrowser({ type: 'error', message: `Jarvis konnte nicht starten: ${error.message}` }); });
+    } else if (message.type === 'start') {
       shoppingStore.adopt(message.shoppingList, message.shoppingListUpdatedAt);
       shoppingStore.send(session);
       customerStore.adopt(message.customers, message.customersUpdatedAt);
@@ -1589,6 +1644,7 @@ browserWss.on('connection', (browser, request) => {
 
   browser.on('close', () => {
     sessions.delete(session);
+    if (guest && guestStarted) { guestUsage.add(guest.id, Date.now() - guestStarted); guestStarted = 0; clearTimeout(guestTimer); }
     for (const finish of confirmations.values()) finish(false);
     for (const timer of timers) clearTimeout(timer);
     clearInterval(keepAlive);
