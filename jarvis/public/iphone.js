@@ -142,5 +142,15 @@ export function initIphone(options) {
   deps = { ...deps, ...options };
   showChip();
   connect();
+  // opened by the Shortcut receiver with a prepared voice message
+  try {
+    const q = new URLSearchParams(location.search).get('phonecmd');
+    if (q) {
+      history.replaceState(null, '', location.pathname);
+      const bin = atob(q.replace(/-/g, '+').replace(/_/g, '/'));
+      const m = JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0))));
+      if (m.action === 'voice' && m.clip) setTimeout(() => voiceMessage({ ...m, id: 'local' }), 600);
+    }
+  } catch { /* ignore broken link */ }
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { connect(); keepAwake(); } });
 }

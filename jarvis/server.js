@@ -490,6 +490,16 @@ const httpServer = createServer(async (request, response) => {
     return;
   }
 
+  // Turbo receiver: Apple Shortcut on the iPhone asks for the next command.
+  // Auth: Authorization: Bearer <PHONE_TOKEN> (stored only in Render and in his Shortcut).
+  if (pathname === '/api/phone/next' && request.method === 'GET') {
+    if (!tokenMatches(request.headers.authorization, process.env.PHONE_TOKEN)) { sendJson(response, 401, { error: process.env.PHONE_TOKEN ? 'Falscher Schlüssel' : 'PHONE_TOKEN fehlt bei Render' }); return; }
+    let closed = false; request.on('close', () => { closed = true; });
+    const command = await phoneHub.poll(25_000);
+    if (!closed) sendJson(response, 200, command || { url: '' });
+    return;
+  }
+
   // Voice clip for a WhatsApp voice message, fetched by the logged-in iPhone.
   if (pathname === '/api/phone/voice' && request.method === 'GET') {
     if (!isAuthenticated(request)) { sendJson(response, 401, { error: 'Nicht angemeldet' }); return; }
@@ -1108,9 +1118,10 @@ browserWss.on('connection', (browser, request) => {
       },
       async voice(contact, text) {
         if (!phoneHub.status().connected) return openReply({ label: 'WhatsApp' }, { state: 'offline' });
-        const clip = await makeVoiceClip(text, { elevenLabs: elevenLabsConfigured(), eleven: (t) => elevenLabsMp3(t), synth: (t, o) => synthesize(t, o), ffmpeg: ffmpegPath(), log: console });
+                const clip = await makeVoiceClip(text, { elevenLabs: elevenLabsConfigured(), eleven: (t) => elevenLabsMp3(t), synth: (t, o) => synthesize(t, o), ffmpeg: ffmpegPath(), log: console });
         const id = phoneHub.storeClip(clip);
-        const r = await phoneHub.send({ action: 'voice', clip: id, hasOgg: Boolean(clip.ogg), hasMp3: Boolean(clip.mp3), contact: String(contact || '').slice(0, 60), text: String(text).slice(0, 1200) });
+        const pageCmd = Buffer.from(JSON.stringify({ action: 'voice', clip: id, hasOgg: Boolean(clip.ogg), hasMp3: Boolean(clip.mp3), contact: String(contact || '').slice(0, 60), text: String(text).slice(0, 600) })).toString('base64url');
+        const r = await phoneHub.send({ turboUrl: `${origin}/?phonecmd=${pageCmd}`, label: 'Jarvis', action: 'voice', clip: id, hasOgg: Boolean(clip.ogg), hasMp3: Boolean(clip.mp3), contact: String(contact || '').slice(0, 60), text: String(text).slice(0, 1200) });
         if (r.state === 'ready') return { ok: true, bereit: true, hinweis: `Die Sprachnachricht an ${contact || 'den Kontakt'} ist in deiner Stimme fertig und liegt auf dem iPhone. iOS erlaubt keiner App, WhatsApp-Sprachnachrichten selbst abzuschicken – er tippt auf dem iPhone „An ${contact || 'Kontakt'} senden“, wählt WhatsApp und ${contact || 'den Kontakt'} und drückt Senden. Sag das kurz.` };
         return openReply({ label: 'WhatsApp' }, r);
       }

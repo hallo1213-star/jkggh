@@ -431,7 +431,7 @@ Du sprichst mit Jarvis am Laptop – dein iPhone öffnet Apps und bereitet Whats
 
 **Was iOS erlaubt – ehrlich:**
 - Kein Laptop und keine Website darf ein iPhone fernsteuern. Darum muss **Jarvis auf dem iPhone offen sein** (Safari oder Home-Bildschirm, Bildschirm an). Jarvis hält den Bildschirm dann wach, solange die Seite offen ist.
-- Apps öffnen: Je nach iOS-Version öffnet sich die App sofort oder iOS will einen Tipp – dann steht auf dem iPhone ein großer Knopf „… öffnen“.
+- Apps öffnen über die Jarvis-Seite: iOS will dabei oft einen Tipp (großer Knopf „… öffnen“). **Ganz ohne Tippen geht es mit dem Kurzbefehl „Jarvis Empfänger“** (unten).
 - **WhatsApp-Sprachnachrichten kann keine App automatisch aufnehmen oder abschicken** (WhatsApp hat dafür auf dem iPhone keine Schnittstelle). Jarvis erledigt alles davor: Text erkennen, Sprachnachricht in seiner Stimme erzeugen (Ogg/Opus – das Format von WhatsApp-Sprachnachrichten), auf dem iPhone bereitlegen. Du tippst nur „An Marie senden“ → WhatsApp → Marie → Senden. Die Nachricht kommt als Audio mit Play-Knopf an; wie genau WhatsApp sie darstellt, entscheidet WhatsApp. „Als Text senden“ geht auch.
 
 **Einrichtung auf dem iPhone (einmalig, ~5 Minuten):**
@@ -440,6 +440,22 @@ Du sprichst mit Jarvis am Laptop – dein iPhone öffnet Apps und bereitet Whats
 3. Für Kamera/Einstellungen/Fotos/TikTok je einen Kurzbefehl anlegen: App **Kurzbefehle** → **+** → Aktion **„App öffnen“** → App wählen (z. B. Kamera) → oben den Namen exakt **„Jarvis Kamera“** geben (bzw. „Jarvis Einstellungen“, „Jarvis Fotos“, „Jarvis TikTok“). Beim ersten Mal fragt iOS, ob Jarvis den Kurzbefehl starten darf → **Erlauben**.
 4. **Jede weitere App** geht genauso: Kurzbefehl „Jarvis <App-Name>“ (z. B. „Jarvis Duolingo“) – dann versteht Jarvis „Öffne Duolingo“.
 5. Beim ersten Öffnen einer App fragt iOS evtl. „In ‚WhatsApp' öffnen?“ → **Öffnen**.
+
+**Ohne Tippen: Kurzbefehl „Jarvis Empfänger“ (empfohlen)**
+
+iOS fragt bei Webseiten jedes Mal nach – ein Kurzbefehl darf Apps dagegen direkt öffnen. Dieser Kurzbefehl holt sich die Befehle von Jarvis ab und öffnet die App sofort:
+
+1. Bei Render → Environment: `PHONE_TOKEN` = ein langes, nur dir bekanntes Passwort (mind. 20 Zeichen, z. B. aus einem Passwort-Generator) → speichern.
+2. iPhone → App **Kurzbefehle** → **+** → Name **„Jarvis Empfänger“**. Aktionen in dieser Reihenfolge:
+   - **Wiederholen** – Anzahl **1000**
+   - darin **Inhalt von URL abrufen** – URL: `https://DEINE-JARVIS-ADRESSE/api/phone/next` – „Mehr anzeigen“ → Methode **GET** → **Header** hinzufügen: Schlüssel `Authorization`, Wert `Bearer DEIN-PHONE_TOKEN`
+   - **Wörterbuchwert abrufen** – Wert für Schlüssel `url` in *Inhalt von URL*
+   - **Wenn** *Wörterbuchwert* **hat einen beliebigen Wert** → darin **URLs öffnen** (*Wörterbuchwert*)
+   - (Ende Wenn, Ende Wiederholen kommen automatisch)
+3. Kurzbefehl starten (antippen). Am Laptop steht dann „Online · iPhone“. Jetzt öffnet „Öffne WhatsApp“ WhatsApp **ohne Nachfrage**. Bei einer Sprachnachricht öffnet der Kurzbefehl Jarvis mit der fertigen Karte.
+4. Er läuft, bis du ihn stoppst; iOS kann ihn nach längerer Zeit im Hintergrund beenden – dann einfach neu starten. Tipp: Kurzbefehle → **Automation** → **+** → z. B. „Ladegerät: ist verbunden“ → **Sofort ausführen** → *Kurzbefehl ausführen: Jarvis Empfänger* – dann startet er von selbst.
+
+Das `PHONE_TOKEN` steht nur bei Render und in deinem Kurzbefehl – nie in der App oder im Code. Ohne richtiges Token antwortet Jarvis nicht.
 
 Ein anderes Gerät (z. B. Android-Tablet) kann unter ⚙️ Einstellungen → „Dieses Gerät als iPhone-Empfänger“ dasselbe tun.
 

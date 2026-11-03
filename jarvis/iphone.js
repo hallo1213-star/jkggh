@@ -59,7 +59,37 @@ export function createPhoneHub({ onStatus = () => {}, ackTimeoutMs = 9000 } = {}
   const OPEN = 1;
   const live = () => [...phones].filter((p) => p.ws.readyState === OPEN);
   const newest = () => live().sort((a, b) => b.lastSeen - a.lastSeen)[0] || null;
-  const status = () => { const p = newest(); return { connected: Boolean(p), device: p?.device || null, since: p?.since || null }; };
+  // "Turbo" receiver: an Apple Shortcut on the iPhone that long-polls /api/phone/next
+  // and opens app links itself – iOS asks no confirmation for Shortcuts.
+  const turbo = { lastPoll: 0, waiter: null, queue: [], wasActive: false };
+  const turboActive = () => Boolean(turbo.waiter) || Date.now() - turbo.lastPoll < 45_000;
+  const status = () => {
+    const p = newest();
+    if (p) return { connected: true, device: turboActive() ? `${p.device} + Kurzbefehl` : p.device, since: p.since, turbo: turboActive(), page: true };
+    return turboActive() ? { connected: true, device: 'iPhone (Kurzbefehl)', since: turbo.lastPoll, turbo: true, page: false } : { connected: false, device: null, since: null, turbo: false, page: false };
+  };
+  const checkTurbo = () => { const a = turboActive(); if (a !== turbo.wasActive) { turbo.wasActive = a; onStatus(status()); } };
+
+  // the Shortcut asks for the next command (waits up to timeoutMs)
+  function poll(timeoutMs = 25_000) {
+    turbo.lastPoll = Date.now();
+    if (turbo.waiter) turbo.waiter.resolve(null);
+    const next = turbo.queue.shift();
+    checkTurbo();
+    if (next) { next.delivered(); return Promise.resolve(next.command); }
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => { if (turbo.waiter?.resolve === done) turbo.waiter = null; turbo.lastPoll = Date.now(); resolve(null); }, timeoutMs);
+      function done(command) { clearTimeout(timer); turbo.lastPoll = Date.now(); resolve(command); }
+      turbo.waiter = { resolve: done };
+    });
+  }
+  function toTurbo(command) {
+    return new Promise((resolve) => {
+      const item = { command, delivered: () => { clearTimeout(timer); resolve({ ok: true, state: 'opened', via: 'kurzbefehl' }); } };
+      const timer = setTimeout(() => { turbo.queue = turbo.queue.filter((x) => x !== item); resolve({ ok: false, state: 'timeout' }); }, ackTimeoutMs);
+      if (turbo.waiter) { const w = turbo.waiter; turbo.waiter = null; item.delivered(); w.resolve(command); } else turbo.queue.push(item);
+    });
+  }
 
   function attach(ws) {
     const phone = { ws, device: 'iPhone', since: Date.now(), lastSeen: Date.now(), isAlive: true };
@@ -80,6 +110,9 @@ export function createPhoneHub({ onStatus = () => {}, ackTimeoutMs = 9000 } = {}
   // sends a command to the most recently active iPhone and waits for its answer
   function send(command) {
     const phone = newest();
+    // opening apps: the Shortcut does it without any confirmation → preferred
+    if (turboActive() && command.action === 'open') return toTurbo({ url: command.url, label: command.label || '' });
+    if (!phone && turboActive() && command.turboUrl) return toTurbo({ url: command.turboUrl, label: command.label || '' }).then((r) => (r.ok ? { ok: true, state: 'ready', via: 'kurzbefehl' } : r));
     if (!phone) return Promise.resolve({ ok: false, state: 'offline' });
     const id = `p${(seq += 1)}`;
     return new Promise((resolve) => {
@@ -98,12 +131,14 @@ export function createPhoneHub({ onStatus = () => {}, ackTimeoutMs = 9000 } = {}
   }
   const clip = (id) => clips.get(String(id || '')) || null;
 
+  const turboTimer = setInterval(checkTurbo, 10_000);
+  turboTimer.unref?.();
   const heartbeat = setInterval(() => {
     for (const p of phones) { if (!p.isAlive) { p.ws.terminate(); continue; } p.isAlive = false; try { p.ws.ping(); } catch { /* closed */ } }
   }, 25_000);
   heartbeat.unref?.();
 
-  return { attach, send, status, storeClip, clip, get count() { return live().length; } };
+  return { attach, send, poll, status, storeClip, clip, get count() { return live().length; } };
 }
 
 // Tool replies for the voice AI (German, short).
@@ -111,7 +146,7 @@ export function openReply(app, result) {
   if (result.state === 'offline') return { ok: false, fehler: 'Das iPhone ist nicht verbunden. Er soll Jarvis auf dem iPhone in Safari öffnen (eingeloggt) und offen lassen – dann steht oben „iPhone verbunden“.' };
   if (result.state === 'timeout') return { ok: false, fehler: 'Das iPhone hat nicht geantwortet. Wahrscheinlich ist Jarvis dort im Hintergrund oder der Bildschirm aus – er soll Jarvis auf dem iPhone wieder öffnen.' };
   if (result.state === 'opened') return { ok: true, geoeffnet: app.label, hinweis: `${app.label} ist auf dem iPhone offen${app.searched ? ' (mit Suche)' : ''}. Kurz bestätigen.` };
-  if (result.state === 'tap') return { ok: true, geoeffnet: false, hinweis: `iOS verlangt hier einen Tipp: Auf dem iPhone steht jetzt ein Knopf „${app.label} öffnen“ – einmal antippen.${app.via === 'kurzbefehl' ? ` Falls dann nichts passiert, fehlt der Kurzbefehl „${app.shortcut}“ (Anleitung im README).` : ''}` };
+  if (result.state === 'tap') return { ok: true, geoeffnet: false, hinweis: `iOS verlangt hier einen Tipp: Auf dem iPhone steht jetzt ein Knopf „${app.label} öffnen“ – einmal antippen.${app.via === 'kurzbefehl' ? ` Falls dann nichts passiert, fehlt der Kurzbefehl „${app.shortcut}“ (Anleitung im README).` : ''} Ohne Tippen geht es mit dem Kurzbefehl „Jarvis Empfänger“ (README).` };
   return { ok: false, fehler: result.info || `${app.label} konnte auf dem iPhone nicht geöffnet werden. Ist die App installiert?` };
 }
 

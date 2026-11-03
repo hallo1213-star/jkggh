@@ -53,3 +53,21 @@ await tool.run({ action: 'sprachnachricht', contact: 'Marie', text: 'Ich komme s
 assert(seen[0][1] === 'Spotify' && seen[1][1] === 'Marie' && seen[1][2] === 'Ich komme später.', 'Werkzeug iphone_control leitet weiter');
 err = ''; try { await tool.run({ action: 'sprachnachricht', contact: 'Marie' }, ctx); } catch (e) { err = e.message; } assert(/Was soll/.test(err), 'Sprachnachricht ohne Text wird nachgefragt');
 assert((await tool.run({ action: 'status' }, ctx)).verbunden === true, 'Status');
+
+// Turbo receiver (Apple Shortcut long-poll)
+const hub2 = createPhoneHub({ ackTimeoutMs: 300 });
+assert(!hub2.status().connected, 'ohne Kurzbefehl: nicht verbunden');
+const pollP = hub2.poll(500);
+assert(hub2.status().connected && hub2.status().turbo, 'Kurzbefehl fragt → iPhone gilt als verbunden');
+const sendP = hub2.send({ action: 'open', url: 'whatsapp://', label: 'WhatsApp' });
+assert((await pollP).url === 'whatsapp://', 'Kurzbefehl bekommt den App-Link sofort');
+assert((await sendP).state === 'opened', 'Öffnen über Kurzbefehl = ohne Bestätigung');
+const queued = hub2.send({ action: 'open', url: 'spotify://' });
+assert((await hub2.poll(500)).url === 'spotify://' && (await queued).state === 'opened', 'Befehl zwischen zwei Abfragen wartet in der Schlange');
+assert((await hub2.poll(50)) === null, 'nichts zu tun → leere Antwort');
+const v = hub2.send({ action: 'voice', turboUrl: 'https://x/?phonecmd=abc' });
+assert((await hub2.poll(500)).url === 'https://x/?phonecmd=abc' && (await v).state === 'ready', 'Sprachnachricht über Kurzbefehl öffnet die Jarvis-Seite mit der Karte');
+const ws2 = new FakeWs(); hub2.attach(ws2);
+const viaPage = hub2.send({ action: 'voice', turboUrl: 'https://x/?phonecmd=abc' });
+assert(ws2.sent.at(-1)?.action === 'voice', 'ist Jarvis auf dem iPhone offen, geht die Sprachnachricht direkt dorthin');
+ws2.emit('message', JSON.stringify({ type: 'ack', id: ws2.sent.at(-1).id, ok: true, state: 'ready' })); await viaPage;
