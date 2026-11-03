@@ -55,7 +55,7 @@ err = ''; try { await tool.run({ action: 'sprachnachricht', contact: 'Marie' }, 
 assert((await tool.run({ action: 'status' }, ctx)).verbunden === true, 'Status');
 
 // Turbo receiver (Apple Shortcut long-poll)
-const hub2 = createPhoneHub({ ackTimeoutMs: 300 });
+const hub2 = createPhoneHub({ ackTimeoutMs: 300, turboWaitMs: 300 });
 assert(!hub2.status().connected, 'ohne Kurzbefehl: nicht verbunden');
 const pollP = hub2.poll(500);
 assert(hub2.status().connected && hub2.status().turbo, 'Kurzbefehl fragt → iPhone gilt als verbunden');
