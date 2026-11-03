@@ -470,6 +470,21 @@ Sag zu Jarvis: **„Erstelle mir einen Link für meinen Freund, damit er dich au
 - **Kosten:** Gäste nutzen deine Deepgram-Minuten → Limit pro Gast und Tag: 30 Minuten (bei Render änderbar: `GUEST_MINUTES`).
 - **Sperren:** bei Render `GUEST_BLOCK` = Name des Freundes (mehrere mit Komma) → sein Zugang endet sofort.
 
+## Befehls-Animationen (Command Animation Engine) 🎬
+
+Jede wichtige Aktion bekommt ihre eigene Animation – ausgelöst von dem, was Jarvis **wirklich tut** (der echten Funktion), nicht von bestimmten Wörtern. „Mach mir eine moderne Website“ und „Erstelle einen Onlineshop“ führen beide zur Website-Animation, weil Jarvis dafür die Website-Funktion startet.
+
+| Was passiert | Animation |
+|---|---|
+| Jarvis denkt nach (echte Denkphase) | Kern färbt sich warm, neuronales Netz leuchtet, Impulse wandern; sobald er antwortet, verschmelzen die Knoten mit dem Kern |
+| „Öffne deine Systeme“ | Der KI-Kern öffnet sich in 3D, Tafeln für die **tatsächlich vorhandenen** Module (Anzahl Funktionen, Status wie „Laptop verbunden“) erscheinen, die Kamera fährt sie ab, antippen = Fokus |
+| „Erstelle eine Website …“ | Holografisches Drahtgitter baut sich Bauteil für Bauteil auf – im Takt der **echten** Bau-Schritte; erst wenn der Bau wirklich fertig ist: „Website fertig“ → echte Vorschau. Bei Fehler: rotes Flackern + Fehlermeldung |
+| „Zeig mir Berlin“ | Der vorhandene 3D-Globus fliegt hin, dazu Zielerfassung mit echten Koordinaten |
+| „Zeig mir deine Erinnerungen“ | Die echten Erinnerungen fliegen als Datenobjekte ein, dann öffnet sich der Gedächtnis-Palast (Erinnerung antippen = lesen/bearbeiten/löschen). Keine erfundenen Einträge |
+| alles andere | Neutrale Animation: kleiner Auftrags-Chip über dem Kern (läuft → ✓ fertig / ✕ Fehler) |
+
+Technik: `public/cae/` – Event-System (`COMMAND_RECEIVED`, `COMMAND_CLASSIFIED`, `ACTION_STARTED`, `ACTION_PROGRESS`, `ACTION_COMPLETED`, `ACTION_FAILED`, `AGENT_STATE`), Zustand, Module, Fehlerschutz (eine kaputte Animation stört Jarvis nie), Leistungsstufen (iPhone: weniger Teilchen, begrenzte Pixeldichte; „Bewegung reduzieren“ wird beachtet; pausiert im Hintergrund).
+
 ## Startanimation 🔴
 
 Beim Öffnen von Jarvis (Design „Jarvis wie im Video“): Oberfläche ausgeblendet → schwarzer Bildschirm → dünner roter Lichtstrahl von oben nach unten → dein bestehender Reaktor (derselbe Canvas-Code) entsteht in der Mitte, pulsiert, die Ringe drehen schneller und werden heller → rote Partikel fliegen zum Kern → roter Energieimpuls über den Bildschirm → die normale Oberfläche blendet ein, der Reaktor bleibt an seinem Platz → „Alle Systeme sind online.“ (nur wenn der Server wirklich erreichbar ist, sonst „Verbindung wird hergestellt …“). Dauer ca. 5,5 s, Knopf „Überspringen“, startet nie doppelt. Mit Soundeffekten (live erzeugt, keine Dateien): Bass-Teppich, Scan-Ton des Lichtstrahls, Einschalt-Schlag des Reaktors, aufladendes Surren mit Funken, Energie-Aufprall, Übergangs-Rauschen mit Akkord und HUD-Bestätigung bei „Alle Systeme sind online.“; Lautsprecher-Knopf schaltet den Ton ab (wird gemerkt). Blockiert der Browser Ton bis zum ersten Tippen (iPhone), wartet der schwarze Bildschirm mit „Tippen, um Jarvis zu starten“ – der Tipp startet Animation mit Ton und gleichzeitig das Mikrofon. Danach den Reaktor (oder „Jarvis aktivieren“) antippen, um das Mikrofon freizugeben.

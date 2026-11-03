@@ -1162,6 +1162,7 @@ browserWss.on('connection', (browser, request, guest = null) => {
   }
 
   const context = {
+    systemsInfo: () => ({ tools: cloudTools.map((t) => t.name), laptopTools: laptopFunctions.length, laptop: laptopConnected(), phone: phoneHub.status().connected, telegram: telegramConfigured(), gmail: gmailConfigured(), twilio: twilioConfigured(), voice: elevenLabsConfigured() ? 'ElevenLabs' : 'Deepgram Aura' }),
     phone: {
       status: () => phoneHub.status(),
       async open(app, query) {
@@ -1408,14 +1409,14 @@ browserWss.on('connection', (browser, request, guest = null) => {
     }
     const tool = findCloudTool(name) || findLaptopTool(name);
     const label = tool?.label(args) ?? name;
-    toBrowser({ type: 'action', id, label, state: 'running', laptop: !findCloudTool(name) });
+    toBrowser({ type: 'action', id, label, state: 'running', laptop: !findCloudTool(name), tool: name });
     const { state, result } = await runFunction(id, name, args);
     if (cancelled.has(id) || !agentOpen) {
-      toBrowser({ type: 'action', id, label, state: 'cancelled' });
+      toBrowser({ type: 'action', id, label, state: 'cancelled', tool: name });
       return;
     }
     agent.sendFunctionCallResponse({ type: 'FunctionCallResponse', id, name: callName, content: JSON.stringify(result) });
-    toBrowser({ type: 'action', id, label, state, detail: result.fehler });
+    toBrowser({ type: 'action', id, label, state, detail: result.fehler, tool: name });
     console.log(`Funktion ${name}: ${state}${result.fehler ? ` – ${result.fehler}` : ''}`);
   }
 

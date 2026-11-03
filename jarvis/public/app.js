@@ -25,6 +25,7 @@ import { handleFx4, initFx4 } from './fx4.js';
 import { FX5_ACTIONS, handleFx5, initFx5 } from './fx5.js';
 import { openEscape, openSecret } from './fx6.js';
 import { enterGuestMode, showInvite } from './invite.js';
+import { ingest as animate } from './cae/engine.js';
 import { handlePhoneStatus, initIphone, phoneState, receiverWanted, setReceiver } from './iphone.js';
 import { showMindmap } from './mindmap.js';
 import { openChess } from './chess.js';
@@ -1526,6 +1527,8 @@ function disconnected(reason) {
 }
 
 function handleMessage(message) {
+  // Command Animation Engine: real events → animations (never blocks the app)
+  try { animate(message); } catch (error) { console.warn('Animation', error); }
   switch (message.type) {
     case 'status':
       if (message.state === 'listening' && !state.connected) {

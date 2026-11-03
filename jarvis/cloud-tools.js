@@ -1,3 +1,4 @@
+import { buildSystems } from './systems-map.js';
 // Functions that run in the cloud and work even when the laptop is off.
 import { createInvite, normalizePlatform, platformLabel } from './guest.js';
 import { buildMindmap, extendMap } from './mindmap.js';
@@ -1472,6 +1473,18 @@ export const cloudTools = [
       const url = `${context.origin}/einladung?t=${createInvite({ name, platform: p })}`;
       context.showVisual?.({ type: 'invite', url, name: String(name || '').slice(0, 40), platform: p, label: platformLabel(p) });
       return { erstellt: true, fuer: name || 'Freund', geraet: platformLabel(p), hinweis: `Der Link steht auf dem Bildschirm (Kopieren/Teilen). Er gilt 30 Tage zum Öffnen, ${p === 'handy' ? 'nur auf dem Handy' : p === 'laptop' ? 'nur am Laptop/PC' : 'auf Handy und Laptop'}. Sag kurz: Er soll ihn dem Freund schicken; der Freund öffnet ihn und tippt „Jarvis starten“ (am Handy vorher „Zum Home-Bildschirm“). Der Freund hat eine eigene Unterhaltung ohne Zugriff auf seine Daten, mit Tageslimit. Lies den Link NICHT vor.` };
+    }
+  },
+  {
+    name: 'systems_overview',
+    description: 'Öffnet Jarvis\' Systeme: der KI-Kern öffnet sich und zeigt alle wirklich vorhandenen Funktionsmodule (mit Anzahl und Status, z. B. Laptop verbunden). Für „Öffne deine Systeme“, „Zeig mir deine Module“, „Was kannst du alles?“ (visuell).',
+    parameters: { type: 'object', properties: {} },
+    label: () => 'Systeme öffnen',
+    run: async (args, context) => {
+      if (!context.systemsInfo) throw new Error('Geht nur in der Jarvis-App.');
+      const sys = buildSystems(context.systemsInfo());
+      context.showVisual?.({ type: 'systems', ...sys });
+      return { module: sys.modules.map((m) => `${m.title} (${m.detail})`), hinweis: 'Die Module erscheinen nacheinander. Stell 2–3 davon in einem Satz vor – nur diese, nichts erfinden.' };
     }
   },
   {
