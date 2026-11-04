@@ -472,7 +472,17 @@ Sag zu Jarvis: **„Erstelle mir einen Link für meinen Freund, damit er dich au
 
 ## TikTok-Modus 🎬
 
-Sag: **„Jarvis, ich nehme gerade ein TikTok auf“** (oder „Stell dich mal vor“, „Zeig, was du kannst“). Jarvis sagt „Kamera läuft!“ und startet eine ~45-Sekunden-Show im Vollbild (rot/schwarz, Hoch- und Querformat):
+Sag: **„Jarvis, ich nehme gerade ein TikTok auf“** (oder „… ein Video auf“, „Stell dich mal vor“). Als **Serie in 5 Teilen** – sag „… **Part 2**“ bis „… **Part 5**“:
+
+| Teil | Thema |
+|---|---|
+| Part 1 | Wer er ist, wie er ist, wie viele Funktionen, was er baut, Show-Highlights |
+| Part 2 | Anzug (Design, Anziehen, Fliegen, Helm) und Kamera-Effekte (Laser-Augen, Cyborg, Klone, Matrix-Moment, Energieklinge, Teleport), Kinoplakat, 3D-Hologramm |
+| Part 3 | Alltag: Gedächtnis, Erinnerungen, Termine, Einkaufsliste, Wetter, Nachrichten, Übersetzen, Routen, E-Mails, Telegram, iPhone- und Laptop-Steuerung |
+| Part 4 | Bauen: Websites & Shops, App-Fabrik, Spiele, Bilder, Logos, Videos, 3D-Modelle, Business-Modus |
+| Part 5 | Großes Finale: digitale Welt, 3D-Globus, ISS live, Holo-Schach, Escape-Room, Geheimcode, Holo-Katze, Feuerwerk, schwarzes Loch |
+
+Teil 2–5 beginnen mit einer großen „PART n“-Einblendung, Teil 1–4 enden mit „PART n+1 KOMMT BALD“. Ablauf von Part 1: Jarvis sagt „Kamera läuft!“ und startet eine ~45-Sekunden-Show im Vollbild (rot/schwarz, Hoch- und Querformat):
 
 1. **Intro** – roter Lichtstrahl, der Reaktor zündet mit Schockwelle und Funkenregen: „Hallo TikTok! Ich bin Jarvis …“
 2. **Wer bin ich?** – SCHNELL · FRECH · EHRLICH knallen mit Glitch-Effekt ins Bild

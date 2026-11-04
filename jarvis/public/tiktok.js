@@ -67,6 +67,15 @@ const SCENES = {
     if (t > 900) reactor(c, W / 2, H * 0.4, r, t, Math.min(1, (t - 900) / 700));
     if (t > 1900 && !s.flag1) { s.flag1 = true; hit(0.12); burst(P, W / 2, H * 0.4, perf.tier === 'high' ? 160 : 80, 9); s.shock = t; }
     if (s.shock) { const f = (t - s.shock) / 900; if (f < 1) { c.strokeStyle = `rgba(${RED},${1 - f})`; c.lineWidth = 6 * (1 - f) + 1; c.beginPath(); c.arc(W / 2, H * 0.4, f * Math.max(W, H) * 0.7, 0, Math.PI * 2); c.stroke(); } }
+    // series: big glitching "PART 2" card slams in after the ignition
+    const part = s.data.part || 1;
+    if (part > 1 && t > 2100) {
+      const f = Math.min(1, (t - 2100) / 300); const sc = 2.2 - 1.2 * f; const jit = t % 900 < 80 ? rnd(-6, 6) : 0;
+      const fs = Math.min(W * 0.2, H * 0.13);
+      c.save(); c.translate(W / 2 + jit, H * 0.62); c.scale(sc, sc); c.globalAlpha = f; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = `900 ${fs}px Inter, Arial, sans-serif`;
+      c.fillStyle = 'rgba(0,255,255,0.4)'; c.fillText(`PART ${part}`, -4, 0); c.fillStyle = `rgba(${RED},0.9)`; c.fillText(`PART ${part}`, 4, 0); c.fillStyle = '#fff'; c.fillText(`PART ${part}`, 0, 0); c.restore();
+      if (!s.partHit) { s.partHit = true; hit(0.11); }
+    }
     return k;
   },
   wesen(c, W, H, t, s) {
@@ -76,7 +85,8 @@ const SCENES = {
       const ti = t - 500 - i * per; if (ti < 0) return;
       if (!s[`w${i}`]) { s[`w${i}`] = true; hit(0.08); whoosh(0.03, 0.3); }
       const f = Math.min(1, ti / 260); const scale = 2.6 - 1.6 * f;
-      const y = H * (0.2 + i * 0.13); const fs = Math.min(W * 0.14, H * 0.09);
+      const y = H * (0.2 + i * 0.13); let fs = Math.min(W * 0.14, H * 0.09);
+      c.font = `900 ${fs}px Inter, Arial, sans-serif`; const tw = c.measureText(w).width; if (tw > W * 0.9) fs *= (W * 0.9) / tw; // long words fit the screen
       c.save(); c.translate(W / 2, y); c.scale(scale, scale); c.globalAlpha = f;
       c.font = `900 ${fs}px Inter, Arial, sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
       c.fillStyle = 'rgba(0,255,255,0.35)'; c.fillText(w, -3, 0); c.fillStyle = `rgba(${RED},0.8)`; c.fillText(w, 3, 0);
@@ -125,7 +135,7 @@ const SCENES = {
       else if (card.title.startsWith('Apps')) { c.strokeRect(-ih * 0.3, iy, ih * 0.6, ih); c.fillStyle = `rgba(${RED},0.8)`; c.font = '10px monospace'; for (let k = 0; k < 6; k += 1) c.fillText(['fn()', '{ }', '=>', 'let', 'if', '<>'][(k + Math.floor(ti / 200)) % 6], -ih * 0.22, iy + 14 + k * (ih / 7)); }
       else { const pr = Math.min(1, ti / 1800); for (let k = 0; k < 40 * pr; k += 1) { c.fillStyle = `hsla(${350 + (k * 37) % 40}, 90%, ${45 + (k * 13) % 30}%, 0.8)`; c.beginPath(); c.arc(ix + ((k * 53) % 100) / 100 * iw, iy + ((k * 31) % 100) / 100 * ih, 4 + (k % 4), 0, Math.PI * 2); c.fill(); } }
       c.fillStyle = '#fff'; c.textAlign = 'center'; c.font = `800 ${Math.min(22, cw * 0.09)}px Inter, Arial, sans-serif`; c.fillText(`${card.icon} ${card.title}`, 0, ch / 2 - 40);
-      c.fillStyle = '#ffd0d4'; c.font = `500 ${Math.min(15, cw * 0.06)}px Inter, Arial, sans-serif`; c.fillText(card.sub, 0, ch / 2 - 16);
+      if (card.sub) { c.fillStyle = '#ffd0d4'; c.font = `500 ${Math.min(15, cw * 0.06)}px Inter, Arial, sans-serif`; c.fillText(card.sub, 0, ch / 2 - 16); }
       c.restore();
     });
   },
@@ -150,11 +160,12 @@ const SCENES = {
     const pulse = 1 + Math.sin(t / 260) * 0.06;
     reactor(c, W / 2, H * 0.36, Math.min(W, H) * 0.16 * pulse, t, 1);
     if (!s.f) { s.f = true; hit(0.12); burst(P, W / 2, H * 0.36, perf.tier === 'high' ? 140 : 70, 8); }
-    const typed = '„Jarvis …“'.slice(0, Math.floor(t / 110));
+    const next = s.data.next; const full = next ? `${next} KOMMT BALD` : '„Jarvis …“';
+    const typed = full.slice(0, Math.floor(t / 90));
     c.fillStyle = '#040001'; c.fillRect(0, H * 0.55, W, H * 0.17); // no motion-trail ghosts behind the text
     c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.font = `500 ${Math.min(W * 0.05, 26)}px Inter, Arial, sans-serif`; c.fillStyle = '#ffd0d4'; c.fillText('Sag einfach', W / 2, H * 0.6);
-    c.font = `900 ${Math.min(W * 0.11, 64)}px Inter, Arial, sans-serif`; c.fillStyle = '#fff'; c.fillText(typed + (Math.floor(t / 400) % 2 ? '' : '▌'), W / 2, H * 0.67);
+    c.font = `500 ${Math.min(W * 0.05, 26)}px Inter, Arial, sans-serif`; c.fillStyle = '#ffd0d4'; c.fillText(next ? 'Folgen nicht vergessen!' : 'Sag einfach', W / 2, H * 0.6);
+    c.font = `900 ${Math.min(next ? W * 0.075 : W * 0.11, 64)}px Inter, Arial, sans-serif`; c.fillStyle = '#fff'; c.fillText(typed + (Math.floor(t / 400) % 2 ? '' : '▌'), W / 2, H * 0.67);
   }
 };
 

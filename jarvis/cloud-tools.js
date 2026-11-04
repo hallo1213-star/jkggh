@@ -1515,15 +1515,15 @@ export const cloudTools = [
   },
   {
     name: 'tiktok_show',
-    description: 'TikTok-Modus: Jarvis stellt sich in einer großen animierten Show vor (wer er ist, wie er ist, was er kann – nur echte Funktionen) und spricht dazu Szene für Szene. Für „Ich nehme gerade ein TikTok auf“, „Stell dich mal vor“, „Zeig, was du kannst“, „Wir sind live“. action: start | stopp.',
-    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['start', 'stopp'] } }, required: ['action'] },
-    label: (a) => (a.action === 'stopp' ? 'TikTok-Show beenden' : 'TikTok-Show'),
-    run: async ({ action }, context) => {
+    description: 'TikTok-Modus als Serie in 5 Teilen: Jarvis stellt sich in einer großen animierten Show vor und spricht dazu Szene für Szene (nur echte Funktionen). part 1 = wer er ist; 2 = Anzug & Kamera-Effekte; 3 = Alltag & Steuerung; 4 = Bauen & Erschaffen; 5 = Welt, Spiele & Finale. Für „Ich nehme gerade ein TikTok/Video auf“ (part 1) und „… Part 2/3/4/5“. action: start | stopp.',
+    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['start', 'stopp'] }, part: { type: 'number', description: '1–5, aus „Part 2“ usw.; ohne Angabe 1' } }, required: ['action'] },
+    label: (a) => (a.action === 'stopp' ? 'TikTok-Show beenden' : `TikTok-Show${a.part > 1 ? ` · Part ${a.part}` : ''}`),
+    run: async ({ action, part }, context) => {
       if (action === 'stopp') { context.tiktok = null; context.showVisual?.({ type: 'tiktok', action: 'stopp' }); return { ok: true, hinweis: 'Kurz bestätigen.' }; }
       if (!context.systemsInfo) throw new Error('Die Show geht nur in der Jarvis-App.');
-      const show = buildShow(context.systemsInfo());
+      const show = buildShow(context.systemsInfo(), part);
       context.tiktok = { lines: show.scenes.map((s) => s.line), until: Date.now() + 5 * 60_000 };
-      context.showVisual?.({ type: 'tiktok', action: 'start', scenes: show.scenes });
+      context.showVisual?.({ type: 'tiktok', action: 'start', part: show.part, scenes: show.scenes });
       return { ok: true, hinweis: 'Die Show startet gleich auf dem Bildschirm und du sprichst dann automatisch die Texte der einzelnen Szenen. Antworte JETZT nur mit genau zwei Wörtern: „Kamera läuft!“ – sonst nichts.' };
     }
   },
