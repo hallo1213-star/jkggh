@@ -1618,6 +1618,10 @@ browserWss.on('connection', (browser, request, guest = null) => {
       clearTimeout(context.pranks?.selfDestruct);
     } else if (message.type === 'level_state') {
       context.level = { level: Math.max(1, Number(message.level) || 1), xp: Math.max(0, Number(message.xp) || 0), next: Math.max(1, Number(message.next) || 50) };
+    } else if (message.type === 'show_line') {
+      // TikTok show: the browser asks for the next line of the script the tool created
+      const show = context.tiktok; const i = Number(message.index);
+      if (show && Date.now() < show.until && Number.isInteger(i) && show.lines[i]) context.say(show.lines[i]);
     } else if (message.type === 'pet_state') {
       context.petState = message.exists ? { exists: true, name: message.name ? String(message.name).slice(0, 20) : null, stufe: String(message.stufe || '').slice(0, 10), stimmung: String(message.stimmung || '').slice(0, 30), hunger: Number(message.hunger) || 0, spass: Number(message.spass) || 0, energie: Number(message.energie) || 0, xp: Number(message.xp) || 0, naechsteStufeBei: message.naechsteStufeBei ?? null } : { exists: false };
     } else if (message.type === 'suit_state') {

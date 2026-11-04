@@ -28,6 +28,7 @@ import { enterGuestMode, showInvite } from './invite.js';
 import { ingest as animate } from './cae/engine.js';
 import { initPet, openPet, petState } from './pet.js';
 import { openHoloName } from './holoname.js';
+import { initTikTok, startTikTok, stopTikTok } from './tiktok.js';
 import { handlePhoneStatus, initIphone, phoneState, receiverWanted, setReceiver } from './iphone.js';
 import { showMindmap } from './mindmap.js';
 import { openChess } from './chess.js';
@@ -160,6 +161,7 @@ els.halfDuplex.addEventListener('change', () => saveSetting('jarvis.halfDuplex',
 
 function setMode(mode) {
   state.mode = mode;
+  document.dispatchEvent(new CustomEvent('jarvis-mode', { detail: mode }));
   document.body.dataset.mode = mode;
   const shown = state.micMuted && (mode === 'listening') ? 'muted' : mode;
   els.statusLine.textContent = statusText[shown] || mode;
@@ -1296,6 +1298,12 @@ initReality({ toast });
 initFx3({ toast, muteJarvis: (mute) => { if (state.connected && state.micMuted !== mute) els.micToggle.click(); } });
 initFx4({ toast });
 initIphone({ toast, chip: els.chipText });
+let showMutedMic = false;
+initTikTok({
+  send: (m) => { try { if (state.ws?.readyState === 1) { state.ws.send(JSON.stringify(m)); return true; } } catch { /* offline */ } return false; },
+  // during the show the mic is muted so Jarvis' own voice cannot interrupt him; restored afterwards
+  muteMic: (on) => { if (on) { if (state.connected && !state.micMuted) { els.micToggle.click(); showMutedMic = true; } } else if (showMutedMic) { if (state.micMuted) els.micToggle.click(); showMutedMic = false; } }
+});
 initPet({ toast, send: (m) => { try { if (state.ws?.readyState === 1) state.ws.send(JSON.stringify(m)); } catch { /* offline */ } } });
 initFx5({ toast, runEffect: (action) => handleMessage({ type: 'effect', action }) });
 initFun({ toast, send: (message) => { if (state.ws?.readyState === 1) state.ws.send(JSON.stringify(message)); } });
@@ -1776,6 +1784,9 @@ function handleMessage(message) {
       break;
     case 'holoname':
       openHoloName(message.text);
+      break;
+    case 'tiktok':
+      if (message.action === 'stopp') stopTikTok(); else startTikTok(message.scenes);
       break;
     case 'guest':
       enterGuestMode(message.name);

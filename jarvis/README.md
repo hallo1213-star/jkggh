@@ -470,6 +470,19 @@ Sag zu Jarvis: **„Erstelle mir einen Link für meinen Freund, damit er dich au
 - **Kosten:** Gäste nutzen deine Deepgram-Minuten → Limit pro Gast und Tag: 30 Minuten (bei Render änderbar: `GUEST_MINUTES`).
 - **Sperren:** bei Render `GUEST_BLOCK` = Name des Freundes (mehrere mit Komma) → sein Zugang endet sofort.
 
+## TikTok-Modus 🎬
+
+Sag: **„Jarvis, ich nehme gerade ein TikTok auf“** (oder „Stell dich mal vor“, „Zeig, was du kannst“). Jarvis sagt „Kamera läuft!“ und startet eine ~45-Sekunden-Show im Vollbild (rot/schwarz, Hoch- und Querformat):
+
+1. **Intro** – roter Lichtstrahl, der Reaktor zündet mit Schockwelle und Funkenregen: „Hallo TikTok! Ich bin Jarvis …“
+2. **Wer bin ich?** – SCHNELL · FRECH · EHRLICH knallen mit Glitch-Effekt ins Bild
+3. **Funktionen** – Zähler rast hoch, seine echten Module kreisen in 3D um den Reaktor
+4. **Ich baue für dich** – animierte Karten: Website baut sich auf, App mit Code, Bild malt sich
+5. **Show** – Schnell-Montage: Iron-Man-Anzug, Laser-Augen (mit Laserstrahlen), Feuerwerk, schwarzes Loch, 3D-Globus, Holo-Katze
+6. **Outro** – „Sag einfach: Jarvis …“ · „Folgt für mehr!“
+
+Jarvis spricht jede Szene selbst; die nächste startet erst, wenn er fertig ist. TikTok-Untertitel heben das gesprochene Wort hervor, dazu leise Whoosh-/Bass-Effekte und ein REC-Fortschrittsbalken. Alles, was er erzählt, stammt aus seinen wirklich vorhandenen Funktionen. Während der Show ist das Mikro stumm (damit sich Jarvis nicht selbst unterbricht) und danach wieder an. ✕ beendet die Show.
+
 ## Jarvis Studio 2.0 – Agentur-Websites mit Qualitäts-Agent 🧪
 
 „Erstelle mir eine moderne Website für …“ / „Bau einen Online-Shop für …“ → Jarvis Studio öffnet sich.
