@@ -524,8 +524,12 @@ const httpServer = createServer(async (request, response) => {
       return;
     }
     const cookie = guestCookie(invite, isSecure(request));
-    if (query.get('app')) { response.writeHead(302, { location: '/', 'set-cookie': cookie, 'cache-control': 'no-store' }); response.end(); return; }
-    html(200, invitePage({ ok: true, invite, token }), { 'set-cookie': cookie });
+    // The owner is logged in on this device: his login would win and the friend
+    // would talk to (and change) the OWNER's Jarvis. Only switch after an explicit choice.
+    if (isAuthenticated(request) && !query.get('wechseln')) { html(200, invitePage({ ok: true, invite, token, ownerHere: true })); return; }
+    const cookies = isAuthenticated(request) ? [cookie, clearedCookie(isSecure(request))] : cookie;
+    if (query.get('app') || query.get('wechseln')) { response.writeHead(302, { location: query.get('app') ? '/' : `/einladung?t=${encodeURIComponent(token)}`, 'set-cookie': cookies, 'cache-control': 'no-store' }); response.end(); return; }
+    html(200, invitePage({ ok: true, invite, token }), { 'set-cookie': cookies });
     return;
   }
 

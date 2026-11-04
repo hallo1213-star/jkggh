@@ -32,3 +32,6 @@ const shown = [];
 const r = await tool.run({ platform: 'handy', name: 'Abdullah Demir' }, { origin: 'https://jarvis.example', showVisual: (m) => shown.push(m) });
 assert(r.erstellt && shown[0].url.startsWith('https://jarvis.example/einladung?t=') && readInvite(new URL(shown[0].url).searchParams.get('t')).platform === 'handy', 'Jarvis erstellt den Link (nur Handy)');
 err = ''; try { await tool.run({ name: 'A' }, { origin: 'x' }); } catch (e) { err = e.message; } assert(/Nur für Laptop/.test(err), 'ohne Gerät fragt Jarvis nach');
+const owner = invitePage({ ok: true, invite: { ...inv, name: 'Abdullah Demir' }, token: t, ownerHere: true });
+assert(/als Besitzer angemeldet/.test(owner) && owner.includes('&wechseln=1') && !owner.includes('/einladung/manifest'), 'Link auf dem Gerät des Besitzers: Hinweis statt stillem Login als Besitzer');
+assert(/Nenn mich/.test(guestPrompt(inv)) && /beim Besitzer ändert sich dadurch nichts/.test(guestPrompt(inv)), 'Gast: „Nenn mich …“ nur im eigenen Gespräch');

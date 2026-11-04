@@ -83,13 +83,16 @@ export function guestPrompt(guest, ownerName) {
 Heute ist ${now.toLocaleDateString('de-DE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Berlin' })}, ${now.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Berlin' })} Uhr.
 Als Gast kannst du: Wetter, Nachrichten, Wissen, Rechnen, Übersetzen, Quiz, Spiele bauen, Bilder erstellen, Fußball, Routen, Feuerwerk, Schwerkraft, schwarzes Loch, Gedanken-Karte, Holo-Schach, Escape-Room, Geheimcode, Kamera-Effekte (Laser-Augen, Luft-Malen, Klone, Matrix-Moment, Cyborg, Anzug), Helm, Kinoplakat, Globus, eigene Welt.
 Nicht im Gast-Modus: E-Mails, Telegram, Erinnerungen/Gedächtnis, Termine, Notizen, Einkaufsliste, Laptop- oder Handy-Steuerung, Business und Geld. Wenn ${guest.name} das will, sag freundlich, dass das nur der Besitzer kann. Du weißt nichts Privates über ${ownerName || 'den Besitzer'} und erfindest nichts.
+Sagt ${guest.name} „Nenn mich …“, dann nenn ihn ab jetzt in diesem Gespräch so (ohne Funktion) – speichern kannst du es nicht, und beim Besitzer ändert sich dadurch nichts.
 Behaupte nie, etwas getan zu haben, das du nicht per Funktion getan hast.`;
 }
 
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-export function invitePage({ invite, token, ok, reason }) {
+export function invitePage({ invite, token, ok, reason, ownerHere = false }) {
   const t = encodeURIComponent(token || '');
-  const body = !ok
+  const body = ownerHere
+    ? `<p class="k">EINLADUNG FÜR ${esc(invite.name).toUpperCase()}</p><h1>Du bist hier als Besitzer angemeldet</h1><p>Auf diesem Gerät ist dein eigener Jarvis angemeldet. Würde ${esc(invite.name)} hier reden, wäre es <b>dein</b> Jarvis – mit deinen Erinnerungen und Einstellungen.</p><p>Schick den Link einfach ${esc(invite.name)}, er funktioniert auf <b>seinem</b> Gerät.</p><a class="go" href="/">Zurück zu meinem Jarvis</a><a class="go2" href="/einladung?t=${t}&wechseln=1">Auf diesem Gerät zum Gast wechseln (meldet mich hier ab)</a>`
+    : !ok
     ? `<h1>Link ungültig</h1><p>${esc(reason || 'Dieser Einladungslink ist abgelaufen oder ungültig.')}</p><p class="s">Bitte frag nach einem neuen Link.</p>`
     : `<p class="k">EINLADUNG</p><h1>Hallo ${esc(invite.name)}! 👋</h1><p>Du hast Jarvis bekommen – deinen eigenen KI-Assistenten (${esc(platformLabel(invite.platform))}).</p>
 <ol><li id="ios" hidden>Unten auf <b>Teilen</b> <span class="i">⬆︎</span> tippen → <b>„Zum Home-Bildschirm“</b> → <b>Hinzufügen</b>. Dann ist Jarvis wie eine App auf deinem Handy.</li>
@@ -98,12 +101,12 @@ export function invitePage({ invite, token, ok, reason }) {
 <a class="go" href="/einladung?t=${t}&app=1">Jarvis jetzt starten</a><p class="s">Sag z. B. „Mach ein Feuerwerk“, „Laser-Augen an“ oder „Wie wird das Wetter?“</p>`;
   return `<!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Jarvis – Einladung</title>
 <meta name="theme-color" content="#070102"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Jarvis"><meta name="apple-mobile-web-app-status-bar-style" content="black">
-<link rel="apple-touch-icon" href="/apple-touch-icon.png">${ok ? `<link rel="manifest" href="/einladung/manifest?t=${t}">` : ''}
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">${ok && !ownerHere ? `<link rel="manifest" href="/einladung/manifest?t=${t}">` : ''}
 <style>:root{color-scheme:dark}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:24px 16px;box-sizing:border-box;background:radial-gradient(circle at 50% 25%,#3a0309,#070102 65%);color:#fff;font:16px/1.5 Inter,system-ui,sans-serif}
 main{width:min(460px,100%);padding:24px;border:1px solid rgba(255,42,61,.5);border-radius:20px;background:rgba(10,2,3,.9);box-shadow:0 0 50px rgba(255,42,61,.25)}
 .r{width:90px;height:90px;margin:0 auto 14px;border-radius:50%;background:radial-gradient(circle,#fff 0 12%,#ff5c6c 30%,#8a0012 62%,transparent 64%);box-shadow:0 0 40px #ff2a3d;animation:p 2.4s ease-in-out infinite}@keyframes p{50%{transform:scale(1.06);box-shadow:0 0 70px #ff2a3d}}
 .k{margin:0;text-align:center;font-size:11px;letter-spacing:.35em;color:#c9a0a5}h1{margin:6px 0 8px;text-align:center;font-size:26px}p{color:#ffd0d4}ol{padding-left:20px;color:#fff}li{margin:10px 0}
-.go,#install{display:block;width:100%;box-sizing:border-box;margin-top:16px;padding:15px;border:0;border-radius:14px;background:#ff2a3d;color:#fff;font:800 16px Inter,system-ui,sans-serif;text-align:center;text-decoration:none;box-shadow:0 0 24px rgba(255,42,61,.5);cursor:pointer}
+.go2{display:block;margin-top:10px;padding:13px;border:1px solid rgba(255,92,108,.6);border-radius:14px;color:#ffd0d4;text-align:center;text-decoration:none;font:600 14px Inter,system-ui,sans-serif}.go,#install{display:block;width:100%;box-sizing:border-box;margin-top:16px;padding:15px;border:0;border-radius:14px;background:#ff2a3d;color:#fff;font:800 16px Inter,system-ui,sans-serif;text-align:center;text-decoration:none;box-shadow:0 0 24px rgba(255,42,61,.5);cursor:pointer}
 #install{margin:6px 0}.s{display:block;font-size:13px;color:#c9a0a5;text-align:center}.i{display:inline-block;padding:0 6px;border:1px solid #ff5c6c;border-radius:6px}</style></head>
 <body><main><div class="r" aria-hidden="true"></div>${body}</main>
 <script>(function(){var ua=navigator.userAgent,ios=/iPhone|iPad|iPod/.test(ua),and=/Android/.test(ua),st=window.navigator.standalone||matchMedia('(display-mode: standalone)').matches;
