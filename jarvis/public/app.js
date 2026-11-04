@@ -29,6 +29,7 @@ import { ingest as animate } from './cae/engine.js';
 import { initPet, openPet, petState } from './pet.js';
 import { openHoloName } from './holoname.js';
 import { initTikTok, startTikTok, stopTikTok } from './tiktok.js';
+import { showSchool } from './school.js';
 import { handlePhoneStatus, initIphone, phoneState, receiverWanted, setReceiver } from './iphone.js';
 import { showMindmap } from './mindmap.js';
 import { openChess } from './chess.js';
@@ -1784,6 +1785,9 @@ function handleMessage(message) {
       break;
     case 'holoname':
       openHoloName(message.text);
+      break;
+    case 'school':
+      showSchool(message);
       break;
     case 'tiktok':
       if (message.action === 'stopp') stopTikTok(); else startTikTok(message.scenes);

@@ -470,6 +470,24 @@ Sag zu Jarvis: **„Erstelle mir einen Link für meinen Freund, damit er dich au
 - **Kosten:** Gäste nutzen deine Deepgram-Minuten → Limit pro Gast und Tag: 30 Minuten (bei Render änderbar: `GUEST_MINUTES`).
 - **Sperren:** bei Render `GUEST_BLOCK` = Name des Freundes (mehrere mit Komma) → sein Zugang endet sofort.
 
+## Vertretungsplan (DSBmobile) 📚
+
+| Sag zu Jarvis | Was passiert |
+|---|---|
+| „Hab ich heute Vertretung?“ · „Fällt heute was aus?“ | Jarvis liest den Plan aus DSBmobile, nennt nur die Änderungen deiner Klasse und zeigt sie als Karte (Ausfälle rot) |
+| „Hab ich morgen Vertretung?“ | dasselbe für den nächsten Schultag |
+| „Zeig mir den Vertretungsplan“ | alle Tage, die gerade im Plan stehen |
+| „Was hat die 8b morgen?“ | geht auch für andere Klassen |
+| (automatisch) | Im **Tagesbriefing** steht der Plan für heute; ändert sich der Plan deiner Klasse, kommt eine **Telegram-Nachricht** (alle 30 Min. geprüft, 6–21 Uhr) |
+
+**Einrichten:** bei Render → Environment:
+- `DSB_USER` = Benutzername von DSBmobile (bekommst du von der Schule)
+- `DSB_PASSWORD` = Passwort von DSBmobile
+- `DSB_KLASSE` = deine Klasse, z. B. `7D`
+- optional `DSB_TELEGRAM=false`, wenn du keine Telegram-Nachrichten willst
+
+Hinweise: DSBmobile hat keine offizielle Schnittstelle für eigene Apps – Jarvis nutzt dieselbe inoffizielle wie die App; sie kann sich ohne Vorwarnung ändern. Jarvis liest Untis-Pläne (Text). Stellt deine Schule den Plan nur als Bild/PDF ein, zeigt Jarvis ihn an, kann ihn aber nicht nach deiner Klasse durchsuchen. Im Zweifel gilt der Aushang der Schule.
+
 ## Echte KI-Videos 🎥
 
 Sag: **„Erstelle ein echtes KI-Video von …“** – z. B. „… von einem Astronauten auf dem Mars“, „… mit Menschen, die am Strand lachen“, „… einer Drohnenfahrt durch eine Zukunftsstadt, fürs TikTok“.

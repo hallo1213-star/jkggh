@@ -1,3 +1,4 @@
+import { describeEntry, dsbClass, dsbConfigured, forClass, loadPlan } from './dsb.js';
 import { buildShow } from './tiktok.js';
 import { buildSystems } from './systems-map.js';
 // Functions that run in the cloud and work even when the laptop is off.
@@ -38,6 +39,15 @@ import { FONTS, MODES, SECTION_TYPES, encodeSite, sanitizeSite } from './public/
 
 const timeZone = process.env.TZ || 'Europe/Berlin';
 
+
+// day of the plan for today (0) / the next school day (1), Berlin time
+function pickDay(days, offset) {
+  const fmt = (d) => d.toLocaleDateString('sv-SE', { timeZone: 'Europe/Berlin' });
+  const today = fmt(new Date());
+  const future = days.filter((d) => d.date && d.date >= today).sort((a, b) => a.date.localeCompare(b.date));
+  if (offset === 0) return future.find((d) => d.date === today) || null;
+  return future.find((d) => d.date > today) || null;
+}
 export const cloudTools = [
   {
     name: 'get_datetime',
@@ -199,6 +209,9 @@ export const cloudTools = [
         getNews({ limit: 3 })
       ]);
       const [weather, mail, news] = parts;
+      if (dsbConfigured() && dsbClass()) {
+        try { const today = pickDay(forClass(await loadPlan(), dsbClass()), 0); briefing.vertretungsplan = today ? { tag: today.title, klasse: dsbClass(), aenderungen: today.entries.map(describeEntry) } : { hinweis: 'Für heute steht nichts im Plan.' }; } catch (error) { briefing.vertretungsplan = { nichtVerfuegbar: error.message }; }
+      }
       if (weather.status === 'fulfilled') {
         briefing.wetter = weather.value;
         context.showWeather(weather.value);
@@ -1561,6 +1574,23 @@ export const cloudTools = [
       if (context.videoMemory) context.videoMemory.last = project;
       context.showVisual?.({ type: 'video_open', project, voice, fetchClips: true });
       return { gestartet: started.filter((x) => x.clip).length, fehlgeschlagen: failed.length, titel: project.title, hinweis: `${started.filter((x) => x.clip).length} echte KI-Clips werden gerade erzeugt (meist 1–5 Minuten). Das Video Studio ist offen und setzt jeden fertigen Clip automatisch ein; danach kann er es als MP4 exportieren.${failed.length ? ` ${failed.length} Clip(s) konnten nicht starten – dort steht vorerst ein KI-Bild.` : ''} Sag das kurz.` };
+    }
+  },
+  {
+    name: 'school_plan',
+    description: 'Vertretungsplan aus DSBmobile für seine Klasse: Ausfälle, Vertretungen, Raumänderungen. Für „Hab ich morgen Vertretung?“, „Fällt heute was aus?“, „Zeig mir den Vertretungsplan“. tag: heute | morgen | alle. klasse nur, wenn er eine andere Klasse nennt.',
+    parameters: { type: 'object', properties: { tag: { type: 'string', enum: ['heute', 'morgen', 'alle'] }, klasse: { type: 'string' } } },
+    label: (a) => `Vertretungsplan${a.tag ? ` ${a.tag}` : ''}`,
+    run: async ({ tag = 'alle', klasse }, context) => {
+      const k = dsbClass(klasse);
+      if (!k) throw new Error('Für welche Klasse? (Bei Render DSB_KLASSE eintragen, z. B. 7D.)');
+      const plan = await loadPlan();
+      const mine = forClass(plan, k);
+      const days = tag === 'alle' ? mine : [pickDay(mine, tag === 'morgen' ? 1 : 0)].filter(Boolean);
+      context.showVisual?.({ type: 'school', klasse: k, days: days.map((d) => ({ title: d.title, entries: d.entries })), images: plan.images.slice(0, 4) });
+      if (!plan.days.length && plan.images.length) return { klasse: k, hinweis: 'Deine Schule stellt den Plan als Bild/PDF ein – ich kann ihn zeigen (steht auf dem Bildschirm), aber nicht nach deiner Klasse durchsuchen. Sag ihm das ehrlich.' };
+      if (!days.length) return { klasse: k, hinweis: `Für ${tag === 'morgen' ? 'morgen' : tag === 'heute' ? 'heute' : 'die nächsten Tage'} steht noch kein Plan in DSBmobile.` };
+      return { klasse: k, tage: days.map((d) => ({ tag: d.title, aenderungen: d.entries.length ? d.entries.map(describeEntry) : ['keine Änderungen für deine Klasse'] })), hinweis: 'Sag die Änderungen kurz und klar (Stunde, Fach, was passiert). Nichts erfinden.' };
     }
   },
   {

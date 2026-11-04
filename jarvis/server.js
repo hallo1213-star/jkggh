@@ -26,6 +26,7 @@ import { getNews, getWeather } from './knowledge.js';
 import { gmailConfigured, listEmails } from './gmail.js';
 import { sendVoiceNote, synthesize, voiceMessagesEnabled } from './voice-message.js';
 import { GUEST_TOOLS, createUsage, deviceAllowed, guestCookie, guestPrompt, inviteManifest, invitePage, readGuest, readInvite } from './guest.js';
+import { createPlanWatcher, dsbConfigured } from './dsb.js';
 import { createPhoneHub, elevenLabsMp3, makeVoiceClip, openReply, resolveApp } from './iphone.js';
 import { sendTelegramDocument } from './telegram.js';
 import { addIncome, completeUserTask, sanitizeMoney, startMoney, stopMoney, addLog as addMoneyLog, updateProject, updateTask, incomeTotals } from './money-state.js';
@@ -143,6 +144,14 @@ const phoneHub = createPhoneHub({
   }
 });
 const phoneWss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
+
+// Vertretungsplan watcher: every 30 minutes (6–21 Uhr) – Telegram message when
+// the plan for his class changes. The first check only remembers the state.
+const checkSchoolPlan = createPlanWatcher({ send: (text) => sendTelegram(text), enabled: () => dsbConfigured() && telegramConfigured() && process.env.DSB_TELEGRAM?.trim().toLowerCase() !== 'false' });
+setInterval(() => {
+  const hour = Number(new Date().toLocaleTimeString('de-DE', { timeZone: 'Europe/Berlin', hour: '2-digit', hour12: false }));
+  if (hour >= 6 && hour <= 21) checkSchoolPlan().catch((error) => console.warn(`Vertretungsplan: ${error.message}`));
+}, 30 * 60_000).unref?.();
 
 // Lists shared by all devices (shopping list, customers). The free server
 // forgets them while it sleeps, so every device keeps a copy stamped with the
