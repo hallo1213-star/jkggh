@@ -470,6 +470,23 @@ Sag zu Jarvis: **„Erstelle mir einen Link für meinen Freund, damit er dich au
 - **Kosten:** Gäste nutzen deine Deepgram-Minuten → Limit pro Gast und Tag: 30 Minuten (bei Render änderbar: `GUEST_MINUTES`).
 - **Sperren:** bei Render `GUEST_BLOCK` = Name des Freundes (mehrere mit Komma) → sein Zugang endet sofort.
 
+## Echte KI-Videos 🎥
+
+Sag: **„Erstelle ein echtes KI-Video von …“** – z. B. „… von einem Astronauten auf dem Mars“, „… mit Menschen, die am Strand lachen“, „… einer Drohnenfahrt durch eine Zukunftsstadt, fürs TikTok“.
+
+**Mit Replicate-Schlüssel (echte Bewegung):**
+1. Jarvis plant 1–4 Einstellungen (je ~5 s) mit genauen englischen Video-Prompts (Motiv, Bewegung, Ort, Licht, Kamerafahrt, Stil) plus deutschen Untertiteln und Sprechertexten.
+2. **Auf dem Bildschirm erscheint die Bestätigung** mit Anzahl der Clips, Modell und **Kosten** – vorher wird nichts gestartet.
+3. Nach „Ausführen“ erzeugt Replicate die Clips (meist 1–5 Minuten). Das Video Studio ist schon offen, setzt jeden fertigen Clip automatisch ein, vertont die Sprechertexte, legt Musik darunter → **Exportieren** als MP4. Scheitert ein Clip, steht dort ein fotorealistisches KI-Bild.
+
+**Einrichten (einmalig, kostet pro Clip – mit deinen Eltern klären, Replicate braucht eine Zahlungsmethode):**
+- replicate.com → Konto → *API tokens* → Token kopieren → bei Render `REPLICATE_API_TOKEN`
+- Auf replicate.com unter *Explore → Video* ein Text-zu-Video-Modell aussuchen (z. B. aus den Reihen Kling, Veo, Wan, Hailuo – Namen und Preise ändern sich, auf der Modellseite nachsehen) → bei Render `REPLICATE_VIDEO_MODEL` = `besitzer/modell`
+- `REPLICATE_VIDEO_PRICE` = der Preis als Text (wird in der Bestätigung angezeigt, z. B. `ca. 0,30 $`)
+- optional `AI_VIDEO_MAX_CLIPS` (Standard 4)
+
+**Ohne Schlüssel (kostenlos):** Jarvis baut automatisch ein Video aus fotorealistischen KI-Bildern mit Kamerafahrt, Untertiteln, Sprecher und Musik – und sagt ehrlich, dass sich darin nichts wirklich bewegt.
+
 ## TikTok-Modus 🎬
 
 Sag: **„Jarvis, ich nehme gerade ein TikTok auf“** (oder „… ein Video auf“, „Stell dich mal vor“). Als **Serie in 5 Teilen** – sag „… **Part 2**“ bis „… **Part 5**“:

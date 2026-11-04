@@ -282,3 +282,25 @@ export async function convertToMp4(input) {
     await rm(dir, { recursive: true, force: true }).catch(() => {});
   }
 }
+
+// --- Voice: real AI film from several AI clips ---------------------------------------------
+// Jarvis splits the wish into 1–4 shots with detailed English video prompts
+// (subject, action, place, light, camera, style) and German voice-over lines.
+const FILM_SYSTEM = `Du bist Regisseur für KI-Videos (Text-zu-Video-Modelle wie Kling, Veo, Wan, Hailuo). Du zerlegst einen Wunsch in kurze Einstellungen (je ca. 5 Sekunden).
+Für jede Einstellung schreibst du einen sehr genauen ENGLISCHEN Video-Prompt: Hauptmotiv (Aussehen, Kleidung), was genau passiert (Bewegung!), Ort, Tageszeit, Licht, Kamerabewegung (z. B. slow dolly in, aerial drone shot, tracking shot), Stil (photorealistic, cinematic, 35mm film, shallow depth of field, 4k). Keine echten bekannten Personen, keine Marken, nichts Gewalttätiges oder Anstößiges. Dazu eine kurze deutsche Bildunterschrift und – falls gewünscht – einen deutschen Sprechertext (max. 12 Wörter pro Einstellung).`;
+
+export async function planAiFilm(description, { clips, format, voice = true, generate = generateJson } = {}) {
+  const text = clean(description, 600);
+  if (!text) throw new Error('Was für ein Video soll ich erstellen?');
+  const max = Math.min(Math.max(Number(process.env.AI_VIDEO_MAX_CLIPS) || 4, 1), 6);
+  const wanted = Math.min(Math.max(Math.round(Number(clips) || 0), 0), max);
+  const fmt = pick(format, FORMATS, guessFormat(text));
+  if (!llmProvider()) return { title: text.slice(0, 60), format: fmt, music: 'epic', scenes: [{ prompt: `${text}, photorealistic, cinematic lighting, 4k`, caption: '', voiceover: '', duration: 5 }] };
+  const data = await generate({
+    system: FILM_SYSTEM,
+    prompt: `Wunsch: ${text}\nAnzahl Einstellungen: ${wanted || `1 bis ${Math.min(3, max)}, so viele wie die Geschichte braucht`}\nFormat: ${fmt}\nSprecher: ${voice ? 'ja' : 'nein'}\nJSON: {"title":"…","music":"epic|tech|chill","scenes":[{"prompt":"English video prompt","caption":"deutsch","voiceover":"deutsch oder leer"}]}`,
+    maxTokens: 2000
+  });
+  const scenes = (Array.isArray(data?.scenes) ? data.scenes : []).slice(0, wanted || max).map((s) => ({ prompt: clean(s.prompt, 700) || text, caption: clean(s.caption, 120), voiceover: voice ? clean(s.voiceover, 160) : '', duration: 5 })).filter((s) => s.prompt);
+  return { title: clean(data?.title, 60) || text.slice(0, 60), format: fmt, music: pick(data?.music, MUSIC, 'epic'), scenes: scenes.length ? scenes : [{ prompt: text, caption: '', voiceover: '', duration: 5 }] };
+}

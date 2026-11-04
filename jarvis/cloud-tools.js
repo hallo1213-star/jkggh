@@ -15,7 +15,7 @@ import { getNews, getWeather, lookupWikipedia, searchNews, topNews } from './kno
 import { getChart, getMarkets } from './markets.js';
 import { getIss } from './iss.js';
 import { describeRoute, planRoute } from './route.js';
-import { aiVideoConfig, editVideo, planVideo } from './video.js';
+import { aiVideoConfig, editVideo, planAiFilm, planVideo, sanitizeVideo, startAiClip } from './video.js';
 import { GRAPHIC_UPGRADE, TYPES as GRAPHIC_TYPES, designGraphics, editGraphics } from './graphics.js';
 import { STATES, calculate, convertCurrency, countdownTarget, getBundesliga, getDepartures, getHolidays, getJourneys, ingredientText, makeQr, makeQuiz, planRecipe, summarizeUrl, translate } from './everyday.js';
 import { bauplanConfig, missingSettings } from './bauplan-page.js';
@@ -677,7 +677,7 @@ export const cloudTools = [
   },
   {
     name: 'create_video',
-    description: 'Video Studio: Jarvis erstellt SELBST ein Video aus seiner Beschreibung – Konzept, Szenen, Texte, Untertitel, Sprecherstimme, Musik – und öffnet es im Video Studio mit Vorschau, Timeline und MP4-Export (16:9, 9:16, 1:1). Für „Erstelle mir eine 30-sekündige Werbung für meinen Jarvis“, „Mach ein TikTok-Video über …“, „Erstelle ein Video von einer futuristischen Stadt bei Nacht“. aendern = das offene Video per Sprache ändern („Mach Szene 2 länger“, „Andere Musik“). Lädt NIE Videos aus dem Internet und startet NIE kostenpflichtige KI-Videos (die gibt es nur per Knopf mit Bestätigung im Studio).',
+    description: 'Video Studio: Jarvis erstellt SELBST ein Video aus seiner Beschreibung – Konzept, Szenen, Texte, Untertitel, Sprecherstimme, Musik – und öffnet es im Video Studio mit Vorschau, Timeline und MP4-Export (16:9, 9:16, 1:1). Für „Erstelle mir eine 30-sekündige Werbung für meinen Jarvis“, „Mach ein TikTok-Video über …“, „Erstelle ein Video von einer futuristischen Stadt bei Nacht“. aendern = das offene Video per Sprache ändern („Mach Szene 2 länger“, „Andere Musik“). Lädt NIE Videos aus dem Internet. Für echte bewegte KI-Clips (realistische Menschen, Tiere, Weltraum-Flüge …) stattdessen ai_video verwenden.',
     parameters: {
       type: 'object',
       properties: {
@@ -1525,6 +1525,42 @@ export const cloudTools = [
       context.tiktok = { lines: show.scenes.map((s) => s.line), until: Date.now() + 5 * 60_000 };
       context.showVisual?.({ type: 'tiktok', action: 'start', part: show.part, scenes: show.scenes });
       return { ok: true, hinweis: 'Die Show startet gleich auf dem Bildschirm und du sprichst dann automatisch die Texte der einzelnen Szenen. Antworte JETZT nur mit genau zwei Wörtern: „Kamera läuft!“ – sonst nichts.' };
+    }
+  },
+  {
+    name: 'ai_video',
+    description: 'Echtes KI-Video mit echter Bewegung – alles, was er beschreibt (realistische Menschen, Tiere, Weltraum, Natur, Städte, Action, Fantasy …): Jarvis plant 1–4 Einstellungen, erzeugt jede als echten KI-Videoclip (Replicate, kostet pro Clip – startet NUR nach Bestätigung auf dem Bildschirm) und schneidet sie im Video Studio mit Untertiteln, Sprecher und Musik zu einem Film (MP4-Export). Ohne Replicate-Schlüssel macht Jarvis automatisch die kostenlose Version aus fotorealistischen KI-Bildern mit Kamerafahrt (keine echte Bewegung – das ehrlich sagen). Für „Erstelle ein (echtes/realistisches) KI-Video von …“, „Mach ein Video mit echten Menschen/im Weltraum …“.',
+    parameters: { type: 'object', properties: { description: { type: 'string', description: 'Das Video in seinen Worten' }, format: { type: 'string', enum: ['16:9', '9:16', '1:1'], description: '9:16 für TikTok/Reels' }, clips: { type: 'number', description: 'Anzahl Einstellungen 1–4 (optional)' }, voice: { type: 'boolean', description: 'Sprecherstimme (Standard true)' } }, required: ['description'] },
+    label: (a) => `KI-Video: ${String(a.description || '').slice(0, 40)}`,
+    confirm: async (args, context) => {
+      const cfg = aiVideoConfig();
+      if (!cfg.enabled) return null; // free version – nothing paid happens
+      const plan = await planAiFilm(args.description, { clips: args.clips, format: args.format, voice: args.voice !== false });
+      context.aiFilmDraft = { key: JSON.stringify(args), plan };
+      return { title: `${plan.scenes.length} echte${plan.scenes.length === 1 ? 'n' : ''} KI-Videoclip${plan.scenes.length === 1 ? '' : 's'} erzeugen?`, detail: `„${plan.title}“ · Format ${plan.format}\nModell: ${cfg.model}\n💶 Kosten: ${cfg.price} pro Clip × ${plan.scenes.length} – abgerechnet über DEINEN Replicate-Schlüssel.\n\nEinstellungen:\n${plan.scenes.map((x, i) => `${i + 1}. ${x.caption || x.prompt.slice(0, 90)}`).join('\n')}\n\nDauer der Erzeugung: meist 1–5 Minuten pro Clip.` };
+    },
+    run: async (args, context) => {
+      const cfg = aiVideoConfig();
+      const voice = args.voice !== false;
+      if (!cfg.enabled) {
+        // free: photo-realistic AI stills with camera moves, voice-over and music
+        const project = await planVideo(`${args.description}. Nutze fast nur image-Szenen mit fotorealistischen, filmischen Motiven (photorealistic, cinematic, 35mm) und passender Kamerafahrt.`, { duration: Math.min(40, (Number(args.clips) || 4) * 6), format: args.format, voice });
+        if (context.videoMemory) context.videoMemory.last = project;
+        context.showVisual?.({ type: 'video_open', project, voice });
+        return { kostenlos: true, echteBewegung: false, titel: project.title, szenen: project.scenes.length, hinweis: 'Echte bewegte KI-Videos sind nicht eingerichtet (dafür braucht es einen Replicate-Schlüssel – kostet pro Clip, mit den Eltern klären). Sag ihm ehrlich: Ich habe dir die kostenlose Version gebaut – fotorealistische KI-Bilder mit Kamerafahrt, Sprecher und Musik, aber ohne echte Bewegung. Anleitung für echte Clips steht im README.' };
+      }
+      const plan = context.aiFilmDraft?.key === JSON.stringify(args) ? context.aiFilmDraft.plan : await planAiFilm(args.description, { clips: args.clips, format: args.format, voice });
+      context.aiFilmDraft = null;
+      const started = []; const failed = [];
+      for (const scene of plan.scenes) {
+        try { const { id } = await startAiClip({ prompt: scene.prompt, format: plan.format, confirmed: true }); started.push({ ...scene, clip: id }); } catch (error) { failed.push(error.message); started.push({ ...scene, clip: null }); }
+      }
+      if (!started.some((x) => x.clip)) throw new Error(`Die KI-Videos konnten nicht gestartet werden: ${failed[0] || 'unbekannter Fehler'}`);
+      // scenes whose clip could not start fall back to a photo-real still of the same prompt
+      const project = sanitizeVideo({ title: plan.title, format: plan.format, music: plan.music, voice, scenes: started.map((x) => ({ type: x.clip ? 'ai_video' : 'image', clip: x.clip || undefined, prompt: x.prompt, caption: x.caption, voiceover: x.voiceover, duration: x.duration, transition: 'fade' })) });
+      if (context.videoMemory) context.videoMemory.last = project;
+      context.showVisual?.({ type: 'video_open', project, voice, fetchClips: true });
+      return { gestartet: started.filter((x) => x.clip).length, fehlgeschlagen: failed.length, titel: project.title, hinweis: `${started.filter((x) => x.clip).length} echte KI-Clips werden gerade erzeugt (meist 1–5 Minuten). Das Video Studio ist offen und setzt jeden fertigen Clip automatisch ein; danach kann er es als MP4 exportieren.${failed.length ? ` ${failed.length} Clip(s) konnten nicht starten – dort steht vorerst ein KI-Bild.` : ''} Sag das kurz.` };
     }
   },
   {

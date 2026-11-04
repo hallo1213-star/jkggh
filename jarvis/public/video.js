@@ -1058,10 +1058,47 @@ function showNarrated(blob, lines) {
 }
 
 // --- voice assistant ---------------------------------------------------------------------------------
+// Clips that Jarvis started by voice: wait for each one and put it into its scene.
+async function fetchPendingClips() {
+  const pending = project.scenes.filter((s) => s.type === 'ai_video' && s.clip);
+  const missing = [];
+  for (const scene of pending) if (!(await getAsset(`clip:${scene.clip}`))) missing.push(scene);
+  if (!missing.length) return;
+  let done = 0; let failedCount = 0;
+  setBusy(`Echte KI-Clips werden erzeugt: 0 von ${missing.length} fertig (meist 1–5 Minuten) …`);
+  const owner = project.id;
+  await Promise.all(missing.map(async (scene) => {
+    try {
+      for (let i = 0; i < 120; i += 1) {
+        await new Promise((r) => setTimeout(r, 6000));
+        const st = await api(`/api/video/ai-clip?id=${encodeURIComponent(scene.clip)}`);
+        if (st.status === 'fertig') break;
+        if (st.status === 'fehler') throw new Error(st.error || 'Fehlgeschlagen');
+      }
+      const blob = await (await fetch(`/api/video/ai-clip/file?id=${encodeURIComponent(scene.clip)}`)).blob();
+      if (!blob.size) throw new Error('Leere Datei');
+      await putAsset(`clip:${scene.clip}`, blob);
+      done += 1;
+    } catch (error) {
+      failedCount += 1;
+      ctx.toast(`KI-Clip „${scene.caption || 'Szene'}“: ${error.message}`, 'error');
+      if (project?.id === owner) { scene.type = 'image'; scene.clip = undefined; } // fall back to a photo-real still
+    }
+    if (project?.id === owner) setBusy(done + failedCount < missing.length ? `Echte KI-Clips werden erzeugt: ${done} von ${missing.length} fertig …` : '');
+  }));
+  if (project?.id !== owner) return;
+  await loadClips();
+  setBusy('');
+  changed({ structure: true });
+  renderBadges();
+  ctx.toast(failedCount ? `${done} von ${missing.length} KI-Clips fertig – der Rest ist ein KI-Bild.` : `Alle ${done} KI-Clips sind fertig und eingesetzt – jetzt kannst du exportieren.`);
+}
+
 export function handleVideoMessage(message) {
   if (message.type === 'video_open') {
     openVideoStudio(message.project).then(() => {
       if (message.voice && status.voice && message.project?.scenes?.some((s) => s.voiceover)) generateVoices({ quiet: true });
+      if (message.fetchClips) fetchPendingClips().catch((error) => { setBusy(''); ctx.toast(error.message, 'error'); });
     });
   }
 }
