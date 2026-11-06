@@ -35,3 +35,14 @@ err = ''; try { await tool.run({ name: 'A' }, { origin: 'x' }); } catch (e) { er
 const owner = invitePage({ ok: true, invite: { ...inv, name: 'Abdullah Demir' }, token: t, ownerHere: true });
 assert(/als Besitzer angemeldet/.test(owner) && owner.includes('&wechseln=1') && !owner.includes('/einladung/manifest'), 'Link auf dem Gerät des Besitzers: Hinweis statt stillem Login als Besitzer');
 assert(/Nenn mich/.test(guestPrompt(inv)) && /beim Besitzer ändert sich dadurch nichts/.test(guestPrompt(inv)), 'Gast: „Nenn mich …“ nur im eigenen Gespräch');
+{
+  const g = await import('../../guest.js');
+  const old = process.env.JARVIS_PASSWORD;
+  process.env.JARVIS_PASSWORD = 'pw-eins-12345';
+  const inv = g.createInvite({ name: 'Test', platform: 'beides' });
+  const ok1 = Boolean(g.readInvite(inv.token ?? inv));
+  process.env.JARVIS_PASSWORD = 'pw-zwei-67890';
+  const ok2 = Boolean(g.readInvite(inv.token ?? inv));
+  process.env.JARVIS_PASSWORD = old;
+  console.log(ok1 && !ok2 ? 'ok  ' : 'FAIL', 'new password invalidates old invite links'); if (!(ok1 && !ok2)) process.exitCode = 1;
+}

@@ -17,3 +17,10 @@ assert(a.attemptLogin('5.6.7.8', 'geheim-passwort-123').ok, 'other client logs i
 assert(a.tokenMatches('Bearer tok123', 'tok123') && !a.tokenMatches('Bearer nope', 'tok123') && !a.tokenMatches('Bearer tok123', undefined), 'laptop token check');
 process.env.JARVIS_PASSWORD = 'kurz';
 assert(!a.passwordConfigured() && !a.isAuthenticated({ headers: { cookie: value } }), 'short password disables login');
+// changing the password logs out every device, even with SESSION_SECRET set
+process.env.SESSION_SECRET = 'feste-sitzung-0123456789abcdef';
+process.env.JARVIS_PASSWORD = 'altes-passwort-123';
+const before = a.sessionCookie(true).split(';')[0];
+assert(a.isAuthenticated({ headers: { cookie: before } }), 'cookie valid with old password');
+process.env.JARVIS_PASSWORD = 'neues-passwort-456';
+assert(!a.isAuthenticated({ headers: { cookie: before } }), 'new password logs out old devices');

@@ -89,6 +89,7 @@ const functionDefinitions = [
 // Guests (friends with an invitation link) get only harmless functions, by their own names.
 const guestFunctions = cloudTools.filter(({ name }) => GUEST_TOOLS.has(name)).map(({ name, description, parameters }) => ({ name, description: description.slice(0, 1000), parameters }));
 const guestUsage = createUsage();
+const describeDevice = (ua = '') => { const u = String(ua); const os = /iPhone/.test(u) ? 'iPhone' : /iPad/.test(u) ? 'iPad' : /Android/.test(u) ? 'Android' : /Windows/.test(u) ? 'Windows' : /Mac OS/.test(u) ? 'Mac' : /Linux/.test(u) ? 'Linux' : 'unbekanntes Gerät'; const br = /Edg\//.test(u) ? 'Edge' : /CriOS|Chrome\//.test(u) ? 'Chrome' : /FxiOS|Firefox\//.test(u) ? 'Firefox' : /Safari\//.test(u) ? 'Safari' : 'Browser'; return `${os}, ${br}`; };
 if (functionDefinitions.length > 128) console.warn(`Achtung: ${functionDefinitions.length} Funktionen – die Sprach-KI erlaubt höchstens 128.`);
 
 const isSecure = (request) => request.headers['x-forwarded-proto'] === 'https';
@@ -487,7 +488,11 @@ const httpServer = createServer(async (request, response) => {
       return;
     }
     const result = attemptLogin(clientId(request), password);
-    if (result.ok) sendJson(response, 200, { ok: true }, { 'set-cookie': sessionCookie(isSecure(request)) });
+    if (result.ok) {
+      sendJson(response, 200, { ok: true }, { 'set-cookie': sessionCookie(isSecure(request)) });
+      // every new owner login is reported, so a stranger with the password is noticed at once
+      if (telegramConfigured()) sendTelegram(`🔐 Neue Anmeldung bei deinem Jarvis (${describeDevice(request.headers['user-agent'])}, ${new Date().toLocaleString('de-DE', { timeZone: 'Europe/Berlin' })}). Warst du das nicht? Sofort bei Render JARVIS_PASSWORD ändern – dann sind alle Geräte abgemeldet.`).catch(() => {});
+    }
     else if (result.locked) sendJson(response, 429, { error: `Zu viele Fehlversuche. Bitte in ${Math.ceil(result.retryAfterSeconds / 60)} Minuten erneut versuchen.` });
     else sendJson(response, 401, { error: 'Falsches Passwort.' });
     return;

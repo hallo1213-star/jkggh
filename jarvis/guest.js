@@ -12,7 +12,7 @@ const ACCESS_DAYS = 365;  // after that the friend's device stays logged in for 
 // Only functions that touch no personal data of the owner.
 export const GUEST_TOOLS = new Set(['get_datetime', 'web_search', 'open_link', 'get_weather', 'get_news', 'wiki_lookup', 'create_game', 'iss_live', 'translate', 'transit', 'route_plan', 'holidays', 'calculate', 'currency', 'qr_code', 'quiz', 'countdown', 'summarize_url', 'football', 'create_image', 'camera_look', 'effect_control', 'helmet_mirror', 'movie_poster', 'ufo_prank', 'random_toss', 'mindmap', 'fireworks', 'gravity', 'black_hole', 'time_capsule', 'treasure_hunt', 'secret_code', 'escape_room', 'holo_chess', 'self_destruct', 'globe', 'digital_reality', 'holo_pet', 'name_hologram']);
 
-const secret = () => createHash('sha256').update(`jarvis-guest:${process.env.SESSION_SECRET || process.env.JARVIS_PASSWORD || ''}`).digest();
+const secret = () => createHash('sha256').update(`jarvis-guest:${process.env.SESSION_SECRET || ''}:${process.env.JARVIS_PASSWORD?.trim() || ''}`).digest();
 const sign = (s) => createHmac('sha256', secret()).update(s).digest('base64url');
 const same = (a, b) => { const x = createHash('sha256').update(String(a)).digest(); const y = createHash('sha256').update(String(b)).digest(); return timingSafeEqual(x, y); };
 const cleanName = (n) => String(n || '').replace(/[<>"'`\\]/g, '').replace(/\s+/g, ' ').trim().slice(0, 40);

@@ -469,6 +469,9 @@ Sag zu Jarvis: **„Erstelle mir einen Link für meinen Freund, damit er dich au
 - Der Link lässt sich 30 Tage öffnen; danach bleibt Jarvis auf seinem Gerät 1 Jahr angemeldet.
 - **Kosten:** Gäste nutzen deine Deepgram-Minuten → Limit pro Gast und Tag: 30 Minuten (bei Render änderbar: `GUEST_MINUTES`).
 - **Sperren:** bei Render `GUEST_BLOCK` = Name des Freundes (mehrere mit Komma) → sein Zugang endet sofort.
+- **Notfall – alle rauswerfen:** bei Render `JARVIS_PASSWORD` auf ein neues Passwort ändern → **alle** Geräte sind abgemeldet (auch fremde, die dein Passwort kennen) und **alle** alten Einladungslinks ungültig. Danach dich selbst neu anmelden und neue Links erstellen.
+- **Anmelde-Alarm:** Jede neue Anmeldung als Besitzer meldet Jarvis dir per Telegram (Gerät + Uhrzeit).
+- Gib Freunden **nie** dein Passwort oder deine normale Jarvis-Adresse zum Anmelden – nur den Einladungslink, und lass ihn auf **ihrem** Gerät öffnen.
 
 ## Vertretungsplan (DSBmobile) 📚
 

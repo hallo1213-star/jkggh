@@ -1,6 +1,8 @@
 // Password login with a signed session cookie, plus a simple lockout after
 // repeated wrong passwords. Jarvis can read mail and control the laptop, so
 // every page and connection except the login page requires a valid session.
+// The password is part of the signing key: changing JARVIS_PASSWORD logs out
+// every device at once (also when SESSION_SECRET is set).
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 
 const COOKIE = 'jarvis_session';
@@ -14,7 +16,7 @@ export function passwordConfigured() {
 }
 
 function secret() {
-  return createHash('sha256').update(`jarvis-session:${process.env.SESSION_SECRET || process.env.JARVIS_PASSWORD}`).digest();
+  return createHash('sha256').update(`jarvis-session:${process.env.SESSION_SECRET || ''}:${process.env.JARVIS_PASSWORD?.trim() || ''}`).digest();
 }
 
 function sign(payload) {
