@@ -39,6 +39,7 @@ import { handleMirrorMessage, initMirror } from './mirror.js';
 import { handlePrankMessage, initPrank } from './prank.js';
 import { handleFactoryMessage, initFactory, openFactory } from './factory.js';
 import { handleSuitMessage, initSuit, openSuitLab, ownedSuit, suitState } from './suit.js';
+import { createVoiceGate, showDenied } from './voice-gate.js';
 import { hudAction, hudBoot, hudResult, hudConnected, hudPong, hudToday, hudUser, initHud, reactorFx, refreshSystem } from './hud.js';
 
 const OUTPUT_SAMPLE_RATE = 24000;
@@ -210,6 +211,7 @@ function addMessage(role, content) {
   item.append(label, body);
   els.transcript.append(item);
   els.transcript.scrollTop = els.transcript.scrollHeight;
+  return item;
 }
 
 function upsertAction({ id, label, state: actionState, detail }) {
@@ -1250,6 +1252,19 @@ async function openSettings() {
       section('iPhone'),
       row(phoneState.self ? 'Dieses Gerät empfängt Befehle' : phoneState.connected ? `${phoneState.device || 'iPhone'} verbunden` : 'Kein iPhone verbunden', phoneState.self ? 'Jarvis kann hier Apps öffnen und WhatsApp-Sprachnachrichten vorbereiten. Seite offen lassen.' : 'Jarvis auf dem iPhone in Safari öffnen und eingeloggt offen lassen – verbindet sich automatisch.', phoneState.self || phoneState.connected),
       (() => { const r = el('div', 'order-actions'); r.append(pill(receiverWanted() ? 'Empfänger an (dieses Gerät)' : 'Dieses Gerät als iPhone-Empfänger', receiverWanted(), () => { setReceiver(!receiverWanted()); setTimeout(openSettings, 600); })); return r; })(),
+      section('Stimm-Schloss 🔒'),
+      row(voiceGate.enrolled() ? (voiceGate.enabled() ? 'AN – Jarvis gehorcht nur deiner Stimme' : 'AUS – Stimme ist eingelernt') : 'Noch keine Stimme eingelernt', voiceGate.enrolled() ? 'Fremde Stimmen bekommen „Zugriff verweigert“. Die Stimm-Probe bleibt nur auf diesem Gerät. Tippen und Text-Eingabe gehen immer.' : 'Lies 4 kurze Sätze vor – danach reagiert Jarvis auf diesem Gerät nur noch auf dich.', voiceGate.enabled()),
+      (() => {
+        const r = el('div', 'order-actions');
+        r.append(pill(voiceGate.enrolled() ? 'Neu einlernen' : 'Stimme einlernen', false, () => { document.getElementById('settings-modal').hidden = true; voiceGate.openEnrol(); }));
+        if (voiceGate.enrolled()) {
+          r.append(pill(voiceGate.enabled() ? 'Ausschalten' : 'Einschalten', voiceGate.enabled(), () => { voiceGate.setOn(!voiceGate.enabled()); toast(voiceGate.enabled() ? 'Stimm-Schloss AN' : 'Stimm-Schloss AUS'); openSettings(); }));
+          r.append(pill('Testen', false, () => { document.getElementById('settings-modal').hidden = true; voiceGate.openTest(); }));
+          r.append(pill('Stimme löschen', false, () => { voiceGate.forget(); toast('Stimm-Probe gelöscht.'); openSettings(); }));
+        }
+        return r;
+      })(),
+      ...(voiceGate.enrolled() ? [(() => { const r = el('div', 'order-actions'); r.append(...[['locker', 'Strenge: locker'], ['normal', 'normal'], ['streng', 'streng']].map(([k, label]) => pill(label, voiceGate.level() === k, () => { voiceGate.setLevel(k); openSettings(); }))); return r; })()] : []),
       section('Gedächtnis'), row(`${data.memories} gespeicherte Erinnerungen`, 'Ansehen und löschen über den Gehirn-Knopf oben. Passwörter und Bankdaten werden nie gespeichert.'),
       section('Dienste & Modelle'), ...Object.entries(data.services).map(([name, s]) => row(name, s.detail, s.ok)),
       el('p', 'card-source', 'Schlüssel werden nur bei Render (Environment) eingetragen – nie hier in der App. Anleitung im README.')
@@ -1449,10 +1464,13 @@ async function setupAudio() {
   state.outputGain.connect(state.outputAnalyser).connect(audio.destination);
 
   state.micNode.port.onmessage = ({ data }) => {
+    // Stimm-Schloss listens on the device (enrolment also while the mic is muted for Jarvis)
+    const enrolling = voiceGate.capturing();
+    if (enrolling || !state.micMuted) voiceGate.feed(data, audio.sampleRate);
     const ws = state.ws;
     if (!ws || ws.readyState !== WebSocket.OPEN || !state.connected) return;
     // Silence keeps the stream steady while muted or while Jarvis talks in half-duplex mode.
-    const silent = state.micMuted || (els.halfDuplex.checked && isSpeaking());
+    const silent = state.micMuted || enrolling || (els.halfDuplex.checked && isSpeaking());
     ws.send(silent ? new ArrayBuffer(data.byteLength) : data);
   };
   state.audio = audio;
@@ -1464,6 +1482,9 @@ function playChunk(arrayBuffer) {
   state.agentStreaming = true;
   // after the stop button the rest of that answer is still arriving – drop it
   if (state.dropAudio) return;
+  // Stimm-Schloss: the answer waits until the voice of this turn is checked
+  if (voiceGate.turnDenied()) return;
+  if (voiceGate.holding()) { voiceHeld.audio.push(arrayBuffer); return; }
   let bytes = new Uint8Array(arrayBuffer);
   if (state.leftover) {
     const merged = new Uint8Array(state.leftover.length + bytes.length);
@@ -1505,6 +1526,37 @@ function stopPlayback() {
   if (state.audio) state.playHead = state.audio.currentTime;
 }
 
+// Stimm-Schloss (voice lock): verdicts for each spoken turn.
+const voiceHeld = { audio: [], text: [], userEl: null, userText: '' };
+const voiceGate = createVoiceGate({
+  toast,
+  onChange: () => sendVoiceGate(),
+  onVerdict({ turn, ok, score, why }) {
+    if (state.ws?.readyState === 1) state.ws.send(JSON.stringify({ type: 'voice_verdict', turn, ok }));
+    if (score !== null) console.log(`Stimm-Schloss: ${ok ? 'erkannt' : 'abgelehnt'} (${Math.round(score * 100)} %)`);
+    else if (why !== 'kurz') console.warn(`Stimm-Schloss: nicht geprüft (${why}) – durchgelassen`);
+    const audio = voiceHeld.audio; const text = voiceHeld.text;
+    voiceHeld.audio = []; voiceHeld.text = [];
+    if (ok) {
+      for (const chunk of audio) playChunk(chunk);
+      for (const t of text) { addMessage('assistant', t); rememberTurn('assistant', t); }
+      return;
+    }
+    if (state.agentStreaming) state.dropAudio = true;
+    stopPlayback();
+    if (voiceHeld.userEl) {
+      voiceHeld.userEl.classList.add('voice-denied');
+      try { const list = loadHistory(); const i = list.map((x) => x.content).lastIndexOf(String(voiceHeld.userText).slice(0, 400)); if (i >= 0) { list.splice(i, 1); localStorage.setItem(HISTORY_KEY, JSON.stringify(list)); } } catch { /* ignore */ }
+    }
+    showDenied(state.audio);
+    if (state.mode === 'speaking') setMode('listening');
+  }
+});
+window.__jarvisAudioReady = () => Boolean(state.audio && state.stream);
+function sendVoiceGate() {
+  if (state.ws?.readyState === 1) state.ws.send(JSON.stringify({ type: 'voice_gate', enabled: voiceGate.active() }));
+}
+
 // Stop button: Jarvis stops talking at once (the rest of this answer is dropped).
 function stopTalking() {
   if (state.agentStreaming) state.dropAudio = true;
@@ -1525,7 +1577,7 @@ function connect() {
   setMode('connecting');
   els.reconnect.hidden = true;
 
-  ws.onopen = () => hudBoot('link', true) || ws.send(JSON.stringify({ type: 'start', sampleRate: state.audio.sampleRate, shoppingList: shopping.load(), shoppingListUpdatedAt: shopping.loadTime(), customers: customers.load(), customersUpdatedAt: customers.loadTime(), memories: memories.load(), memoriesUpdatedAt: memories.loadTime(), history: loadHistory().slice(-16), stores: Object.fromEntries(Object.entries(personalStores).map(([name, store]) => [name, { items: store.load(), updatedAt: store.loadTime() }])) })) || ws.send(JSON.stringify(suitState())) || ws.send(JSON.stringify(levelState())) || ws.send(JSON.stringify(petState()));
+  ws.onopen = () => hudBoot('link', true) || ws.send(JSON.stringify({ type: 'start', sampleRate: state.audio.sampleRate, shoppingList: shopping.load(), shoppingListUpdatedAt: shopping.loadTime(), customers: customers.load(), customersUpdatedAt: customers.loadTime(), memories: memories.load(), memoriesUpdatedAt: memories.loadTime(), history: loadHistory().slice(-16), stores: Object.fromEntries(Object.entries(personalStores).map(([name, store]) => [name, { items: store.load(), updatedAt: store.loadTime() }])) })) || ws.send(JSON.stringify(suitState())) || ws.send(JSON.stringify(levelState())) || ws.send(JSON.stringify(petState())) || sendVoiceGate();
   ws.onmessage = ({ data }) => {
     if (typeof data !== 'string') {
       playChunk(data);
@@ -1570,9 +1622,19 @@ function handleMessage(message) {
       hudPong(message.t);
       break;
     case 'transcript':
-      if (message.role === 'user') hudUser(message.content);
-      addMessage(message.role === 'user' ? 'user' : 'assistant', message.content);
-      rememberTurn(message.role === 'user' ? 'user' : 'assistant', message.content);
+      if (message.role === 'user') {
+        voiceGate.userDone();
+        if (voiceGate.turnDenied()) { addMessage('user', message.content).classList.add('voice-denied'); break; }
+        hudUser(message.content);
+        voiceHeld.userEl = addMessage('user', message.content);
+        voiceHeld.userText = message.content;
+        rememberTurn('user', message.content);
+        break;
+      }
+      if (voiceGate.turnDenied()) break;
+      if (voiceGate.holding()) { voiceHeld.text.push(message.content); break; }
+      addMessage('assistant', message.content);
+      rememberTurn('assistant', message.content);
       break;
     case 'weather':
       addWeatherCard(message.weather);
@@ -1738,6 +1800,8 @@ function handleMessage(message) {
       break;
     case 'user_speaking':
       state.dropAudio = false;
+      voiceHeld.audio = []; voiceHeld.text = []; voiceHeld.userEl = null;
+      voiceGate.userSpeaking(message.turn);
       stopPlayback();
       setMode('listening');
       break;
@@ -1802,6 +1866,11 @@ function handleMessage(message) {
       break;
     case 'holoname':
       openHoloName(message.text);
+      break;
+    case 'voice_lock':
+      if (message.action === 'einlernen' || (message.action === 'an' && !voiceGate.enrolled())) voiceGate.openEnrol();
+      else if (message.action === 'testen') voiceGate.openTest();
+      else if (message.action === 'an' || message.action === 'aus') { voiceGate.setOn(message.action === 'an'); toast(message.action === 'an' ? 'Stimm-Schloss AN 🔒' : 'Stimm-Schloss AUS'); }
       break;
     case 'school':
       showSchool(message);

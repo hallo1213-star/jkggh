@@ -79,7 +79,8 @@ const contentTypes = {
   '.js': 'text/javascript; charset=utf-8',
   '.svg': 'image/svg+xml; charset=utf-8',
   '.png': 'image/png',
-  '.webmanifest': 'application/manifest+json; charset=utf-8'
+  '.webmanifest': 'application/manifest+json; charset=utf-8',
+  '.bin': 'application/octet-stream'
 };
 const functionDefinitions = [
   ...cloudTools.filter(({ name }) => !EFFECT_TOOLS.has(name)).map(({ name, description, parameters, confirm }) => ({ name, description, parameters, ...(confirm ? { defer_until_eot: true } : {}) })),
@@ -962,7 +963,8 @@ const httpServer = createServer(async (request, response) => {
     const body = await readFile(file);
     response.writeHead(200, {
       'content-type': type,
-      'cache-control': 'no-store',
+      // the voice model (2.8 MB) never changes – let the browser keep it
+      'cache-control': type === 'application/octet-stream' ? 'private, max-age=604800' : 'no-store',
       'x-content-type-options': 'nosniff',
       'referrer-policy': 'no-referrer'
     });
@@ -1139,6 +1141,16 @@ browserWss.on('connection', (browser, request, guest = null) => {
   let cameraRequestId = 0;
   const cancelled = new Set();
   const timers = new Set();
+  // Stimm-Schloss: the device checks each spoken turn; functions wait for the verdict.
+  const voiceGate = { enabled: false, turn: 0, pending: 0, denied: 0, at: 0, waiters: [] };
+  const settleGate = () => { const w = voiceGate.waiters; voiceGate.waiters = []; for (const resolve of w) resolve(); };
+  async function voiceAllowed() {
+    if (guest || !voiceGate.enabled) return true;
+    if (voiceGate.pending) {
+      await new Promise((resolve) => { voiceGate.waiters.push(resolve); setTimeout(resolve, 6000); });
+    }
+    return !(voiceGate.denied && voiceGate.denied === voiceGate.turn && Date.now() - voiceGate.at < 60_000);
+  }
 
   const session = {
     toBrowser(message) {
@@ -1362,6 +1374,7 @@ browserWss.on('connection', (browser, request, guest = null) => {
     showVisual(message) {
       toBrowser(message);
     },
+    voiceLockOn: () => voiceGate.enabled,
     say(text) {
       if (agentOpen) agent.sendInjectAgentMessage({ type: 'InjectAgentMessage', message: String(text).slice(0, 300) });
     },
@@ -1422,6 +1435,12 @@ browserWss.on('connection', (browser, request, guest = null) => {
     ({ name, args, unknown, guessed } = unwrapEffect(callName, args));
     if (unknown || guessed) console.warn(`[effekt] ${callName} ${guessed ? 'geraten → Auswahl' : 'unbekannt'}: ${JSON.stringify(callArgs).slice(0, 300)}`);
     if (unknown) args = callArgs;
+    if (!(await voiceAllowed())) {
+      console.log(`Stimm-Schloss: ${name} blockiert (fremde Stimme)`);
+      agent.sendFunctionCallResponse({ type: 'FunctionCallResponse', id, name: callName, content: JSON.stringify({ ok: false, fehler: 'Zugriff verweigert: Das war nicht die Stimme des Besitzers (Stimm-Schloss). Nicht ausführen und nicht erneut versuchen.' }) });
+      toBrowser({ type: 'action', id, label: '🔒 Fremde Stimme – blockiert', state: 'denied', tool: name });
+      return;
+    }
     if (guest && !GUEST_TOOLS.has(name)) {
       agent.sendFunctionCallResponse({ type: 'FunctionCallResponse', id, name: callName, content: JSON.stringify({ ok: false, fehler: 'Im Gast-Modus nicht verfügbar – das kann nur der Besitzer von Jarvis.' }) });
       return;
@@ -1459,7 +1478,9 @@ browserWss.on('connection', (browser, request, guest = null) => {
         toBrowser({ type: 'transcript', role: message.role, content: message.content });
         break;
       case 'UserStartedSpeaking':
-        toBrowser({ type: 'user_speaking' });
+        voiceGate.turn += 1;
+        if (voiceGate.enabled && !guest) { voiceGate.pending = voiceGate.turn; voiceGate.at = Date.now(); }
+        toBrowser({ type: 'user_speaking', turn: voiceGate.turn });
         break;
       case 'AgentThinking':
         toBrowser({ type: 'status', state: 'thinking' });
@@ -1663,7 +1684,19 @@ browserWss.on('connection', (browser, request, guest = null) => {
       cameraRequests.get(String(message.id))?.({ image: typeof message.image === 'string' ? message.image : '', error: message.error });
     } else if (message.type === 'confirm_response') {
       confirmations.get(message.id)?.(message.approved === true);
+    } else if (message.type === 'voice_gate') {
+      voiceGate.enabled = !guest && Boolean(message.enabled);
+      if (!voiceGate.enabled) { voiceGate.pending = 0; voiceGate.denied = 0; settleGate(); }
+    } else if (message.type === 'voice_verdict') {
+      if (Number(message.turn) === voiceGate.turn) {
+        voiceGate.pending = 0;
+        voiceGate.denied = message.ok ? 0 : voiceGate.turn;
+        if (!message.ok) console.log('Stimm-Schloss: fremde Stimme erkannt – dieser Gesprächsschritt wird blockiert.');
+        settleGate();
+      }
     } else if (message.type === 'text' && agentOpen && String(message.text || '').trim()) {
+      // typed text comes from the logged-in owner device itself
+      voiceGate.pending = 0; voiceGate.denied = 0; settleGate();
       agent.sendInjectUserMessage({ type: 'InjectUserMessage', content: String(message.text).trim().slice(0, 2000) });
     }
   });

@@ -473,6 +473,19 @@ Sag zu Jarvis: **„Erstelle mir einen Link für meinen Freund, damit er dich au
 - **Anmelde-Alarm:** Jede neue Anmeldung als Besitzer meldet Jarvis dir per Telegram (Gerät + Uhrzeit).
 - Gib Freunden **nie** dein Passwort oder deine normale Jarvis-Adresse zum Anmelden – nur den Einladungslink, und lass ihn auf **ihrem** Gerät öffnen.
 
+## Stimm-Schloss: Jarvis hört nur auf dich 🔒
+
+Sag **„Jarvis, lern meine Stimme“** (oder ⚙️ Einstellungen → Stimm-Schloss → *Stimme einlernen*) und lies die 4 Sätze auf dem Bildschirm vor. Danach ist das Schloss **an**.
+
+- Jeder gesprochene Satz wird **auf deinem Gerät** mit deinem Stimm-Abdruck verglichen. Kein Cloud-Dienst, keine Kosten. Der Abdruck (256 Zahlen) bleibt nur in diesem Browser.
+- **Fremde Stimme:** rote Warnung „ZUGRIFF VERWEIGERT“. Jarvis' Antwort wird nicht abgespielt, und der Server blockiert alle Funktionen dieses Satzes (keine Mails, kein iPhone, keine Listen …).
+- Jarvis' Antwort wartet kurz, bis die Prüfung fertig ist (meist unter 1 Sekunde, höchstens 5 Sekunden).
+- **Strenge:** locker 80 % / normal 85 % / streng 88 % Übereinstimmung. Mit **Testen** siehst du die Prozentzahl live. Wirst du selbst abgelehnt: auf *locker* stellen oder an einem ruhigen Ort neu einlernen.
+- Sprachbefehle: „Stimm-Schloss an/aus“, „Teste meine Stimme“. Ausschalten per Stimme geht nur mit deiner Stimme.
+- Tippen funktioniert immer. Das Gerät ist ja schon mit deinem Passwort angemeldet.
+- **Grenzen:** Sehr kurze Befehle unter ½ Sekunde Sprache können nicht geprüft werden und gehen durch. Eine **Aufnahme** deiner Stimme kann das Schloss eventuell täuschen. Es ist ein Zusatz-Schutz, **kein Ersatz für dein Passwort**. Auf jedem Gerät einmal einlernen.
+- Modell: Sprecher-Encoder aus [Resemblyzer](https://github.com/resemble-ai/Resemblyzer) (Apache-2.0, Lizenz in `licenses/`), nachgebaut in JavaScript (`public/voice-id.js`).
+
 ## Vertretungsplan (DSBmobile) 📚
 
 | Sag zu Jarvis | Was passiert |

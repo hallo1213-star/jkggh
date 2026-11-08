@@ -1515,6 +1515,20 @@ export const cloudTools = [
     }
   },
   {
+    name: 'voice_lock',
+    description: 'Stimm-Schloss: Jarvis gehorcht nur der Stimme des Besitzers (Prüfung läuft auf seinem Gerät). action: einlernen (Stimme mit 4 Sätzen einlernen – „lern meine Stimme“, „hör nur auf mich“), an, aus, testen, status. Niemals behaupten, eine Stimme sei erkannt – das prüft das Gerät.',
+    parameters: { type: 'object', properties: { action: { type: 'string', enum: ['einlernen', 'an', 'aus', 'testen', 'status'] } }, required: ['action'] },
+    label: (a) => `Stimm-Schloss: ${a.action || 'status'}`,
+    run: async ({ action = 'status' }, context) => {
+      const on = context.voiceLockOn?.() ?? false;
+      if (action === 'status') return { an: on, hinweis: on ? 'Das Stimm-Schloss ist an.' : 'Das Stimm-Schloss ist aus (oder noch keine Stimme eingelernt). Sag „Lern meine Stimme“.' };
+      context.showVisual({ type: 'voice_lock', action });
+      if (action === 'einlernen') return { ok: true, hinweis: 'Auf dem Bildschirm erscheinen 4 Sätze zum Vorlesen. Sag nur kurz: „Lies die Sätze auf dem Bildschirm laut vor.“ Danach still sein, bis er fertig ist.' };
+      if (action === 'testen') return { ok: true, hinweis: 'Der Stimm-Test ist offen – er soll einen Satz sagen, das Gerät zeigt die Übereinstimmung.' };
+      return { ok: true, hinweis: action === 'an' ? 'Stimm-Schloss wird eingeschaltet (falls schon eine Stimme eingelernt ist, sonst öffnet sich das Einlernen).' : 'Stimm-Schloss ist aus – Jarvis hört wieder auf alle Stimmen.' };
+    }
+  },
+  {
     name: 'name_hologram',
     description: '3D-Namens-Hologramm: ein Name oder Wort als glänzendes rotes 3D-Metall, das sich aus Funken zusammensetzt und dreht – als Bild oder Video speicherbar. text = der Name/das Wort (max. 18 Zeichen). Für „Schreib meinen Namen in 3D“.',
     parameters: { type: 'object', properties: { text: { type: 'string' } }, required: ['text'] },
