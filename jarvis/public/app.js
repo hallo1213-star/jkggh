@@ -1461,6 +1461,9 @@ async function setupAudio() {
 function playChunk(arrayBuffer) {
   const audio = state.audio;
   if (!audio) return;
+  state.agentStreaming = true;
+  // after the stop button the rest of that answer is still arriving – drop it
+  if (state.dropAudio) return;
   let bytes = new Uint8Array(arrayBuffer);
   if (state.leftover) {
     const merged = new Uint8Array(state.leftover.length + bytes.length);
@@ -1501,6 +1504,17 @@ function stopPlayback() {
   state.leftover = null;
   if (state.audio) state.playHead = state.audio.currentTime;
 }
+
+// Stop button: Jarvis stops talking at once (the rest of this answer is dropped).
+function stopTalking() {
+  if (state.agentStreaming) state.dropAudio = true;
+  stopPlayback();
+  document.body.classList.remove('is-talking');
+  if (state.mode === 'speaking') setMode('listening');
+}
+$('stop-talk')?.addEventListener('click', stopTalking);
+// the button shows only while Jarvis' voice is actually playing
+setInterval(() => document.body.classList.toggle('is-talking', Boolean(state.connected && isSpeaking())), 150);
 
 // --- Connection ------------------------------------------------------------
 
@@ -1723,10 +1737,13 @@ function handleMessage(message) {
       if (message.show) openPalace();
       break;
     case 'user_speaking':
+      state.dropAudio = false;
       stopPlayback();
       setMode('listening');
       break;
     case 'agent_audio_done': {
+      state.agentStreaming = false;
+      state.dropAudio = false;
       // Return to listening once the queued audio has finished playing.
       const wait = state.audio ? Math.max(0, (state.playHead - state.audio.currentTime) * 1000) : 0;
       setTimeout(() => {

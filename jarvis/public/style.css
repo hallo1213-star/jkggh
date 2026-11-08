@@ -1761,3 +1761,10 @@ body.theme-neon .vs-dialog { border-color: rgba(255, 62, 165, 0.4); background: 
 .studio-qachecks small { color: #8b93a1; }
 .studio-qaproblems { margin: 6px 0 0; padding-left: 20px; max-height: 180px; overflow: auto; }
 .studio-qaproblems li.fehler { color: #fca5a5; } .studio-qaproblems li.hinweis { color: #c3c9d4; }
+
+/* Stop button: only visible while Jarvis is speaking (sits next to the mic button) */
+.stop-talk { display: none; animation: stop-talk-in 0.22s ease-out; }
+.stop-talk svg { fill: currentColor; }
+body.is-talking .controls .stop-talk { display: inline-flex; }
+@keyframes stop-talk-in { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .stop-talk { animation: none; } }

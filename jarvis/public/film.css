@@ -87,7 +87,7 @@ body.theme-film .status-line { font: 700 12px var(--font-body); letter-spacing: 
 body.theme-film .film-hint { display: block; margin: 0; color: var(--muted); font-size: 13px; text-align: center; }
 body.theme-film .hud-telemetry { display: none; }
 body.theme-film .controls { gap: 8px; }
-body.theme-film .controls .ctrl:not(#mic-toggle):not(#reconnect) { display: none; }
+body.theme-film .controls .ctrl:not(#mic-toggle):not(#reconnect):not(#stop-talk) { display: none; }
 body.theme-film .ctrl { border: 1px solid var(--film-line); border-radius: 999px; background: rgba(255, 255, 255, 0.03); font: 600 13px var(--font-body); letter-spacing: 0.02em; clip-path: none; }
 body.theme-film .ctrl:hover:not(:disabled) { border-color: rgba(255, 42, 61, 0.6); background: rgba(255, 42, 61, 0.1); }
 body.theme-film .hud-boot { border: 1px solid var(--film-line); border-radius: 10px; background: rgba(12, 4, 5, 0.9); font-family: var(--font-body); clip-path: none; }
